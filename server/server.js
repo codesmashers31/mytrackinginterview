@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 // Route Imports
 import authRoutes from './routes/authRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
+import Admin from './models/Admin.js';
 
 dotenv.config();
 
@@ -29,7 +30,23 @@ app.use('/api/students', studentRoutes);
 
 // Database Connection
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('PlaceTrack Database Linked: MongoDB Connected'))
+  .then(async () => {
+    console.log('PlaceTrack Database Linked: MongoDB Connected');
+    try {
+      const adminCount = await Admin.countDocuments();
+      if (adminCount === 0) {
+        const defaultAdmin = new Admin({
+          email: process.env.DEFAULT_ADMIN_EMAIL || 'admin@placetrack.com',
+          password: process.env.DEFAULT_ADMIN_PASSWORD || 'admin123',
+          name: 'System Administrator'
+        });
+        await defaultAdmin.save();
+        console.log('Default Administrator Created: admin@placetrack.com / admin123');
+      }
+    } catch (seedErr) {
+      console.error('Failed to seed default admin:', seedErr);
+    }
+  })
   .catch((err) => console.log('Database Link Failure:', err));
 
 app.listen(PORT, () => {

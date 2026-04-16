@@ -289,6 +289,9 @@ export function StatusBadge({ status = '' }) {
   if (normalized.includes('need') || normalized.includes('filled')) {
     return <Badge tone="warning" label={status} />;
   }
+  if (normalized.includes('not picking') || normalized.includes('reachable')) {
+    return <Badge tone="danger" label={status} />;
+  }
   if (normalized.includes('interview')) return <Badge tone="info" label={status} />;
   if (normalized === 'inactive') return <Badge tone="neutral" label={status} />;
 

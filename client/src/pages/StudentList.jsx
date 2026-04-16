@@ -544,6 +544,8 @@ function StudentFormModal({ onClose, onRefresh, student, editMode }) {
                             <option value="Need to filled">Needs Updates</option>
                             <option value="Interview process">Interviewing</option>
                             <option value="Inactive">Suspended/Inactive</option>
+                            <option value="Not Picking the call">Not Picking the call</option>
+                            <option value="Not Reachable">Not Reachable</option>
                          </select>
                       </div>
 

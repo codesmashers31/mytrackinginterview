@@ -158,9 +158,9 @@ export default function StudentList() {
 
   const availableBatches = [...new Set(
     students
-      .map(student => getValidBatchYear(student.passedOutYear))
+      .map(student => String(student.batch || '').trim())
       .filter(Boolean)
-  )].sort((a, b) => Number(b) - Number(a));
+  )].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
   const availableStatuses = [...new Set(
     students
@@ -171,7 +171,7 @@ export default function StudentList() {
   const processedStudents = [...students]
     .filter(student => {
       if (batchFilter === 'All') return true;
-      return getValidBatchYear(student.passedOutYear) === batchFilter;
+      return String(student.batch || '').trim() === batchFilter;
     })
     .sort((a, b) => {
       if (sortBy === 'name-asc') {
@@ -255,7 +255,7 @@ export default function StudentList() {
                  >
                     <option value="All">All Batches</option>
                     {availableBatches.map(batch => (
-                      <option key={batch} value={batch}>Batch {batch}</option>
+                      <option key={batch} value={batch}>{batch}</option>
                     ))}
                  </select>
                  <select
@@ -307,7 +307,7 @@ export default function StudentList() {
                 <h3 className="text-sm md:text-base font-bold text-[#1e293b]">All Candidates</h3>
                 <p className="text-[11px] md:text-xs font-medium text-slate-500">
                   Showing <span className="font-bold text-slate-700">{processedStudents.length}</span> candidate{processedStudents.length === 1 ? '' : 's'}
-                  {batchFilter !== 'All' ? ` in Batch ${batchFilter}` : ''}
+                  {batchFilter !== 'All' ? ` in ${batchFilter}` : ''}
                 </p>
              </div>
              

@@ -214,7 +214,7 @@ export default function StudentList() {
     <AppShell
       title="Student Directory"
       subtitle="Manage candidate records, imports, exports, and placement status updates."
-      searchPlaceholder="Search students, mobile, company, or batch"
+      searchPlaceholder="Search students, mobile number, company, or institute batch"
     >
            <SectionTabs
              items={[
@@ -255,7 +255,7 @@ export default function StudentList() {
                    }}
                    className="w-full py-2 px-3 bg-white border border-slate-200 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4338ca] text-[12px] md:text-[13px] font-semibold text-[#1e293b] cursor-pointer transition-shadow"
                  >
-                    <option value="All">All Batches</option>
+                    <option value="All">All Institute Batches</option>
                     {availableBatches.map(batch => (
                       <option key={batch} value={batch}>{batch}</option>
                     ))}
@@ -268,8 +268,8 @@ export default function StudentList() {
                    }}
                    className="w-full py-2 px-3 bg-white border border-slate-200 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4338ca] text-[12px] md:text-[13px] font-semibold text-[#1e293b] cursor-pointer transition-shadow"
                  >
-                    <option value="batch-desc">Batch: New to Old</option>
-                    <option value="batch-asc">Batch: Old to New</option>
+                    <option value="batch-desc">Institute Batch: New to Old</option>
+                    <option value="batch-asc">Institute Batch: Old to New</option>
                     <option value="name-asc">Name: A to Z</option>
                     <option value="name-desc">Name: Z to A</option>
                  </select>
@@ -321,7 +321,7 @@ export default function StudentList() {
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Mobile</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Degree</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Batch Year</th>
-                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Batch</th>
+                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Institute Batch</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Status</th>
                      <th className="px-3 py-2 text-right text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Actions</th>
                    </tr>
@@ -535,7 +535,7 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
                    <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="crm-input" />
                 </div>
                 <div>
-                   <label className="crm-label">Communications Node</label>
+                   <label className="crm-label">Mobile Number</label>
                    <input required value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} className="crm-input" />
                 </div>
                 <div>
@@ -565,7 +565,7 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
                    <input value={formData.passedOutYear} onChange={e => setFormData({...formData, passedOutYear: e.target.value})} className="crm-input" />
                 </div>
                 <div>
-                   <label className="crm-label">Batch</label>
+                   <label className="crm-label">Institute Batch</label>
                    <input value={formData.batch} onChange={e => setFormData({...formData, batch: e.target.value})} className="crm-input" placeholder="2024-A / Morning / Section A" />
                 </div>
                 
@@ -677,7 +677,7 @@ function StudentDetailModal({ onClose, student }) {
              <div className="space-y-3">
                 <DetailRow label="Phone Contact" val={student.mobile} />
                 <DetailRow label="Batch Year" val={batchYear || 'Not Added'} />
-                <DetailRow label="Batch" val={student.batch || 'Not Added'} />
+                <DetailRow label="Institute Batch" val={student.batch || 'Not Added'} />
                 {student.statusReason && (
                   <DetailRow label="Status Reason" val={student.statusReason} />
                 )}

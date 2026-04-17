@@ -161,6 +161,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             passedOutYear: String(row['Batch Year'] || row.Year || row['Passed Out Year'] || row.passedOutYear || 'Need to filled'),
             batch: String(row.Batch || row.batch || ''),
             currentStatus: row.Status || row.currentStatus || 'Need to filled',
+            statusReason: row['Status Reason'] || row.statusReason || row.Reason || row.reason || '',
+            others: row.Others || row.others || row['Other Notes'] || row.otherNotes || '',
             companyName: row.Company || row['Company Name'] || row.companyName || '',
             packageLpa: String(row.Package || row.packageLpa || ''),
             jobGetMode: row.Mode || row.jobGetMode || ''

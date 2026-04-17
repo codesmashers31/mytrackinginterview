@@ -293,7 +293,7 @@ export function StatusBadge({ status = '' }) {
     return <Badge tone="danger" label={status} />;
   }
   if (normalized.includes('interview')) return <Badge tone="info" label={status} />;
-  if (normalized === 'inactive') return <Badge tone="neutral" label={status} />;
+  if (normalized.includes('inactive') || normalized.includes('suspended')) return <Badge tone="neutral" label={status} />;
 
   return <Badge tone="neutral" label={status || 'Unknown'} />;
 }

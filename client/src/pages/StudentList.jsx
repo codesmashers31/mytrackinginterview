@@ -75,9 +75,11 @@ export default function StudentList() {
       'Batch Year': s.passedOutYear,
       Batch: s.batch || '',
       Status: s.currentStatus,
+      'Status Reason': s.statusReason || '',
+      Others: s.others || '',
       Company: s.companyName,
       'Package (LPA)': s.packageLpa,
-      'Mode': s.jobGetMode
+      Mode: s.jobGetMode
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Candidates");
@@ -321,13 +323,15 @@ export default function StudentList() {
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Batch Year</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Batch</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Status</th>
+                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Reason</th>
+                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Others</th>
                      <th className="px-3 py-2 text-right text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Actions</th>
                    </tr>
                  </thead>
                  <tbody className="bg-white">
                    {loading ? (
                      <tr>
-                       <td colSpan="7" className="px-4 py-8 md:py-10 text-center">
+                       <td colSpan="9" className="px-4 py-8 md:py-10 text-center">
                           <div className="animate-spin h-8 w-8 border-4 border-[#4338ca] border-t-transparent flex items-center justify-center rounded-full mx-auto mb-4"></div>
                        </td>
                      </tr>
@@ -352,6 +356,16 @@ export default function StudentList() {
                        </td>
                        <td className="px-3 py-2.5">
                           <StatusBadge status={student.currentStatus} />
+                       </td>
+                       <td className="px-3 py-2.5">
+                          <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">
+                            {student.statusReason || '-'}
+                          </div>
+                       </td>
+                       <td className="px-3 py-2.5">
+                          <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">
+                            {student.others || '-'}
+                          </div>
                        </td>
                        <td className="px-3 py-2.5 text-right">
                           <div className="flex justify-end space-x-2">
@@ -381,7 +395,7 @@ export default function StudentList() {
                      </tr>
                    )) : (
                      <tr>
-                       <td colSpan="7" className="px-4 py-8 md:py-10 text-center text-slate-400 font-medium text-[12px]">
+                       <td colSpan="9" className="px-4 py-8 md:py-10 text-center text-slate-400 font-medium text-[12px]">
                           No records matched search parameters
                        </td>
                      </tr>
@@ -455,11 +469,25 @@ function StudentFormModal({ onClose, onRefresh, student, editMode }) {
     degree: student?.degree || '',
     passedOutYear: student?.passedOutYear || '',
     batch: student?.batch || '',
-    currentStatus: student?.currentStatus || 'Job seeker',
+    currentStatus: student?.currentStatus || 'Job Seeker',
+    statusReason: student?.statusReason || '',
+    others: student?.others || '',
     companyName: student?.companyName || '',
     packageLpa: student?.packageLpa || '',
     jobGetMode: student?.jobGetMode || ''
   });
+
+  const statusOptions = [
+    { value: 'Job Seeker', label: 'Active Job Seeker' },
+    { value: 'Placed', label: 'Placed successfully' },
+    { value: 'Need to filled', label: 'Needs Updates' },
+    { value: 'Interview Process', label: 'Interviewing' },
+    { value: 'Inactive', label: 'Suspended/Inactive' },
+    { value: 'Not Picking the call', label: 'Not Picking the call' },
+    { value: 'Not Reachable', label: 'Not Reachable' }
+  ];
+
+  const hasCurrentStatusFallback = formData.currentStatus && !statusOptions.some(option => option.value === formData.currentStatus);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -539,14 +567,36 @@ function StudentFormModal({ onClose, onRefresh, student, editMode }) {
                       <div>
                          <label className="crm-label">Active State</label>
                          <select required value={formData.currentStatus} onChange={e => setFormData({...formData, currentStatus: e.target.value})} className="crm-input bg-slate-50">
-                            <option value="Job seeker">Active Job Seeker</option>
-                            <option value="Placed">Placed successfully</option>
-                            <option value="Need to filled">Needs Updates</option>
-                            <option value="Interview process">Interviewing</option>
-                            <option value="Inactive">Suspended/Inactive</option>
-                            <option value="Not Picking the call">Not Picking the call</option>
-                            <option value="Not Reachable">Not Reachable</option>
+                            {hasCurrentStatusFallback && (
+                              <option value={formData.currentStatus}>{formData.currentStatus}</option>
+                            )}
+                            {statusOptions.map(option => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
                          </select>
+                      </div>
+
+                      {['inactive', 'suspended/inactive'].includes(formData.currentStatus.toLowerCase()) && (
+                        <div>
+                           <label className="crm-label">Suspend / Inactive Reason</label>
+                           <textarea
+                              value={formData.statusReason}
+                              onChange={e => setFormData({...formData, statusReason: e.target.value})}
+                              className="crm-input min-h-[6rem] resize-none"
+                              placeholder="Enter the reason for inactive or suspended status"
+                              required
+                           />
+                        </div>
+                      )}
+
+                      <div className="md:col-span-2">
+                         <label className="crm-label">Other Notes</label>
+                         <input
+                            value={formData.others}
+                            onChange={e => setFormData({...formData, others: e.target.value})}
+                            className="crm-input"
+                            placeholder="Add any additional notes or remarks"
+                         />
                       </div>
 
                       {formData.currentStatus.toLowerCase() === 'placed' && (
@@ -620,7 +670,12 @@ function StudentDetailModal({ onClose, student }) {
                 <DetailRow label="Phone Contact" val={student.mobile} />
                 <DetailRow label="Batch Year" val={batchYear || 'Not Added'} />
                 <DetailRow label="Batch" val={student.batch || 'Not Added'} />
-                
+                {student.statusReason && (
+                  <DetailRow label="Status Reason" val={student.statusReason} />
+                )}
+                {student.others && (
+                  <DetailRow label="Other Notes" val={student.others} />
+                )}
                 {student.currentStatus.toLowerCase() === 'placed' && (
                   <div className="pt-5 mt-5 border-t border-slate-100 space-y-3">
                      <p className="text-[11px] md:text-[13px] font-extrabold text-emerald-600 uppercase tracking-widest mb-3">Placement Telemetry</p>

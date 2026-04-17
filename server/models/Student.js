@@ -10,6 +10,8 @@ const studentSchema = new mongoose.Schema({
         type: String, 
         default: 'Need to filled'
     },
+    statusReason: { type: String, default: '' },
+    others: { type: String, default: '' },
     companyName: { type: String, default: '' },
     packageLpa: { type: String, default: '' },
     jobGetMode: { type: String, default: '' }

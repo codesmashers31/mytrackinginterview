@@ -323,15 +323,13 @@ export default function StudentList() {
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Batch Year</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Batch</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Status</th>
-                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Reason</th>
-                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Others</th>
                      <th className="px-3 py-2 text-right text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Actions</th>
                    </tr>
                  </thead>
                  <tbody className="bg-white">
                    {loading ? (
                      <tr>
-                       <td colSpan="9" className="px-4 py-8 md:py-10 text-center">
+                       <td colSpan="7" className="px-4 py-8 md:py-10 text-center">
                           <div className="animate-spin h-8 w-8 border-4 border-[#4338ca] border-t-transparent flex items-center justify-center rounded-full mx-auto mb-4"></div>
                        </td>
                      </tr>
@@ -356,16 +354,6 @@ export default function StudentList() {
                        </td>
                        <td className="px-3 py-2.5">
                           <StatusBadge status={student.currentStatus} />
-                       </td>
-                       <td className="px-3 py-2.5">
-                          <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">
-                            {student.statusReason || '-'}
-                          </div>
-                       </td>
-                       <td className="px-3 py-2.5">
-                          <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">
-                            {student.others || '-'}
-                          </div>
                        </td>
                        <td className="px-3 py-2.5 text-right">
                           <div className="flex justify-end space-x-2">
@@ -395,7 +383,7 @@ export default function StudentList() {
                      </tr>
                    )) : (
                      <tr>
-                       <td colSpan="9" className="px-4 py-8 md:py-10 text-center text-slate-400 font-medium text-[12px]">
+                       <td colSpan="7" className="px-4 py-8 md:py-10 text-center text-slate-400 font-medium text-[12px]">
                           No records matched search parameters
                        </td>
                      </tr>
@@ -430,6 +418,7 @@ export default function StudentList() {
           onRefresh={fetchStudents} 
           student={selectedStudent} 
           editMode={editMode}
+          students={students}
         />
       )}
       
@@ -462,11 +451,19 @@ export default function StudentList() {
   );
 }
 
-function StudentFormModal({ onClose, onRefresh, student, editMode }) {
+function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
+  const existingDegreeOptions = [...new Set((students || []).map(s => String(s.degree || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  const defaultDegreeOptions = ['B.Tech', 'M.Tech', 'BCA', 'MCA', 'B.Sc', 'M.Sc', 'B.Com', 'M.Com', 'BBA', 'MBA'];
+  const degreeOptions = existingDegreeOptions.length > 0 ? existingDegreeOptions : defaultDegreeOptions;
+
+  const studentDegree = student?.degree ? String(student.degree).trim() : '';
+  const isCustomDegree = studentDegree && !degreeOptions.includes(studentDegree);
+
   const [formData, setFormData] = useState({
     name: student?.name || '',
     mobile: student?.mobile || '',
-    degree: student?.degree || '',
+    degree: isCustomDegree ? 'Other' : studentDegree || '',
+    customDegree: isCustomDegree ? studentDegree : '',
     passedOutYear: student?.passedOutYear || '',
     batch: student?.batch || '',
     currentStatus: student?.currentStatus || 'Job Seeker',
@@ -489,6 +486,10 @@ function StudentFormModal({ onClose, onRefresh, student, editMode }) {
 
   const hasCurrentStatusFallback = formData.currentStatus && !statusOptions.some(option => option.value === formData.currentStatus);
 
+  const getDegreeOptions = () => {
+    return [...new Set(degreeOptions || [])];
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -496,10 +497,15 @@ function StudentFormModal({ onClose, onRefresh, student, editMode }) {
         ? `${import.meta.env.VITE_API_BASE_URL}/students/${student._id}` 
         : `${import.meta.env.VITE_API_BASE_URL}/students`;
       
+      const payload = {
+        ...formData,
+        degree: formData.degree === 'Other' ? formData.customDegree.trim() || '' : formData.degree
+      };
+
       const res = await fetch(url, {
         method: editMode ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
@@ -534,24 +540,26 @@ function StudentFormModal({ onClose, onRefresh, student, editMode }) {
                 </div>
                 <div>
                    <label className="crm-label">Academic Origin (Degree)</label>
-                   <select required value={formData.degree} onChange={e => setFormData({...formData, degree: e.target.value})} className="crm-input">
+                   <select required value={formData.degree} onChange={e => setFormData({...formData, degree: e.target.value, customDegree: e.target.value !== 'Other' ? '' : formData.customDegree})} className="crm-input">
                       <option value="">Select Origin</option>
-                      {editMode && student?.degree && !['B.Tech', 'M.Tech', 'BCA', 'MCA', 'B.Sc', 'M.Sc', 'B.Com', 'M.Com', 'BBA', 'MBA', 'Other'].includes(student.degree) && (
-                         <option value={student.degree}>{student.degree}</option>
-                      )}
-                      <option value="B.Tech">B.Tech</option>
-                      <option value="M.Tech">M.Tech</option>
-                      <option value="BCA">BCA</option>
-                      <option value="MCA">MCA</option>
-                      <option value="B.Sc">B.Sc</option>
-                      <option value="M.Sc">M.Sc</option>
-                      <option value="B.Com">B.Com</option>
-                      <option value="M.Com">M.Com</option>
-                      <option value="BBA">BBA</option>
-                      <option value="MBA">MBA</option>
+                      {getDegreeOptions().map(deg => (
+                        <option key={deg} value={deg}>{deg}</option>
+                      ))}
                       <option value="Other">Other</option>
                    </select>
                 </div>
+                {formData.degree === 'Other' && (
+                  <div>
+                    <label className="crm-label">New Academic Origin</label>
+                    <input
+                      required
+                      value={formData.customDegree}
+                      onChange={e => setFormData({...formData, customDegree: e.target.value})}
+                      className="crm-input"
+                      placeholder="Enter new degree"
+                    />
+                  </div>
+                )}
                 <div>
                    <label className="crm-label">Batch Temporal Identifier</label>
                    <input value={formData.passedOutYear} onChange={e => setFormData({...formData, passedOutYear: e.target.value})} className="crm-input" />

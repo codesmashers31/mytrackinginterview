@@ -36,6 +36,7 @@ export function AppShell({
   headerActions = null,
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -58,8 +59,8 @@ export function AppShell({
   };
 
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] text-slate-800">
-      <div className="flex min-h-screen">
+    <div className="h-screen overflow-hidden bg-[var(--app-bg)] text-slate-800">
+      <div className="flex h-full">
         {sidebarOpen && (
           <button
             type="button"
@@ -70,38 +71,52 @@ export function AppShell({
         )}
 
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex h-screen w-[272px] flex-col border-r border-[var(--border-soft)] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)] transition-transform duration-300 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shadow-none ${
+          className={`fixed inset-y-0 left-0 z-50 flex h-screen w-full ${sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[272px]'} flex-col border-r border-[var(--border-soft)] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)] transition-all duration-300 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shadow-none lg:h-full lg:w-auto overflow-hidden ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
           <div className="flex h-[72px] items-center justify-between border-b border-[var(--border-soft)] px-5">
-            <Link to="/dashboard" className="flex items-center gap-3">
+            <Link to="/dashboard" className={`flex items-center gap-3 ${sidebarCollapsed ? 'justify-center w-full' : ''}`}>
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#1d4ed8,#4f46e5)] text-white shadow-[0_12px_30px_rgba(59,130,246,0.22)]">
                 <LayoutDashboard size={20} />
               </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                  Placement OS
-                </p>
-                <h1 className="text-lg font-semibold text-slate-900">PlaceTrack</h1>
-              </div>
+              {!sidebarCollapsed && (
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                    Placement OS
+                  </p>
+                  <h1 className="text-lg font-semibold text-slate-900">PlaceTrack</h1>
+                </div>
+              )}
             </Link>
 
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 lg:hidden"
-            >
-              <X size={18} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed(prev => !prev)}
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+              >
+                {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronRight size={18} className="rotate-180" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(false)}
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 lg:hidden"
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
 
-          <div className="flex-1 space-y-8 overflow-y-auto px-4 py-6">
+          <div className="flex-1 space-y-8 px-4 py-6">
             {navigationGroups.map(group => (
               <div key={group.title}>
-                <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  {group.title}
-                </p>
+                {!sidebarCollapsed && (
+                  <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                    {group.title}
+                  </p>
+                )}
                 <nav className="mt-3 space-y-1.5">
                   {group.items.map(item => {
                     const Icon = item.icon;
@@ -111,7 +126,7 @@ export function AppShell({
                       <Link
                         key={item.to}
                         to={item.to}
-                        className={`group flex items-center justify-between rounded-2xl px-3 py-3 transition ${
+                        className={`group flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} rounded-2xl px-3 py-3 transition ${
                           active
                             ? 'bg-[var(--primary-soft)] text-[var(--primary)] shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]'
                             : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -127,12 +142,14 @@ export function AppShell({
                           >
                             <Icon size={18} />
                           </span>
-                          <span className="text-sm font-medium">{item.label}</span>
+                          {!sidebarCollapsed && <span className="text-sm font-medium">{item.label}</span>}
                         </span>
-                        <ChevronRight
-                          size={16}
-                          className={active ? 'text-[var(--primary)]' : 'text-slate-300'}
-                        />
+                        {!sidebarCollapsed && (
+                          <ChevronRight
+                            size={16}
+                            className={active ? 'text-[var(--primary)]' : 'text-slate-300'}
+                          />
+                        )}
                       </Link>
                     );
                   })}
@@ -142,24 +159,27 @@ export function AppShell({
           </div>
 
           <div className="border-t border-[var(--border-soft)] p-4">
-            <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs font-semibold text-slate-500">Logged in as</p>
-              <p className="mt-1 text-sm font-semibold text-slate-900">{profile.name}</p>
-              <p className="text-xs text-slate-500">{profile.email}</p>
-            </div>
+            {!sidebarCollapsed && (
+              <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs font-semibold text-slate-500">Logged in as</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{profile.name}</p>
+                <p className="text-xs text-slate-500">{profile.email}</p>
+              </div>
+            )}
 
             <button
               type="button"
               onClick={handleLogout}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+              className={`flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 ${sidebarCollapsed ? 'justify-center px-3 py-3' : ''}`}
+              aria-label="Sign Out"
             >
               <LogOut size={16} />
-              <span>Sign Out</span>
+              {!sidebarCollapsed && <span>Sign Out</span>}
             </button>
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col transition-all duration-300">
           <header className="sticky top-0 z-30 border-b border-[var(--border-soft)] bg-white/90 backdrop-blur-xl">
             <div className="flex h-[72px] items-center gap-3 px-4 md:px-6 lg:px-8">
               <button
@@ -214,8 +234,8 @@ export function AppShell({
             </div>
           </header>
 
-          <main className="flex-1 p-4 md:p-6 lg:p-8">
-            <div className="h-full min-h-[calc(100vh-140px)] rounded-[24px] border border-slate-200/80 bg-white/40 p-4 shadow-[0_8px_30px_rgb(0,0,0,0.02)] backdrop-blur-sm sm:p-6">
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+            <div className="min-h-[calc(100vh-140px)] rounded-[24px] border border-slate-200/80 bg-white/40 p-4 shadow-[0_8px_30px_rgb(0,0,0,0.02)] backdrop-blur-sm sm:p-6">
               {children}
             </div>
           </main>

@@ -89,21 +89,22 @@ export default function EligibilityPage() {
   };
 
   const copyAllNumbers = () => {
-    if (results.length === 0) return;
-    navigator.clipboard.writeText(results.map(student => student.mobile).join(', '));
+    const availableStudents = results.filter(s => s.currentStatus === 'Job Seeker');
+    if (availableStudents.length === 0) return;
+    navigator.clipboard.writeText(availableStudents.map(student => student.mobile).join(', '));
     toast.success('Copied mobile list');
   };
 
   const exportResults = () => {
-    if (results.length === 0) return;
+    const availableStudents = results.filter(s => s.currentStatus === 'Job Seeker');
+    if (availableStudents.length === 0) return;
     const ws = XLSX.utils.json_to_sheet(
-      results.map(student => ({
+      availableStudents.map(student => ({
         Name: student.name,
         Mobile: student.mobile,
         Degree: student.degree,
         'Batch Year': student.passedOutYear,
         Status: student.currentStatus,
-        Batch: student.batch || '',
       }))
     );
     const wb = XLSX.utils.book_new();
@@ -186,11 +187,11 @@ export default function EligibilityPage() {
               <h2 className="mt-1 text-xl font-semibold text-slate-950">Filtered results</h2>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={copyAllNumbers} disabled={results.length === 0} className="crm-btn-secondary">
+              <button type="button" onClick={copyAllNumbers} disabled={results.filter(s => s.currentStatus === 'Job Seeker').length === 0} className="crm-btn-secondary">
                 <Copy size={16} />
                 <span>Copy Phones</span>
               </button>
-              <button type="button" onClick={exportResults} disabled={results.length === 0} className="crm-btn-secondary">
+              <button type="button" onClick={exportResults} disabled={results.filter(s => s.currentStatus === 'Job Seeker').length === 0} className="crm-btn-secondary">
                 <Download size={16} />
                 <span>Export Sheet</span>
               </button>
@@ -208,7 +209,7 @@ export default function EligibilityPage() {
                   Select degrees and year range to generate a refined list of candidates for outreach.
                 </p>
               </div>
-            ) : results.length > 0 ? (
+            ) : results.filter(s => s.currentStatus === 'Job Seeker').length > 0 ? (
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
@@ -216,7 +217,7 @@ export default function EligibilityPage() {
                       Candidate
                     </th>
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                      Degree / Batch
+                      Degree
                     </th>
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                       Contact
@@ -227,11 +228,10 @@ export default function EligibilityPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
-                  {results.map(student => (
+                  {results.filter(s => s.currentStatus === 'Job Seeker').map(student => (
                     <tr key={student._id} className="transition hover:bg-slate-50">
                       <td className="px-5 py-4">
                         <p className="text-sm font-semibold text-slate-900">{student.name}</p>
-                        <p className="text-xs text-slate-500">{student.batch || 'Batch not added'}</p>
                       </td>
                       <td className="px-5 py-4 text-sm text-slate-600">
                         <p>{student.degree}</p>
@@ -249,7 +249,7 @@ export default function EligibilityPage() {
               </table>
             ) : (
               <div className="flex min-h-[420px] flex-col items-center justify-center px-6 text-center">
-                <h3 className="text-lg font-semibold text-slate-900">No candidates matched</h3>
+                <h3 className="text-lg font-semibold text-slate-900">No available candidates matched</h3>
                 <p className="mt-2 max-w-sm text-sm text-slate-500">
                   Try widening the graduation range or selecting more degrees.
                 </p>

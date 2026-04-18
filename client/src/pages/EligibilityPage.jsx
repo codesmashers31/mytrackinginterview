@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Copy, Download, Search, Sparkles } from 'lucide-react';
+import { Copy, Download, RefreshCw, Search, Sparkles, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { AppShell, SectionTabs, StatusBadge, SurfaceCard } from '../components/AppShell';
@@ -8,10 +8,26 @@ import { AppShell, SectionTabs, StatusBadge, SurfaceCard } from '../components/A
 export default function EligibilityPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [internalLoading, setInternalLoading] = useState(false);
   const [results, setResults] = useState([]);
   const [searched, setSearched] = useState(false);
   const [jobDescription, setJobDescription] = useState('');
   const [parsedCriteria, setParsedCriteria] = useState(null);
+  const [lastSearchCriteria, setLastSearchCriteria] = useState(null);
+
+  const refreshSearch = async () => {
+    if (lastSearchCriteria) {
+      await performSearch(lastSearchCriteria.degrees, lastSearchCriteria.minYear, lastSearchCriteria.maxYear);
+    }
+  };
+
+  useEffect(() => {
+    // Auto-refresh if we have previous search criteria
+    if (lastSearchCriteria && !searched) {
+      refreshSearch();
+      setSearched(true);
+    }
+  }, []);
 
   const loadDemo = () => {
     setJobDescription(
@@ -22,6 +38,28 @@ export default function EligibilityPage() {
       "- Immediate joiners are preferred.\n\n" +
       "If you fit these requirements, we would love to review your application!"
     );
+  };
+
+  const performSearch = async (degrees, minYear, maxYear, criteria) => {
+    setInternalLoading(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/students/eligible`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ degrees, minYear, maxYear }),
+      });
+      const data = await res.json();
+      setResults(data.students);
+      if (criteria) {
+        setParsedCriteria(criteria);
+        setLastSearchCriteria({ degrees, minYear, maxYear });
+        toast.success(`Matched ${data.count} candidates`);
+      }
+    } catch (err) {
+      toast.error('Search query failed');
+    } finally {
+      setInternalLoading(false);
+    }
   };
 
   const handleSearch = async () => {
@@ -65,27 +103,26 @@ export default function EligibilityPage() {
       maxYear = Math.max(...years).toString();
     }
 
-    setParsedCriteria({ 
+    const criteria = { 
       degreesForDisplay: displayDegrees, 
       degreesPayload: finalDegreesPayload,
       minYear, 
       maxYear 
-    });
+    };
 
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/students/eligible`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ degrees: finalDegreesPayload, minYear, maxYear }),
-      });
-      const data = await res.json();
-      setResults(data.students);
-      toast.success(`Matched ${data.count} candidates`);
-    } catch (err) {
-      toast.error('Search query failed');
-    } finally {
-      setLoading(false);
-    }
+    setParsedCriteria(criteria);
+    setLastSearchCriteria({ degrees: finalDegreesPayload, minYear, maxYear });
+
+    await performSearch(finalDegreesPayload, minYear, maxYear, criteria);
+    setLoading(false);
+  };
+
+  const clearSearch = () => {
+    setResults([]);
+    setSearched(false);
+    setParsedCriteria(null);
+    setLastSearchCriteria(null);
+    setJobDescription('');
   };
 
   const copyAllNumbers = () => {
@@ -187,11 +224,33 @@ export default function EligibilityPage() {
               <h2 className="mt-1 text-xl font-semibold text-slate-950">Filtered results</h2>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={copyAllNumbers} disabled={results.filter(s => s.currentStatus === 'Job Seeker').length === 0} className="crm-btn-secondary">
+              {searched && (
+                <>
+                  <button 
+                    type="button" 
+                    onClick={refreshSearch} 
+                    disabled={internalLoading}
+                    className="crm-btn-secondary"
+                  >
+                    <RefreshCw size={16} className={internalLoading ? 'animate-spin' : ''} />
+                    <span>Refresh</span>
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={clearSearch} 
+                    disabled={internalLoading}
+                    className="crm-btn-secondary"
+                  >
+                    <X size={16} />
+                    <span>Clear</span>
+                  </button>
+                </>
+              )}
+              <button type="button" onClick={copyAllNumbers} disabled={results.filter(s => s.currentStatus === 'Job Seeker').length === 0 || internalLoading} className="crm-btn-secondary">
                 <Copy size={16} />
                 <span>Copy Phones</span>
               </button>
-              <button type="button" onClick={exportResults} disabled={results.filter(s => s.currentStatus === 'Job Seeker').length === 0} className="crm-btn-secondary">
+              <button type="button" onClick={exportResults} disabled={results.filter(s => s.currentStatus === 'Job Seeker').length === 0 || internalLoading} className="crm-btn-secondary">
                 <Download size={16} />
                 <span>Export Sheet</span>
               </button>
@@ -199,7 +258,17 @@ export default function EligibilityPage() {
           </div>
 
           <div className="min-h-[420px] overflow-auto">
-            {!searched ? (
+            {internalLoading ? (
+              <div className="flex min-h-[420px] flex-col items-center justify-center px-6 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                  <RefreshCw size={26} className="animate-spin" />
+                </div>
+                <h3 className="mt-5 text-lg font-semibold text-slate-900">Refreshing data...</h3>
+                <p className="mt-2 max-w-sm text-sm text-slate-500">
+                  Updating candidate information.
+                </p>
+              </div>
+            ) : !searched ? (
               <div className="flex min-h-[420px] flex-col items-center justify-center px-6 text-center">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-400">
                   <Search size={26} />

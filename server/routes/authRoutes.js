@@ -1,6 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import Admin from '../models/Admin.js';
+import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -26,10 +27,10 @@ router.post('/login', async (req, res) => {
 });
 
 // POST /change-password (PlaceTrack Settings Feature)
-router.post('/change-password', async (req, res) => {
-    const { currentPassword, newPassword, email } = req.body;
+router.post('/change-password', authMiddleware, async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
     try {
-        const admin = await Admin.findOne({ email });
+        const admin = await Admin.findById(req.user.id);
         if (!admin || !(await admin.comparePassword(currentPassword))) {
             return res.status(401).json({ message: 'Current password verification failed' });
         }

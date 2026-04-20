@@ -9,6 +9,7 @@ import {
   Users,
 } from 'lucide-react';
 import { AppShell, MetricCard, SectionTabs, StatusBadge, SurfaceCard } from '../components/AppShell';
+import { authHeaders, logout } from '../utils/auth';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -16,10 +17,18 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_BASE_URL}/students/stats`)
-      .then(res => res.json())
+    fetch(`${import.meta.env.VITE_API_BASE_URL}/students/stats`, {
+      headers: { ...authHeaders() },
+    })
+      .then(async res => {
+        if (res.status === 401) {
+          logout();
+          return null;
+        }
+        return res.json();
+      })
       .then(data => {
-        setStats(data);
+        if (data) setStats(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));

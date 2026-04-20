@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ShieldCheck, UserCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AppShell, SectionTabs, SurfaceCard } from '../components/AppShell';
+import { authHeaders, logout } from '../utils/auth';
 
 export default function Settings() {
   const [loading, setLoading] = useState(false);
@@ -25,15 +26,19 @@ export default function Settings() {
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/change-password`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
-          email: adminEmail,
           currentPassword: passwords.current,
           newPassword: passwords.new,
         }),
       });
 
       const data = await res.json();
+
+      if (res.status === 401) {
+        logout();
+        return;
+      }
 
       if (res.ok) {
         toast.success('Password updated successfully');

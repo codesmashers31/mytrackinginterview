@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 // Route Imports
 import authRoutes from './routes/authRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
+import authMiddleware from './middleware/authMiddleware.js';
 import Admin from './models/Admin.js';
 
 dotenv.config();
@@ -26,7 +27,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/students', studentRoutes);
+app.use('/api/students', authMiddleware, studentRoutes);
 
 // Database Connection
 mongoose.connect(process.env.MONGODB_URI)

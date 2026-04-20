@@ -6,6 +6,8 @@ import Dashboard from './pages/Dashboard';
 import StudentList from './pages/StudentList';
 import EligibilityPage from './pages/EligibilityPage';
 import Settings from './pages/Settings';
+import ProtectedRoute from './components/ProtectedRoute';
+import { isAuthenticated } from './utils/auth';
 
 function App() {
   return (
@@ -13,11 +15,11 @@ function App() {
       <Toaster position="top-right" />
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/students" element={<StudentList />} />
-        <Route path="/eligibility" element={<EligibilityPage />} />
-        <Route path="/settings" element={<Settings />} />
+        <Route path="/login" element={isAuthenticated() ? <Navigate to="/dashboard" replace /> : <Login />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/students" element={<ProtectedRoute><StudentList /></ProtectedRoute>} />
+        <Route path="/eligibility" element={<ProtectedRoute><EligibilityPage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );

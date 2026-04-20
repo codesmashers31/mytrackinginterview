@@ -6,6 +6,7 @@ import {
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { AppShell, SectionTabs, StatusBadge, SurfaceCard } from '../components/AppShell';
+import { authHeaders, logout } from '../utils/auth';
 
 function formatBatchYear(year) {
   const value = String(year ?? '').trim();
@@ -46,7 +47,13 @@ export default function StudentList() {
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter !== 'All') params.append('status', statusFilter);
 
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/students?${params.toString()}`);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/students?${params.toString()}`, {
+        headers: { ...authHeaders() },
+      });
+      if (res.status === 401) {
+        logout();
+        return;
+      }
       const data = await res.json();
       setStudents(data);
     } catch (err) {
@@ -88,7 +95,11 @@ export default function StudentList() {
 
   const handleDelete = async (id) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/students/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/students/${id}`, { method: 'DELETE', headers: { ...authHeaders() } });
+      if (res.status === 401) {
+        logout();
+        return;
+      }
       const data = await res.json();
       if (res.ok) {
         toast.success(data.message || 'Successfully deleted');
@@ -108,7 +119,11 @@ export default function StudentList() {
     setIsDeletingAll(true);
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/students/all`, { method: 'DELETE' });
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/students/all`, { method: 'DELETE', headers: { ...authHeaders() } });
+      if (res.status === 401) {
+        logout();
+        return;
+      }
       const data = await res.json();
 
       if (res.ok) {
@@ -143,8 +158,13 @@ export default function StudentList() {
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/students/upload`, {
         method: 'POST',
+        headers: { ...authHeaders() },
         body: formData,
       });
+      if (res.status === 401) {
+        logout();
+        return;
+      }
       const data = await res.json();
       if (res.ok) {
         toast.success(`Imported ${data.count} candidates`, { id: loadToast });
@@ -504,7 +524,7 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
 
       const res = await fetch(url, {
         method: editMode ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(payload),
       });
 

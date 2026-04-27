@@ -40,11 +40,12 @@ router.get('/stats', async (req, res) => {
         const jobSeekers = await Student.countDocuments({ currentStatus: { $regex: /^job seeker$/i } });
         const placed = await Student.countDocuments({ currentStatus: { $regex: /^placed$/i } });
         const needToFilled = await Student.countDocuments({ currentStatus: { $regex: /^need to filled$/i } });
+        const inactiveUsers = await Student.countDocuments({ currentStatus: { $regex: /^inactive - not responded$/i } });
         const interviewProcess = await Student.countDocuments({ currentStatus: { $regex: /^interview process$/i } });
         
         const recent = await Student.find().sort({ createdAt: -1 }).limit(5);
 
-        res.json({ total, jobSeekers, placed, needToFilled, interviewProcess, recent });
+        res.json({ total, jobSeekers, placed, needToFilled, inactiveUsers, interviewProcess, recent });
     } catch (error) {
         res.status(500).json({ message: 'Dashboard stats failure' });
     }

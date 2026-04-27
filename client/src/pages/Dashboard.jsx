@@ -4,7 +4,7 @@ import {
   Activity,
   BriefcaseBusiness,
   CheckCircle2,
-  Clock3,
+  UserX,
   TrendingUp,
   Users,
 } from 'lucide-react';
@@ -42,7 +42,7 @@ export default function Dashboard() {
       { label: 'Placed', value: stats.placed || 0, tone: 'success' },
       { label: 'Job Seekers', value: stats.jobSeekers || 0, tone: 'primary' },
       { label: 'Needs Update', value: stats.needToFilled || 0, tone: 'warning' },
-      { label: 'Interviewing', value: stats.interviewProcess || 0, tone: 'info' },
+      { label: 'Inactive Users', value: stats.inactiveUsers || 0, tone: 'info' },
     ].map(item => ({
       ...item,
       percent: Math.round((item.value / total) * 100),
@@ -113,11 +113,11 @@ export default function Dashboard() {
           icon={<BriefcaseBusiness size={20} />}
         />
         <MetricCard
-          title="Interview Pipeline"
-          value={stats.interviewProcess}
-          helper="Candidates in active interviews"
+          title="Inactive Users"
+          value={stats.inactiveUsers}
+          helper="Students not responding or unreachable"
           tone="warning"
-          icon={<Clock3 size={20} />}
+          icon={<UserX size={20} />}
         />
       </div>
 

@@ -500,6 +500,7 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
     { value: 'Need to filled', label: 'Needs Updates' },
     { value: 'Interview Process', label: 'Interviewing' },
     { value: 'Inactive', label: 'Suspended/Inactive' },
+    { value: 'Inactive - Not Responded', label: 'Inactive - Not Responded' },
     { value: 'Not Picking the call', label: 'Not Picking the call' },
     { value: 'Not Reachable', label: 'Not Reachable' }
   ];

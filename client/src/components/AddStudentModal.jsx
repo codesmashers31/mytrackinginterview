@@ -8,7 +8,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }) {
     mobile: '',
     degree: '',
     passedOutYear: new Date().getFullYear(),
-    currentStatus: 'Pending',
+    currentStatus: 'Job Seeker',
     companyName: '',
     packages: '',
     jobGetMode: 'Not Applicable'
@@ -118,10 +118,13 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }) {
                     name="currentStatus" value={formData.currentStatus} onChange={handleChange}
                     className="w-full bg-white/5 border border-white/5 rounded-2xl px-6 py-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all font-medium text-sm appearance-none"
                   >
-                    <option value="Pending" className="bg-surface">Pending</option>
-                    <option value="Reviewing" className="bg-surface">Reviewing</option>
-                    <option value="Interviewing" className="bg-surface">Interviewing</option>
+                    <option value="Job Seeker" className="bg-surface">Job Seeker</option>
                     <option value="Placed" className="bg-surface">Placed</option>
+                    <option value="Need to filled" className="bg-surface">Need to filled</option>
+                    <option value="Interview Process" className="bg-surface">Interview Process</option>
+                    <option value="Inactive - Not Responded" className="bg-surface">Inactive - Not Responded</option>
+                    <option value="Not Picking the call" className="bg-surface">Not Picking the call</option>
+                    <option value="Not Reachable" className="bg-surface">Not Reachable</option>
                   </select>
                 </div>
 

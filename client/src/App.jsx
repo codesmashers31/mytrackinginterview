@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import StudentList from './pages/StudentList';
 import EligibilityPage from './pages/EligibilityPage';
 import Settings from './pages/Settings';
+import SplClassForm from './pages/SplClassForm';
 import ProtectedRoute from './components/ProtectedRoute';
 import { isAuthenticated } from './utils/auth';
 
@@ -20,6 +21,7 @@ function App() {
         <Route path="/students" element={<ProtectedRoute><StudentList /></ProtectedRoute>} />
         <Route path="/eligibility" element={<ProtectedRoute><EligibilityPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/spl-registration" element={<SplClassForm />} />
       </Routes>
     </BrowserRouter>
   );

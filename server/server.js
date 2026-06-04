@@ -8,7 +8,9 @@ import { fileURLToPath } from 'url';
 // Route Imports
 import authRoutes from './routes/authRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
+// student route protection is handled inside the route file to allow public POST submissions
 import authMiddleware from './middleware/authMiddleware.js';
+import splRoutes from './routes/splRoutes.js';
 import Admin from './models/Admin.js';
 
 dotenv.config();
@@ -27,7 +29,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/students', authMiddleware, studentRoutes);
+app.use('/api/students', studentRoutes);
+app.use('/api/spl-registration', splRoutes);
 
 // Database Connection
 mongoose.connect(process.env.MONGODB_URI)

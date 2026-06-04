@@ -3,12 +3,13 @@ import Student from '../models/Student.js';
 import multer from 'multer';
 import xlsx from 'xlsx';
 import fs from 'fs';
+import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
 
-// GET all students
-router.get('/', async (req, res) => {
+// GET all students (protected)
+router.get('/', authMiddleware, async (req, res) => {
     try {
         const { search, status, degree, year } = req.query;
         let query = {};
@@ -31,8 +32,8 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET dashboard stats
-router.get('/stats', async (req, res) => {
+// GET dashboard stats (protected)
+router.get('/stats', authMiddleware, async (req, res) => {
     try {
         const total = await Student.countDocuments();
         
@@ -51,7 +52,7 @@ router.get('/stats', async (req, res) => {
     }
 });
 
-// POST new student
+// POST new student (public - used by SPL registration form)
 router.post('/', async (req, res) => {
     try {
         const student = new Student(req.body);
@@ -62,8 +63,8 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PUT update student
-router.put('/:id', async (req, res) => {
+// PUT update student (protected)
+router.put('/:id', authMiddleware, async (req, res) => {
     try {
         const student = await Student.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
         res.json(student);
@@ -72,8 +73,8 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// DELETE all students
-router.delete('/all', async (req, res) => {
+// DELETE all students (protected)
+router.delete('/all', authMiddleware, async (req, res) => {
     try {
         const result = await Student.deleteMany({});
         res.json({
@@ -85,8 +86,8 @@ router.delete('/all', async (req, res) => {
     }
 });
 
-// DELETE student
-router.delete('/:id', async (req, res) => {
+// DELETE student (protected)
+router.delete('/:id', authMiddleware, async (req, res) => {
     try {
         const student = await Student.findByIdAndDelete(req.params.id);
         if (!student) {
@@ -98,8 +99,8 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// DELETE bulk students
-router.post('/bulk-delete', async (req, res) => {
+// DELETE bulk students (protected)
+router.post('/bulk-delete', authMiddleware, async (req, res) => {
     try {
         const { ids } = req.body;
         await Student.deleteMany({ _id: { $in: ids } });
@@ -109,8 +110,8 @@ router.post('/bulk-delete', async (req, res) => {
     }
 });
 
-// POST Eligibility Checker
-router.post('/eligible', async (req, res) => {
+// POST Eligibility Checker (protected)
+router.post('/eligible', authMiddleware, async (req, res) => {
     try {
         const { degrees, minYear, maxYear, statuses } = req.body;
         
@@ -146,8 +147,8 @@ router.post('/eligible', async (req, res) => {
     }
 });
 
-// POST Bulk Import
-router.post('/upload', upload.single('file'), async (req, res) => {
+// POST Bulk Import (protected)
+router.post('/upload', authMiddleware, upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
     
     try {

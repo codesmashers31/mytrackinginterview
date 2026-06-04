@@ -18,6 +18,7 @@ const navigationGroups = [
     title: 'Workspace',
     items: [
       { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { to: '/spl-registrations', label: 'SPL Registrations', icon: Users },
       { to: '/students', label: 'Students', icon: Users },
       { to: '/eligibility', label: 'Eligibility', icon: CheckCircle2 },
     ],

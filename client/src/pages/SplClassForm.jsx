@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { getToken } from '../utils/auth';
+// No auth headers needed for public SPL submission
 import { CheckCircle2, User, Mail, Phone, Award } from 'lucide-react';
 
 export default function SplClassForm() {
@@ -27,7 +27,7 @@ export default function SplClassForm() {
     setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
 
     // Basic validation
@@ -35,9 +35,10 @@ export default function SplClassForm() {
     if (!form.name.trim()) newErrors.name = 'Name is required';
     if (!form.email.trim()) newErrors.email = 'Email is required';
     if (form.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)) newErrors.email = 'Enter a valid email';
-    if (!form.mobile.trim()) newErrors.mobile = 'Mobile number is required';
-    // accept only digits and require 10 digits
-    if (form.mobile && !/^\d{10}$/.test(form.mobile)) newErrors.mobile = 'Enter a valid 10-digit mobile number';
+    // normalize mobile - accept formats like +91 98765 43210 but validate 10 digits
+    const cleanedMobile = (form.mobile || '').replace(/\D/g, '');
+    if (!cleanedMobile) newErrors.mobile = 'Mobile number is required';
+    if (cleanedMobile && cleanedMobile.length !== 10) newErrors.mobile = 'Enter a valid 10-digit mobile number';
     if (!form.degree.trim()) newErrors.degree = 'Degree is required';
     if (form.batch && !/^\d{4}$/.test(form.batch)) newErrors.batch = 'Enter a valid 4-digit year';
     if (!form.willing30Days) newErrors.willing30Days = 'Please choose an option';
@@ -52,14 +53,14 @@ export default function SplClassForm() {
     // Prepare payload aligned with server Student model
     const payload = {
       name: form.name,
-      mobile: form.mobile || 'Not Provided',
+      mobile: cleanedMobile || 'Not Provided',
       degree: form.degree || 'Not Provided',
+      willingCompanyProcess: form.willingCompanyProcess,
       passedOutYear: form.batch || 'Need to filled',
       batch: form.batch || '',
       // store extra form details in `others`
       others: JSON.stringify({
         email: form.email,
-        willingCompanyProcess: form.willingCompanyProcess,
         willing30Days: form.willing30Days,
         acceptOffer: form.acceptOffer,
         fullEffort: form.fullEffort,
@@ -68,63 +69,57 @@ export default function SplClassForm() {
       }),
     };
 
-    const token = getToken();
-
+    console.log('Submitting SPL form', payload);
     setLoading(true);
-    fetch('/api/students', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify(payload),
-    })
-      .then(async res => {
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.message || 'Submission failed');
-        }
-        return res.json();
-      })
-        .then(data => {
-          console.log('SPL registration submitted', data);
-          toast.success('Registration submitted');
-            // choose a motivational quote
-            const quotes = [
-              'Keep going — great things take time.',
-              'Believe you can and you’re halfway there.',
-              'Small steps every day lead to big results.',
-              'Your effort today builds tomorrow’s success.',
-              'Stay curious, keep learning, keep growing.'
-            ];
-            setSuccessQuote(quotes[Math.floor(Math.random() * quotes.length)]);
-            setSubmitted(true);
-          setForm({
-            name: '',
-            email: '',
-            mobile: '',
-            degree: '',
-            batch: '',
-            willingCompanyProcess: false,
-            willing30Days: '',
-            acceptOffer: '',
-            fullEffort: '',
-            issues: '',
-            needMost: '',
-          });
-          setTimeout(() => setSubmitted(false), 7000);
-          setErrors({});
-          setLoading(false);
-        })
-      .catch(err => {
-        console.error('Submission error', err);
-        if (err.message && err.message.toLowerCase().includes('access')) {
-          toast.error('Submission requires admin authentication. Please login first.');
-        } else {
-          toast.error(err.message || 'Submission failed');
-        }
-          setLoading(false);
+    try {
+      const res = await fetch('/api/spl-registration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Submission failed');
+      }
+
+      const data = await res.json();
+      console.log('SPL registration submitted', data);
+      toast.success('Registration submitted');
+      const quotes = [
+        'Keep going — great things take time.',
+        'Believe you can and you’re halfway there.',
+        'Small steps every day lead to big results.',
+        'Your effort today builds tomorrow’s success.',
+        'Stay curious, keep learning, keep growing.'
+      ];
+      setSuccessQuote(quotes[Math.floor(Math.random() * quotes.length)]);
+      setSubmitted(true);
+      setForm({
+        name: '',
+        email: '',
+        mobile: '',
+        degree: '',
+        batch: '',
+        willingCompanyProcess: false,
+        willing30Days: '',
+        acceptOffer: '',
+        fullEffort: '',
+        issues: '',
+        needMost: '',
+      });
+      setTimeout(() => setSubmitted(false), 15000);
+      setErrors({});
+    } catch (err) {
+      console.error('Submission error', err);
+      if (err.message && err.message.toLowerCase().includes('access')) {
+        toast.error('Submission requires admin authentication. Please login first.');
+      } else {
+        toast.error(err.message || 'Submission failed');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -150,7 +145,21 @@ export default function SplClassForm() {
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold">Registration received</h3>
-                <p className="mt-1 text-sm text-slate-600">Thanks — we will contact you soon.</p>
+                <p className="mt-1 text-sm text-slate-600">Thanks — your registration is successful. Please follow the schedule below strictly.</p>
+                <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-slate-700">
+                  <p className="font-semibold text-slate-900">Daily schedule</p>
+                  <ul className="mt-3 space-y-2 list-disc pl-5">
+                    <li>10:00 - 11:00: Class</li>
+                    <li>11:00 - 13:00: Working time</li>
+                    <li>13:00 - 14:00: Task allocate</li>
+                    <li>14:00 - 15:00: Lunch break</li>
+                    <li>15:00 - 17:00: Task work</li>
+                    <li>17:00 - 18:00: Class</li>
+                  </ul>
+                  <p className="mt-3">This is an 8-hour working process. Classes run Monday to Friday.</p>
+                  <p className="mt-2 font-semibold">Strictly follow this schedule.</p>
+                  <p className="mt-3 text-slate-600">If you have any doubts, call your mentor.</p>
+                </div>
                 {successQuote && <blockquote className="mt-4 rounded-md border-l-4 border-slate-100 bg-slate-50 p-3 italic text-sm text-slate-700">“{successQuote}”</blockquote>}
                 <div className="mt-4 flex justify-end gap-2">
                   <button onClick={() => setSubmitted(false)} className="rounded-md border px-4 py-2">Close</button>
@@ -161,7 +170,12 @@ export default function SplClassForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded-xl shadow">
+      <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-2xl shadow-lg">
+        <div className="mb-2">
+          <h3 className="text-lg font-bold text-slate-800">Personal Details</h3>
+          <p className="text-sm text-slate-500">Provide your contact and academic details below.</p>
+        </div>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="text-sm font-medium">Name <span className="text-rose-500">*</span></span>
@@ -171,6 +185,7 @@ export default function SplClassForm() {
                 name="name"
                 value={form.name}
                 onChange={handleChange}
+                placeholder="Enter your full name"
                 aria-required
                 aria-invalid={errors.name ? 'true' : 'false'}
                 className="mt-0 w-full rounded-md border pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-200"
@@ -186,6 +201,7 @@ export default function SplClassForm() {
               <input
                 type="email"
                 name="email"
+                placeholder="your.name@example.com"
                 value={form.email}
                 onChange={handleChange}
                 aria-required
@@ -200,7 +216,13 @@ export default function SplClassForm() {
             <span className="text-sm font-medium">Mobile</span>
             <div className="relative mt-1">
               <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input name="mobile" value={form.mobile} onChange={handleChange} className="mt-0 w-full rounded-md border pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-200" />
+              <input
+                name="mobile"
+                placeholder="10-digit mobile number"
+                value={form.mobile}
+                onChange={handleChange}
+                className="mt-0 w-full rounded-md border pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-200"
+              />
             </div>
           </label>
 
@@ -208,21 +230,33 @@ export default function SplClassForm() {
             <span className="text-sm font-medium">Degree <span className="text-rose-500">*</span></span>
             <div className="relative mt-1">
               <Award size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input name="degree" value={form.degree} onChange={handleChange} aria-invalid={errors.degree ? 'true' : 'false'} className="mt-0 w-full rounded-md border pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-200" />
+              <input name="degree" placeholder="Ex. B.Tech (CSE)" value={form.degree} onChange={handleChange} aria-invalid={errors.degree ? 'true' : 'false'} className="mt-0 w-full rounded-md border pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-200" />
             </div>
             {errors.degree && <p className="mt-1 text-rose-600 text-sm">{errors.degree}</p>}
           </label>
 
           <label className="block">
             <span className="text-sm font-medium">Batch (Passed Out year)</span>
-            <input name="batch" value={form.batch} onChange={handleChange} aria-invalid={errors.batch ? 'true' : 'false'} className="mt-1 w-full rounded-md border px-3 py-2" />
+            <input
+              name="batch"
+              placeholder="2025"
+              value={form.batch}
+              onChange={handleChange}
+              aria-invalid={errors.batch ? 'true' : 'false'}
+              className="mt-1 w-full rounded-md border px-3 py-2"
+            />
             {errors.batch && <p className="mt-1 text-rose-600 text-sm">{errors.batch}</p>}
           </label>
 
-          <label className="flex items-center gap-2">
-            <input type="checkbox" name="willingCompanyProcess" checked={form.willingCompanyProcess} onChange={handleChange} />
-            <span className="text-sm">Willing to join the Company Process</span>
-          </label>
+          
+        </div>
+
+        <div>
+          <h4 className="text-md font-semibold text-slate-800">Assessment</h4>
+          <p className="text-sm text-slate-500 mb-2">Answer the questions below. The full process is required to complete this registration.</p>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            Please fill all fields in this section before submitting.
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -261,6 +295,11 @@ export default function SplClassForm() {
             </div>
             {errors.fullEffort && <p className="mt-1 text-rose-600 text-sm">{errors.fullEffort}</p>}
           </label>
+        </div>
+
+        <div className="flex items-center gap-3 text-sm text-slate-700">
+          <input type="checkbox" name="willingCompanyProcess" checked={form.willingCompanyProcess} onChange={handleChange} className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+          <span className="font-medium">Willing to join the Company Process</span>
         </div>
 
         <label className="block">

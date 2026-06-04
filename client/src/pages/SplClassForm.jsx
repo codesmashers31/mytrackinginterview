@@ -160,6 +160,18 @@ export default function SplClassForm() {
                   <p className="mt-2 font-semibold">Strictly follow this schedule.</p>
                   <p className="mt-3 text-slate-600">If you have any doubts, call your mentor.</p>
                 </div>
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                  <p className="font-semibold text-slate-900">Join the WhatsApp group</p>
+                  <p className="mt-2">Stay connected for updates, support, and announcements. Click the link below to join:</p>
+                  <a
+                    href="https://chat.whatsapp.com/Jce5J71wE4BJJgM9c5TUgA"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                  >
+                    Join WhatsApp Group
+                  </a>
+                </div>
                 {successQuote && <blockquote className="mt-4 rounded-md border-l-4 border-slate-100 bg-slate-50 p-3 italic text-sm text-slate-700">“{successQuote}”</blockquote>}
                 <div className="mt-4 flex justify-end gap-2">
                   <button onClick={() => setSubmitted(false)} className="rounded-md border px-4 py-2">Close</button>

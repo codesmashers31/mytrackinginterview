@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 // No auth headers needed for public SPL submission
-import { CheckCircle2, User, Mail, Phone, Award } from 'lucide-react';
+import { User, Mail, Phone, Award } from 'lucide-react';
 
 export default function SplClassForm() {
   const [form, setForm] = useState({
@@ -18,9 +19,8 @@ export default function SplClassForm() {
     needMost: '',
   });
   const [errors, setErrors] = useState({});
-  const [submitted, setSubmitted] = useState(false);
-  const [successQuote, setSuccessQuote] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = e => {
     const { name, value, type, checked } = e.target;
@@ -87,15 +87,6 @@ export default function SplClassForm() {
       const data = await res.json();
       console.log('SPL registration submitted', data);
       toast.success('Registration submitted');
-      const quotes = [
-        'Keep going — great things take time.',
-        'Believe you can and you’re halfway there.',
-        'Small steps every day lead to big results.',
-        'Your effort today builds tomorrow’s success.',
-        'Stay curious, keep learning, keep growing.'
-      ];
-      setSuccessQuote(quotes[Math.floor(Math.random() * quotes.length)]);
-      setSubmitted(true);
       setForm({
         name: '',
         email: '',
@@ -109,8 +100,8 @@ export default function SplClassForm() {
         issues: '',
         needMost: '',
       });
-      setTimeout(() => setSubmitted(false), 15000);
       setErrors({});
+      navigate('/spl-registration/success');
     } catch (err) {
       console.error('Submission error', err);
       if (err.message && err.message.toLowerCase().includes('access')) {
@@ -125,7 +116,7 @@ export default function SplClassForm() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <header className="mb-6 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 p-6 text-white shadow-md">
+      <header className="mb-6 rounded-xl bg-linear-to-r from-blue-600 to-violet-600 p-6 text-white shadow-md">
         <div className="flex items-center gap-4">
           <div className="rounded-lg bg-white/20 p-2">
             <Award size={28} />
@@ -136,52 +127,6 @@ export default function SplClassForm() {
           </div>
         </div>
       </header>
-
-      {submitted && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-w-md w-full rounded-xl bg-white p-6 shadow-lg">
-            <div className="flex items-start gap-4">
-              <div className="rounded-full bg-emerald-50 p-3">
-                <CheckCircle2 size={28} className="text-emerald-600" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold">Registration received</h3>
-                <p className="mt-1 text-sm text-slate-600">Thanks — your registration is successful. Please follow the schedule below strictly.</p>
-                <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-900">Daily schedule</p>
-                  <ul className="mt-3 space-y-2 list-disc pl-5">
-                    <li>10:00 - 11:00: Class</li>
-                    <li>11:00 - 13:00: Working time</li>
-                    <li>13:00 - 14:00: Task allocate</li>
-                    <li>14:00 - 15:00: Lunch break</li>
-                    <li>15:00 - 17:00: Task work</li>
-                    <li>17:00 - 18:00: Class</li>
-                  </ul>
-                  <p className="mt-3">This is an 8-hour working process. Classes run Monday to Friday.</p>
-                  <p className="mt-2 font-semibold">Strictly follow this schedule.</p>
-                  <p className="mt-3 text-slate-600">If you have any doubts, call your mentor.</p>
-                </div>
-                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-900">Join the WhatsApp group</p>
-                  <p className="mt-2">Stay connected for updates, support, and announcements. Click the link below to join:</p>
-                  <a
-                    href="https://chat.whatsapp.com/Jce5J71wE4BJJgM9c5TUgA"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                  >
-                    Join WhatsApp Group
-                  </a>
-                </div>
-                {successQuote && <blockquote className="mt-4 rounded-md border-l-4 border-slate-100 bg-slate-50 p-3 italic text-sm text-slate-700">“{successQuote}”</blockquote>}
-                <div className="mt-4 flex justify-end gap-2">
-                  <button onClick={() => setSubmitted(false)} className="rounded-md border px-4 py-2">Close</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} autoComplete="on" className="space-y-6 bg-white p-6 rounded-2xl shadow-lg">
         <div className="mb-2">
@@ -357,7 +302,7 @@ export default function SplClassForm() {
           >
             Reset
           </button>
-          <button type="submit" disabled={loading} className={`rounded-md px-4 py-2 text-white shadow ${loading ? 'bg-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-violet-600 hover:opacity-95'}`}>
+          <button type="submit" disabled={loading} className={`rounded-md px-4 py-2 text-white shadow ${loading ? 'bg-slate-400 cursor-not-allowed' : 'bg-linear-to-r from-blue-600 to-violet-600 hover:opacity-95'}`}>
             {loading ? 'Submitting...' : 'Submit'}
           </button>
         </div>

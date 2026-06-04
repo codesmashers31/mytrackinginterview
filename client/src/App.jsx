@@ -8,6 +8,7 @@ import EligibilityPage from './pages/EligibilityPage';
 import Settings from './pages/Settings';
 import SplClassForm from './pages/SplClassForm';
 import SplRegistrations from './pages/SplRegistrations';
+import SplSuccess from './pages/SplSuccess';
 import ProtectedRoute from './components/ProtectedRoute';
 import { isAuthenticated } from './utils/auth';
 
@@ -23,6 +24,7 @@ function App() {
         <Route path="/eligibility" element={<ProtectedRoute><EligibilityPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="/spl-registration" element={<SplClassForm />} />
+        <Route path="/spl-registration/success" element={<SplSuccess />} />
         <Route path="/spl-registrations" element={<ProtectedRoute><SplRegistrations /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>

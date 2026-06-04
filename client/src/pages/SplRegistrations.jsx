@@ -14,7 +14,8 @@ export default function SplRegistrations() {
   const fetchRegs = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/spl-registration', { headers: { ...authHeaders() } });
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || '/api'}/spl-registration`;
+      const res = await fetch(apiUrl, { headers: { ...authHeaders() } });
       if (!res.ok) throw new Error('Failed to load');
       const data = await res.json();
       setRegs(data);
@@ -41,7 +42,8 @@ export default function SplRegistrations() {
 
   const saveEdit = async (id) => {
     try {
-      const res = await fetch(`/api/spl-registration/${id}`, {
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || '/api'}/spl-registration/${id}`;
+      const res = await fetch(apiUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ status: newStatus, statusReason: newReason }),

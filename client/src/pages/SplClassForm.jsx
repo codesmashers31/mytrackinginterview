@@ -72,7 +72,8 @@ export default function SplClassForm() {
     console.log('Submitting SPL form', payload);
     setLoading(true);
     try {
-      const res = await fetch('/api/spl-registration', {
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || '/api'}/spl-registration`;
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -182,7 +183,7 @@ export default function SplClassForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-2xl shadow-lg">
+      <form onSubmit={handleSubmit} autoComplete="on" className="space-y-6 bg-white p-6 rounded-2xl shadow-lg">
         <div className="mb-2">
           <h3 className="text-lg font-bold text-slate-800">Personal Details</h3>
           <p className="text-sm text-slate-500">Provide your contact and academic details below.</p>
@@ -197,7 +198,9 @@ export default function SplClassForm() {
                 name="name"
                 value={form.name}
                 onChange={handleChange}
+                onInput={handleChange}
                 placeholder="Enter your full name"
+                autoComplete="name"
                 aria-required
                 aria-invalid={errors.name ? 'true' : 'false'}
                 className="mt-0 w-full rounded-md border pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-200"
@@ -216,6 +219,8 @@ export default function SplClassForm() {
                 placeholder="your.name@example.com"
                 value={form.email}
                 onChange={handleChange}
+                onInput={handleChange}
+                autoComplete="email"
                 aria-required
                 aria-invalid={errors.email ? 'true' : 'false'}
                 className="mt-0 w-full rounded-md border pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-200"
@@ -237,6 +242,8 @@ export default function SplClassForm() {
                 placeholder="Enter 10-digit mobile number"
                 value={form.mobile}
                 onChange={handleChange}
+                onInput={handleChange}
+                autoComplete="tel"
                 className="mt-0 w-full rounded-md border pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-200"
               />
             </div>
@@ -247,7 +254,16 @@ export default function SplClassForm() {
             <span className="text-sm font-medium">Degree <span className="text-rose-500">*</span></span>
             <div className="relative mt-1">
               <Award size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input name="degree" placeholder="Ex. B.Tech (CSE)" value={form.degree} onChange={handleChange} aria-invalid={errors.degree ? 'true' : 'false'} className="mt-0 w-full rounded-md border pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-200" />
+              <input
+                name="degree"
+                placeholder="Ex. B.Tech (CSE)"
+                value={form.degree}
+                onChange={handleChange}
+                onInput={handleChange}
+                autoComplete="off"
+                aria-invalid={errors.degree ? 'true' : 'false'}
+                className="mt-0 w-full rounded-md border pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-200"
+              />
             </div>
             {errors.degree && <p className="mt-1 text-rose-600 text-sm">{errors.degree}</p>}
           </label>
@@ -259,6 +275,8 @@ export default function SplClassForm() {
               placeholder="2025"
               value={form.batch}
               onChange={handleChange}
+              onInput={handleChange}
+              autoComplete="off"
               aria-invalid={errors.batch ? 'true' : 'false'}
               className="mt-1 w-full rounded-md border px-3 py-2"
             />

@@ -229,13 +229,18 @@ export default function SplClassForm() {
             <div className="relative mt-1">
               <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
+                type="tel"
                 name="mobile"
-                placeholder="10-digit mobile number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={10}
+                placeholder="Enter 10-digit mobile number"
                 value={form.mobile}
                 onChange={handleChange}
                 className="mt-0 w-full rounded-md border pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-200"
               />
             </div>
+            {errors.mobile && <p className="mt-1 text-rose-600 text-sm">{errors.mobile}</p>}
           </label>
 
           <label className="block">

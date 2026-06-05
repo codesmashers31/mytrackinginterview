@@ -1,15 +1,38 @@
 import SplRegistration from '../models/SplRegistration.js';
+import { sendRegistrationConfirmation } from '../utils/mailer.js';
 
 export const createRegistration = async (req, res) => {
   try {
+    const email = (req.body.email || '').trim().toLowerCase();
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const existing = await SplRegistration.findOne({ email });
+    if (existing) {
+      return res.status(409).json({ message: 'This email is already registered' });
+    }
+
     const payload = {
       ...req.body,
+      email,
       ip: req.ip || req.headers['x-forwarded-for'] || '',
       userAgent: req.headers['user-agent'] || ''
     };
 
     const reg = new SplRegistration(payload);
     await reg.save();
+
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      try {
+        await sendRegistrationConfirmation(reg);
+      } catch (emailError) {
+        console.error('Failed to send registration email:', emailError);
+      }
+    } else {
+      console.warn('SMTP not configured; confirmation email skipped.');
+    }
+
     res.status(201).json(reg);
   } catch (err) {
     res.status(400).json({ message: 'Registration failed', error: err.message });

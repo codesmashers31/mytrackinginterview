@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const splRegistrationSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { type: String, default: '' },
+  email: { type: String, required: true, trim: true, lowercase: true },
   mobile: { type: String, default: '' },
   degree: { type: String, default: '' },
   batch: { type: String, default: '' },

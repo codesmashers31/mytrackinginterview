@@ -53,20 +53,16 @@ export default function SplClassForm() {
     // Prepare payload aligned with server Student model
     const payload = {
       name: form.name,
+      email: form.email,
       mobile: cleanedMobile || 'Not Provided',
       degree: form.degree || 'Not Provided',
-      willingCompanyProcess: form.willingCompanyProcess,
-      passedOutYear: form.batch || 'Need to filled',
       batch: form.batch || '',
-      // store extra form details in `others`
-      others: JSON.stringify({
-        email: form.email,
-        willing30Days: form.willing30Days,
-        acceptOffer: form.acceptOffer,
-        fullEffort: form.fullEffort,
-        issues: form.issues,
-        needMost: form.needMost,
-      }),
+      willingCompanyProcess: form.willingCompanyProcess,
+      willing30Days: form.willing30Days,
+      acceptOffer: form.acceptOffer,
+      fullEffort: form.fullEffort,
+      issues: form.issues,
+      needMost: form.needMost,
     };
 
     console.log('Submitting SPL form', payload);
@@ -104,10 +100,14 @@ export default function SplClassForm() {
       navigate('/spl-registration/success');
     } catch (err) {
       console.error('Submission error', err);
-      if (err.message && err.message.toLowerCase().includes('access')) {
+      const errorMessage = err.message || 'Submission failed';
+      if (errorMessage.toLowerCase().includes('already registered')) {
+        setErrors(prev => ({ ...prev, email: errorMessage }));
+        toast.error(errorMessage);
+      } else if (errorMessage.toLowerCase().includes('access')) {
         toast.error('Submission requires admin authentication. Please login first.');
       } else {
-        toast.error(err.message || 'Submission failed');
+        toast.error(errorMessage);
       }
     } finally {
       setLoading(false);

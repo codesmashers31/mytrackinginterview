@@ -59,3 +59,14 @@ export const updateRegistration = async (req, res) => {
     res.status(400).json({ message: 'Update failed', error: err.message });
   }
 };
+
+export const deleteRegistration = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const reg = await SplRegistration.findByIdAndDelete(id);
+    if (!reg) return res.status(404).json({ message: 'Registration not found' });
+    res.json({ message: 'Registration deleted successfully' });
+  } catch (err) {
+    res.status(400).json({ message: 'Delete failed', error: err.message });
+  }
+};

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { buildApiUrl } from '../utils/api';
 // No auth headers needed for public SPL submission
 import { User, Mail, Phone, Award } from 'lucide-react';
 
@@ -68,8 +69,7 @@ export default function SplClassForm() {
     console.log('Submitting SPL form', payload);
     setLoading(true);
     try {
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || '/api'}/spl-registration`;
-      const res = await fetch(apiUrl, {
+      const res = await fetch(buildApiUrl('/spl-registration'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { AppShell, MetricCard, SectionTabs, StatusBadge, SurfaceCard } from '../components/AppShell';
 import { authHeaders, logout } from '../utils/auth';
+import { buildApiUrl } from '../utils/api';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_BASE_URL}/students/stats`, {
+    fetch(buildApiUrl('/students/stats'), {
       headers: { ...authHeaders() },
     })
       .then(async res => {

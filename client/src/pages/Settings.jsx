@@ -3,6 +3,7 @@ import { ShieldCheck, UserCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AppShell, SectionTabs, SurfaceCard } from '../components/AppShell';
 import { authHeaders, logout } from '../utils/auth';
+import { buildApiUrl } from '../utils/api';
 
 export default function Settings() {
   const [loading, setLoading] = useState(false);
@@ -24,7 +25,7 @@ export default function Settings() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/change-password`, {
+      const res = await fetch(buildApiUrl('/auth/change-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({

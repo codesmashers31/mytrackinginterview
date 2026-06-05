@@ -13,4 +13,7 @@ router.get('/', authMiddleware, splController.listRegistrations);
 // Admin-only update registration (status, reason, etc.)
 router.put('/:id', authMiddleware, splController.updateRegistration);
 
+// Admin-only delete registration
+router.delete('/:id', authMiddleware, splController.deleteRegistration);
+
 export default router;

@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Copy, Download, RefreshCw, Search, Sparkles, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
-import { AppShell, SectionTabs, StatusBadge, SurfaceCard } from '../components/AppShell';import { authHeaders, logout } from '../utils/auth';
+import { AppShell, SectionTabs, StatusBadge, SurfaceCard } from '../components/AppShell';
+import { authHeaders, logout } from '../utils/auth';
+import { buildApiUrl } from '../utils/api';
 export default function EligibilityPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -42,7 +44,7 @@ export default function EligibilityPage() {
   const performSearch = async (degrees, minYear, maxYear, criteria) => {
     setInternalLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/students/eligible`, {
+      const res = await fetch(buildApiUrl('/students/eligible'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ degrees, minYear, maxYear }),

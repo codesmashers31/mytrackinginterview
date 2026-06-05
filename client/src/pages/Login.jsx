@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { buildApiUrl } from '../utils/api';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/login`, {
+      const res = await fetch(buildApiUrl('/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

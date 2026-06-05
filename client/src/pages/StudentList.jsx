@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { AppShell, SectionTabs, StatusBadge, SurfaceCard } from '../components/AppShell';
 import { authHeaders, logout } from '../utils/auth';
+import { buildApiUrl } from '../utils/api';
+import { buildApiUrl } from '../utils/api';
 
 function formatBatchYear(year) {
   const value = String(year ?? '').trim();
@@ -47,7 +49,7 @@ export default function StudentList() {
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter !== 'All') params.append('status', statusFilter);
 
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/students?${params.toString()}`, {
+      const res = await fetch(`${buildApiUrl('/students')}?${params.toString()}`, {
         headers: { ...authHeaders() },
       });
       if (res.status === 401) {
@@ -95,7 +97,7 @@ export default function StudentList() {
 
   const handleDelete = async (id) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/students/${id}`, { method: 'DELETE', headers: { ...authHeaders() } });
+      const res = await fetch(buildApiUrl(`/students/${id}`), { method: 'DELETE', headers: { ...authHeaders() } });
       if (res.status === 401) {
         logout();
         return;
@@ -119,7 +121,7 @@ export default function StudentList() {
     setIsDeletingAll(true);
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/students/all`, { method: 'DELETE', headers: { ...authHeaders() } });
+      const res = await fetch(buildApiUrl('/students/all'), { method: 'DELETE', headers: { ...authHeaders() } });
       if (res.status === 401) {
         logout();
         return;
@@ -156,7 +158,7 @@ export default function StudentList() {
 
     const loadToast = toast.loading('Uploading records...');
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/students/upload`, {
+      const res = await fetch(buildApiUrl('/students/upload'), {
         method: 'POST',
         headers: { ...authHeaders() },
         body: formData,
@@ -515,8 +517,8 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
     e.preventDefault();
     try {
       const url = editMode 
-        ? `${import.meta.env.VITE_API_BASE_URL}/students/${student._id}` 
-        : `${import.meta.env.VITE_API_BASE_URL}/students`;
+        ? buildApiUrl(`/students/${student._id}`)
+        : buildApiUrl('/students');
       
       const payload = {
         ...formData,

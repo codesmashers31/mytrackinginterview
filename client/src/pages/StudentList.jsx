@@ -8,7 +8,6 @@ import * as XLSX from 'xlsx';
 import { AppShell, SectionTabs, StatusBadge, SurfaceCard } from '../components/AppShell';
 import { authHeaders, logout } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
-import { buildApiUrl } from '../utils/api';
 
 function formatBatchYear(year) {
   const value = String(year ?? '').trim();

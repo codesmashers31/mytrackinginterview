@@ -12,6 +12,7 @@ import studentRoutes from './routes/studentRoutes.js';
 import authMiddleware from './middleware/authMiddleware.js';
 import splRoutes from './routes/splRoutes.js';
 import Admin from './models/Admin.js';
+import emailRoutes from './routes/emailRoutes.js';
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/spl-registration', splRoutes);
+app.use('/api/admin', emailRoutes);
 
 // Database Connection
 mongoose.connect(process.env.MONGODB_URI)

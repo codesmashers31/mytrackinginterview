@@ -24,7 +24,8 @@ const attendanceSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// Compound index for faster queries by student and date range
+// Compound unique index to prevent duplicate attendance for the same student on the same date
+attendanceSchema.index({ studentId: 1, date: 1 }, { unique: true });
 attendanceSchema.index({ studentId: 1, date: -1 });
 attendanceSchema.index({ date: -1, studentId: 1 });
 

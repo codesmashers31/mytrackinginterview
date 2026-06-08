@@ -1,6 +1,14 @@
 import Attendance from '../models/Attendance.js';
 import SplRegistration from '../models/SplRegistration.js';
 
+const parseUTCDate = (dateString) => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  if (!year || !month || !day) {
+    throw new Error('Invalid date format. Expected YYYY-MM-DD');
+  }
+  return new Date(Date.UTC(year, month - 1, day));
+};
+
 // Mark attendance for a single student
 export const markAttendance = async (req, res) => {
   try {
@@ -16,9 +24,8 @@ export const markAttendance = async (req, res) => {
       return res.status(404).json({ message: 'Student not found' });
     }
 
-    // Parse date to remove time component for consistent daily records
-    const attendanceDate = new Date(date);
-    attendanceDate.setHours(0, 0, 0, 0);
+    // Parse date to a UTC midnight date to avoid timezone duplicates
+    const attendanceDate = parseUTCDate(date);
 
     // Check if attendance already exists for this date
     let attendance = await Attendance.findOne({
@@ -84,8 +91,7 @@ export const markBulkAttendance = async (req, res) => {
           continue;
         }
 
-        const attendanceDate = new Date(date);
-        attendanceDate.setHours(0, 0, 0, 0);
+        const attendanceDate = parseUTCDate(date);
 
         let attendance = await Attendance.findOne({
           studentId,
@@ -138,9 +144,9 @@ export const getStudentAttendance = async (req, res) => {
     const query = { studentId };
 
     if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      const start = parseUTCDate(startDate);
+      const end = parseUTCDate(endDate);
+      end.setUTCHours(23, 59, 59, 999);
       query.date = { $gte: start, $lte: end };
     }
 
@@ -156,11 +162,9 @@ export const getAttendanceByDate = async (req, res) => {
   try {
     const { date } = req.params;
 
-    const targetDate = new Date(date);
-    targetDate.setHours(0, 0, 0, 0);
-
+    const targetDate = parseUTCDate(date);
     const nextDate = new Date(targetDate);
-    nextDate.setDate(nextDate.getDate() + 1);
+    nextDate.setUTCDate(nextDate.getUTCDate() + 1);
 
     const attendance = await Attendance.find({
       date: {
@@ -184,9 +188,9 @@ export const getAttendanceSummary = async (req, res) => {
       return res.status(400).json({ message: 'Start date and end date are required' });
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    const start = parseUTCDate(startDate);
+    const end = parseUTCDate(endDate);
+    end.setUTCHours(23, 59, 59, 999);
 
     const attendance = await Attendance.find({
       date: { $gte: start, $lte: end }
@@ -234,9 +238,9 @@ export const listAttendance = async (req, res) => {
     const query = {};
 
     if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      const start = parseUTCDate(startDate);
+      const end = parseUTCDate(endDate);
+      end.setUTCHours(23, 59, 59, 999);
       query.date = { $gte: start, $lte: end };
     }
 
@@ -305,11 +309,9 @@ export const getUnmarkedStudents = async (req, res) => {
   try {
     const { date } = req.params;
 
-    const targetDate = new Date(date);
-    targetDate.setHours(0, 0, 0, 0);
-
+    const targetDate = parseUTCDate(date);
     const nextDate = new Date(targetDate);
-    nextDate.setDate(nextDate.getDate() + 1);
+    nextDate.setUTCDate(nextDate.getUTCDate() + 1);
 
     // Get all SPL students
     const allStudents = await SplRegistration.find();

@@ -9,7 +9,12 @@ import Settings from './pages/Settings';
 import SplClassForm from './pages/SplClassForm';
 import SplRegistrations from './pages/SplRegistrations';
 import SplSuccess from './pages/SplSuccess';
+import AttendancePage from './pages/AttendancePage';
+import TaskManagement from './pages/TaskManagement';
+import TaskList from './pages/TaskList';
+import StudentTasks from './pages/StudentTasks';
 import ProtectedRoute from './components/ProtectedRoute';
+import RoleRoute from './components/RoleRoute';
 import { isAuthenticated } from './utils/auth';
 
 function App() {
@@ -18,14 +23,30 @@ function App() {
       <Toaster position="top-right" />
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={isAuthenticated() ? <Navigate to="/dashboard" replace /> : <Login />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/students" element={<ProtectedRoute><StudentList /></ProtectedRoute>} />
-        <Route path="/eligibility" element={<ProtectedRoute><EligibilityPage /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route
+          path="/login"
+          element={
+            isAuthenticated() ? (
+              <Navigate
+                to={localStorage.getItem('userRole') === 'student' ? '/student/tasks' : '/dashboard'}
+                replace
+              />
+            ) : (
+              <Login />
+            )
+          }
+        />
+        <Route path="/dashboard" element={<RoleRoute roles={[ 'admin' ]}><Dashboard /></RoleRoute>} />
+        <Route path="/students" element={<RoleRoute roles={[ 'admin' ]}><StudentList /></RoleRoute>} />
+        <Route path="/eligibility" element={<RoleRoute roles={[ 'admin' ]}><EligibilityPage /></RoleRoute>} />
+        <Route path="/settings" element={<RoleRoute roles={[ 'admin', 'student' ]}><Settings /></RoleRoute>} />
         <Route path="/spl-registration" element={<SplClassForm />} />
         <Route path="/spl-registration/success" element={<SplSuccess />} />
-        <Route path="/spl-registrations" element={<ProtectedRoute><SplRegistrations /></ProtectedRoute>} />
+        <Route path="/spl-registrations" element={<RoleRoute roles={[ 'admin' ]}><SplRegistrations /></RoleRoute>} />
+        <Route path="/attendance" element={<RoleRoute roles={[ 'admin' ]}><AttendancePage /></RoleRoute>} />
+        <Route path="/tasks" element={<RoleRoute roles={[ 'admin' ]}><TaskManagement /></RoleRoute>} />
+        <Route path="/tasks/list" element={<RoleRoute roles={[ 'admin' ]}><TaskList /></RoleRoute>} />
+        <Route path="/student/tasks" element={<RoleRoute roles={[ 'student' ]}><StudentTasks /></RoleRoute>} />
       </Routes>
     </BrowserRouter>
   );

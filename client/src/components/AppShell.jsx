@@ -2,8 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell,
+  Calendar,
   CheckCircle2,
   ChevronRight,
+  ClipboardList,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -12,22 +14,52 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { logout } from '../utils/auth';
 
-const navigationGroups = [
-  {
-    title: 'Workspace',
-    items: [
-      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { to: '/spl-registrations', label: 'SPL Registrations', icon: Users },
-      { to: '/students', label: 'Students', icon: Users },
-      { to: '/eligibility', label: 'Eligibility', icon: CheckCircle2 },
-    ],
-  },
-  {
-    title: 'Administration',
-    items: [{ to: '/settings', label: 'Settings', icon: SettingsIcon }],
-  },
-];
+const buildNavigationGroups = (role, onLogout) => {
+  if (role === 'student') {
+    return [
+      {
+        title: 'Workspace',
+        items: [
+          { to: '/student/tasks', label: 'My Tasks', icon: ClipboardList },
+          { to: '/settings', label: 'Settings', icon: SettingsIcon },
+        ],
+      },
+      {
+        title: 'Account',
+        items: [
+          { label: 'Sign Out', icon: LogOut, onClick: onLogout, isLogout: true },
+        ],
+      },
+    ];
+  }
+
+  return [
+    {
+      title: 'Workspace',
+      items: [
+        { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { to: '/spl-registrations', label: 'SPL Registrations', icon: Users },
+        { to: '/attendance', label: 'Attendance', icon: Calendar },
+        { to: '/students', label: 'Students', icon: Users },
+        { to: '/eligibility', label: 'Eligibility', icon: CheckCircle2 },
+        { to: '/tasks', label: 'Task Assignment', icon: ClipboardList },
+        { to: '/tasks/list', label: 'Assigned Tasks', icon: CheckCircle2 },
+      ],
+    },
+    {
+      title: 'Administration',
+      items: [{ to: '/settings', label: 'Settings', icon: SettingsIcon }],
+    },
+    {
+      title: 'Account',
+      items: [
+        { label: 'Sign Out', icon: LogOut, onClick: onLogout, isLogout: true },
+      ],
+    },
+  ];
+};
 
 export function AppShell({
   children,
@@ -41,9 +73,10 @@ export function AppShell({
   const location = useLocation();
   const navigate = useNavigate();
 
+  const role = localStorage.getItem('userRole') || 'admin';
   const profile = useMemo(() => {
-    const name = localStorage.getItem('adminName') || 'Administrator';
-    const email = localStorage.getItem('adminEmail') || 'admin@placetrack.com';
+    const name = localStorage.getItem('userName') || 'Administrator';
+    const email = localStorage.getItem('userEmail') || 'admin@placetrack.com';
     const initials = name
       .split(' ')
       .filter(Boolean)
@@ -55,9 +88,10 @@ export function AppShell({
   }, []);
 
   const handleLogout = () => {
-    localStorage.clear();
-    navigate('/login');
+    logout();
   };
+
+  const navigationGroups = useMemo(() => buildNavigationGroups(role, handleLogout), [role]);
 
   return (
     <div className="h-screen overflow-hidden bg-[var(--app-bg)] text-slate-800">
@@ -72,7 +106,7 @@ export function AppShell({
         )}
 
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex h-screen w-full ${sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[272px]'} flex-col border-r border-[var(--border-soft)] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)] transition-all duration-300 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shadow-none lg:h-full lg:w-auto overflow-hidden ${
+          className={`fixed inset-y-0 left-0 z-50 flex h-screen w-full ${sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[272px]'} flex-col border-r border-[var(--border-soft)] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)] transition-all duration-300 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shadow-none lg:h-full lg:w-auto overflow-y-auto ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
@@ -121,18 +155,50 @@ export function AppShell({
                 <nav className="mt-3 space-y-1.5">
                   {group.items.map(item => {
                     const Icon = item.icon;
-                    const active = location.pathname === item.to;
+                    const active = item.to ? location.pathname === item.to : false;
+
+                    const itemClassName = `group flex w-full items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} rounded-2xl px-3 py-3 transition ${
+                      item.isLogout
+                        ? 'border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
+                        : active
+                        ? 'bg-[var(--primary-soft)] text-[var(--primary)] shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    }`;
+
+                    if (item.onClick) {
+                      return (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onClick={item.onClick}
+                          className={itemClassName}
+                        >
+                          <span className="flex items-center gap-3">
+                            <span
+                              className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                                item.isLogout
+                                  ? 'bg-rose-100 text-rose-600'
+                                  : active
+                                  ? 'bg-white text-[var(--primary)] shadow-sm'
+                                  : 'bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-slate-800'
+                              }`}
+                            >
+                              <Icon size={18} />
+                            </span>
+                            {!sidebarCollapsed && <span className="text-sm font-medium">{item.label}</span>}
+                          </span>
+                          {!sidebarCollapsed && (
+                            <ChevronRight
+                              size={16}
+                              className={active ? 'text-[var(--primary)]' : 'text-slate-300'}
+                            />
+                          )}
+                        </button>
+                      );
+                    }
 
                     return (
-                      <Link
-                        key={item.to}
-                        to={item.to}
-                        className={`group flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} rounded-2xl px-3 py-3 transition ${
-                          active
-                            ? 'bg-[var(--primary-soft)] text-[var(--primary)] shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
+                      <Link key={item.to} to={item.to} className={itemClassName}>
                         <span className="flex items-center gap-3">
                           <span
                             className={`flex h-10 w-10 items-center justify-center rounded-xl ${
@@ -161,22 +227,12 @@ export function AppShell({
 
           <div className="border-t border-[var(--border-soft)] p-4">
             {!sidebarCollapsed && (
-              <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                 <p className="text-xs font-semibold text-slate-500">Logged in as</p>
                 <p className="mt-1 text-sm font-semibold text-slate-900">{profile.name}</p>
                 <p className="text-xs text-slate-500">{profile.email}</p>
               </div>
             )}
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              className={`flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 ${sidebarCollapsed ? 'justify-center px-3 py-3' : ''}`}
-              aria-label="Sign Out"
-            >
-              <LogOut size={16} />
-              {!sidebarCollapsed && <span>Sign Out</span>}
-            </button>
           </div>
         </aside>
 

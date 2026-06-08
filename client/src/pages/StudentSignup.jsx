@@ -1,44 +1,42 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { buildApiUrl } from '../utils/api';
 
-export default function Login() {
+export default function StudentSignup() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', confirm: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async event => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    setLoading(true);
+    if (formData.password !== formData.confirm) {
+      return toast.error('Passwords do not match');
+    }
 
+    setLoading(true);
     try {
-      const res = await fetch(buildApiUrl('/auth/login'), {
+      const res = await fetch(buildApiUrl('/auth/register-student'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password
+        })
       });
 
       const data = await res.json();
-
-      if (res.ok) {
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('userName', data.user.name);
-        localStorage.setItem('userEmail', data.user.email);
-        localStorage.setItem('userRole', data.user.role);
-        toast.success(`Welcome back, ${data.user.name.split(' ')[0]}`);
-        if (data.user.role === 'student') {
-          navigate('/student/tasks');
-        } else {
-          navigate('/dashboard');
-        }
-      } else {
-        toast.error(data.message || 'Access Denied');
+      if (!res.ok) {
+        return toast.error(data.message || 'Registration failed');
       }
+
+      toast.success('Student account created successfully. Please log in.');
+      navigate('/login');
     } catch (err) {
-      toast.error('Network connect failure.');
+      toast.error('Network error during registration');
     } finally {
       setLoading(false);
     }
@@ -47,32 +45,18 @@ export default function Login() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#eff6ff_0%,#f8fafc_48%,#f8fafc_100%)] px-4 py-10">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(99,102,241,0.14),transparent_30%)]" />
-
       <div className="relative mx-auto grid min-h-[calc(100vh-80px)] max-w-6xl items-center gap-8 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="hidden lg:block">
           <div className="max-w-xl">
             <div className="inline-flex items-center rounded-full border border-blue-200 bg-white/70 px-4 py-2 text-sm font-medium text-blue-700 backdrop-blur">
-              Enterprise Placement Workspace
+              Student Task Registration
             </div>
             <h1 className="mt-6 text-5xl font-semibold tracking-tight text-slate-950">
-              Operate your student placement pipeline with clarity.
+              Get your task assignments and update progress directly.
             </h1>
             <p className="mt-5 text-lg leading-8 text-slate-600">
-              A polished admin console for student records, eligibility filtering, and placement tracking built for day-to-day operations teams.
+              Sign up as a student account and access your assigned tasks with question-level completion tracking.
             </p>
-
-            <div className="mt-10 grid grid-cols-3 gap-4">
-              {[
-                ['Unified Data', 'Manage records, imports, exports, and workflows in one place.'],
-                ['Live Insights', 'Track placements, pending updates, and interview pipelines.'],
-                ['Secure Access', 'Protected admin login and controlled settings management.'],
-              ].map(([title, copy]) => (
-                <div key={title} className="rounded-[24px] border border-white/70 bg-white/75 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] backdrop-blur">
-                  <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">{copy}</p>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
 
@@ -80,29 +64,41 @@ export default function Login() {
           <div className="crm-surface p-6 md:p-8">
             <div className="mb-8">
               <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-[linear-gradient(135deg,#2563eb,#4f46e5)] text-white shadow-[0_20px_50px_rgba(59,130,246,0.22)]">
-                <ArrowRight size={22} />
+                <User size={22} />
               </div>
-              <h2 className="mt-6 text-3xl font-semibold tracking-tight text-slate-950">Sign in to PlaceTrack</h2>
+              <h2 className="mt-6 text-3xl font-semibold tracking-tight text-slate-950">Student Account Signup</h2>
               <p className="mt-2 text-sm text-slate-500">
-                Use your registered email and mobile number to access your account.
+                Create a student login so you can view assigned tasks and update question status.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="crm-label">Registered Email</label>
+                <label className="crm-label">Full Name</label>
                 <div className="relative">
-                  <Mail
-                    size={18}
-                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  <User size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={event => setFormData({ ...formData, name: event.target.value })}
+                    className="crm-input pl-11"
+                    placeholder="Your full name"
                   />
+                </div>
+              </div>
+
+              <div>
+                <label className="crm-label">Email address</label>
+                <div className="relative">
+                  <Mail size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="email"
                     required
                     value={formData.email}
                     onChange={event => setFormData({ ...formData, email: event.target.value })}
                     className="crm-input pl-11"
-                    placeholder="admin@placetrack.com"
+                    placeholder="student@example.com"
                   />
                 </div>
               </div>
@@ -110,17 +106,14 @@ export default function Login() {
               <div>
                 <label className="crm-label">Password</label>
                 <div className="relative">
-                  <Lock
-                    size={18}
-                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
+                  <Lock size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
                     value={formData.password}
                     onChange={event => setFormData({ ...formData, password: event.target.value })}
                     className="crm-input pl-11 pr-12"
-                    placeholder="Enter your password"
+                    placeholder="Create a password"
                   />
                   <button
                     type="button"
@@ -132,13 +125,26 @@ export default function Login() {
                 </div>
               </div>
 
+              <div>
+                <label className="crm-label">Confirm Password</label>
+                <input
+                  type="password"
+                  required
+                  value={formData.confirm}
+                  onChange={event => setFormData({ ...formData, confirm: event.target.value })}
+                  className="crm-input"
+                  placeholder="Repeat your password"
+                />
+              </div>
+
               <button type="submit" disabled={loading} className="crm-btn-primary w-full justify-center">
-                {loading ? 'Validating access...' : 'Access Dashboard'}
+                {loading ? 'Creating account...' : 'Create Student Account'}
               </button>
             </form>
-            <p className="mt-4 text-sm text-slate-500">
-              SPL-registered students should log in using their registered email and mobile number as the initial password.
-            </p>
+
+            <div className="mt-6 text-center text-sm text-slate-500">
+              Already registered? <button type="button" onClick={() => navigate('/login')} className="font-semibold text-blue-700">Log in here</button>
+            </div>
           </div>
         </div>
       </div>

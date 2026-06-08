@@ -1,16 +1,16 @@
 import dotenv from 'dotenv';
-import { sendTestEmail } from './utils/mailer.js';
 
 dotenv.config();
 
-const to = process.env.TEST_EMAIL || process.env.SMTP_USER;
-
-if (!to) {
-  console.error('No test recipient configured. Set TEST_EMAIL or SMTP_USER in .env');
-  process.exit(1);
-}
-
 (async () => {
+  const { sendTestEmail } = await import('./utils/mailer.js');
+  const to = process.env.TEST_EMAIL || process.env.SMTP_USER || process.env.SENDGRID_FROM;
+
+  if (!to) {
+    console.error('No test recipient configured. Set TEST_EMAIL or SMTP_USER in .env');
+    process.exit(1);
+  }
+
   try {
     console.log('Sending test email to', to);
     const info = await sendTestEmail(to);

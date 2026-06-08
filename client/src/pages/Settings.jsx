@@ -8,8 +8,9 @@ import { buildApiUrl } from '../utils/api';
 export default function Settings() {
   const [loading, setLoading] = useState(false);
 
-  const adminName = localStorage.getItem('adminName') || 'Administrator';
-  const adminEmail = localStorage.getItem('adminEmail') || 'admin@placetrack.com';
+  const adminName = localStorage.getItem('userName') || 'Administrator';
+  const adminEmail = localStorage.getItem('userEmail') || 'admin@placetrack.com';
+  const userRole = localStorage.getItem('userRole') || 'admin';
 
   const [passwords, setPasswords] = useState({
     current: '',
@@ -76,9 +77,11 @@ export default function Settings() {
 
           <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Role</p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">System Administrator</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">{userRole === 'admin' ? 'Administrator' : 'Student'}</p>
             <p className="mt-1 text-sm text-slate-500">
-              Full dashboard access with permission to manage student records and platform configuration.
+              {userRole === 'admin'
+                ? 'Full dashboard access with permission to manage student records and platform configuration.'
+                : 'Student task account with access to assigned tasks and progress updates.'}
             </p>
           </div>
         </SurfaceCard>

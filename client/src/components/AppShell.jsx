@@ -23,6 +23,7 @@ const buildNavigationGroups = (role, onLogout) => {
         title: 'Workspace',
         items: [
           { to: '/student/tasks', label: 'My Tasks', icon: ClipboardList },
+          { to: '/student/attendance', label: 'My Attendance', icon: Calendar },
           { to: '/settings', label: 'Settings', icon: SettingsIcon },
         ],
       },

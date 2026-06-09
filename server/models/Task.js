@@ -4,7 +4,7 @@ const questionSchema = new mongoose.Schema({
   question: { type: String, required: true },
   status: {
     type: String,
-    enum: ['Pending', 'In Progress', 'Completed', 'Blocked', 'Review'],
+    enum: ['Pending', 'In Progress', 'Completed', 'Blocked', 'Review', 'Not Completed', 'Doubt'],
     default: 'Pending'
   },
   remarks: { type: String, default: '' }
@@ -19,7 +19,7 @@ const taskSchema = new mongoose.Schema({
   questions: { type: [questionSchema], default: [] },
   overallStatus: {
     type: String,
-    enum: ['Pending', 'In Progress', 'Completed', 'Blocked', 'Review'],
+    enum: ['Pending', 'In Progress', 'Completed', 'Blocked', 'Review', 'Not Completed', 'Doubt'],
     default: 'Pending'
   },
   assignedBy: { type: String, default: '' },

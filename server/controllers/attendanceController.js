@@ -336,3 +336,126 @@ export const getUnmarkedStudents = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch unmarked students', error: err.message });
   }
 };
+
+// Geolocation-Based Student Methods
+
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371e3;
+  const p1 = lat1 * Math.PI / 180;
+  const p2 = lat2 * Math.PI / 180;
+  const dp = (lat2 - lat1) * Math.PI / 180;
+  const dl = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(dp / 2) * Math.sin(dp / 2) +
+            Math.cos(p1) * Math.cos(p2) *
+            Math.sin(dl / 2) * Math.sin(dl / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+};
+
+// K.K. Nagar Office Approx Coordinates
+const TARGET_LAT = 13.0382;
+const TARGET_LNG = 80.1983;
+const MAX_RADIUS_METERS = 1000;
+
+export const studentCheckIn = async (req, res) => {
+  try {
+    const { lat, lng } = req.body;
+    const studentId = req.user.id;
+
+    if (!lat || !lng) {
+      return res.status(400).json({ message: 'Location coordinates are required' });
+    }
+
+    const distance = calculateDistance(TARGET_LAT, TARGET_LNG, lat, lng);
+    if (distance > MAX_RADIUS_METERS) {
+      return res.status(400).json({ message: `You are not at the office location. Distance: ${Math.round(distance)}m away.` });
+    }
+
+    const student = await SplRegistration.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    const today = parseUTCDate(new Date().toISOString().split('T')[0]);
+
+    let attendance = await Attendance.findOne({ studentId, date: today });
+    if (attendance) {
+      return res.status(400).json({ message: 'Attendance record already exists for today' });
+    }
+
+    attendance = new Attendance({
+      studentId,
+      studentName: student.name,
+      studentEmail: student.email,
+      date: today,
+      status: 'In Progress',
+      checkInTime: new Date(),
+      checkInLocation: { lat, lng, address: 'Office' },
+      markedBy: 'Student'
+    });
+    
+    await attendance.save();
+    res.status(201).json(attendance);
+  } catch (err) {
+    res.status(500).json({ message: 'Check-in failed', error: err.message });
+  }
+};
+
+export const studentCheckOut = async (req, res) => {
+  try {
+    const { lat, lng } = req.body;
+    const studentId = req.user.id;
+
+    if (!lat || !lng) {
+      return res.status(400).json({ message: 'Location coordinates are required' });
+    }
+
+    const distance = calculateDistance(TARGET_LAT, TARGET_LNG, lat, lng);
+    if (distance > MAX_RADIUS_METERS) {
+      return res.status(400).json({ message: `You are not at the office location. Distance: ${Math.round(distance)}m away.` });
+    }
+
+    const today = parseUTCDate(new Date().toISOString().split('T')[0]);
+
+    let attendance = await Attendance.findOne({ studentId, date: today });
+    if (!attendance) {
+      return res.status(404).json({ message: 'No check-in record found for today' });
+    }
+
+    if (attendance.checkOutTime) {
+      return res.status(400).json({ message: 'Already checked out for today' });
+    }
+
+    attendance.checkOutTime = new Date();
+    attendance.checkOutLocation = { lat, lng, address: 'Office' };
+
+    const diffMs = attendance.checkOutTime - attendance.checkInTime;
+    const totalHours = diffMs / (1000 * 60 * 60);
+    attendance.totalHours = parseFloat(totalHours.toFixed(2));
+
+    if (attendance.totalHours >= 6) {
+      attendance.status = 'Present';
+    } else {
+      attendance.status = 'Absent';
+    }
+
+    await attendance.save();
+    res.json(attendance);
+  } catch (err) {
+    res.status(500).json({ message: 'Check-out failed', error: err.message });
+  }
+};
+
+export const getTodayAttendance = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const today = parseUTCDate(new Date().toISOString().split('T')[0]);
+    
+    const attendance = await Attendance.findOne({ studentId, date: today });
+    res.json({ attendance });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch attendance', error: err.message });
+  }
+};

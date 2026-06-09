@@ -31,4 +31,9 @@ router.put('/:id', authMiddleware, attendanceController.updateAttendance);
 // Delete attendance record
 router.delete('/:id', authMiddleware, attendanceController.deleteAttendance);
 
+// Geolocation Check-In / Check-Out
+router.post('/check-in', authMiddleware, attendanceController.studentCheckIn);
+router.post('/check-out', authMiddleware, attendanceController.studentCheckOut);
+router.get('/today', authMiddleware, attendanceController.getTodayAttendance);
+
 export default router;

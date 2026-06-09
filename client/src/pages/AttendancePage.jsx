@@ -10,7 +10,8 @@ const STATUS_COLORS = {
   Present: 'success',
   Absent: 'error',
   Late: 'warning',
-  Leave: 'info'
+  Leave: 'info',
+  'In Progress': 'warning'
 };
 
 export default function AttendancePage() {
@@ -334,13 +335,19 @@ export default function AttendancePage() {
                         <thead>
                           <tr className="border-b border-slate-200">
                             <th className="px-4 py-2 text-left font-semibold text-slate-700">
-                              Student Name
-                            </th>
-                            <th className="px-4 py-2 text-left font-semibold text-slate-700">
-                              Email
+                              Student
                             </th>
                             <th className="px-4 py-2 text-center font-semibold text-slate-700">
                               Status
+                            </th>
+                            <th className="px-4 py-2 text-center font-semibold text-slate-700">
+                              Check In
+                            </th>
+                            <th className="px-4 py-2 text-center font-semibold text-slate-700">
+                              Check Out
+                            </th>
+                            <th className="px-4 py-2 text-center font-semibold text-slate-700">
+                              Total Hrs
                             </th>
                             <th className="px-4 py-2 text-left font-semibold text-slate-700">
                               Remarks
@@ -353,13 +360,24 @@ export default function AttendancePage() {
                         <tbody>
                           {attendance.map(record => (
                             <tr key={record._id} className="border-b border-slate-100 hover:bg-slate-50">
-                              <td className="px-4 py-3 text-slate-900">{record.studentName}</td>
-                              <td className="px-4 py-3 text-slate-600">{record.studentEmail}</td>
+                              <td className="px-4 py-3 text-slate-900">
+                                <div>{record.studentName}</div>
+                                <div className="text-xs text-slate-500">{record.studentEmail}</div>
+                              </td>
                               <td className="px-4 py-3 text-center">
                                 <StatusBadge
                                   status={record.status}
-                                  tone={STATUS_COLORS[record.status]}
+                                  tone={STATUS_COLORS[record.status] || 'info'}
                                 />
+                              </td>
+                              <td className="px-4 py-3 text-center text-slate-600">
+                                {record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                              </td>
+                              <td className="px-4 py-3 text-center text-slate-600">
+                                {record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                              </td>
+                              <td className="px-4 py-3 text-center font-semibold text-slate-700">
+                                {record.totalHours ? record.totalHours + 'h' : '-'}
                               </td>
                               <td className="px-4 py-3 text-slate-600">{record.remarks}</td>
                               <td className="px-4 py-3 text-center">

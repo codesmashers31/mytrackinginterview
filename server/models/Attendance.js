@@ -15,9 +15,22 @@ const attendanceSchema = new mongoose.Schema({
   },
   status: { 
     type: String, 
-    enum: ['Present', 'Absent', 'Late', 'Leave'],
+    enum: ['Present', 'Absent', 'Late', 'Leave', 'In Progress'],
     required: true 
   },
+  checkInTime: { type: Date },
+  checkOutTime: { type: Date },
+  checkInLocation: {
+    lat: { type: Number },
+    lng: { type: Number },
+    address: { type: String }
+  },
+  checkOutLocation: {
+    lat: { type: Number },
+    lng: { type: Number },
+    address: { type: String }
+  },
+  totalHours: { type: Number, default: 0 },
   remarks: { type: String, default: '' },
   markedBy: { type: String, default: 'Admin' },
   createdAt: { type: Date, default: Date.now },

@@ -4,17 +4,16 @@ import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
-import { Plus, ClipboardList } from 'lucide-react';
+import { Plus, ClipboardList, Trash2 } from 'lucide-react';
 
 export default function TaskManagement() {
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [formData, setFormData] = useState({
-    studentId: '',
-    title: '',
+    studentIds: [],
     description: '',
     dueDate: '',
-    questionsText: 'Question 1\nQuestion 2\nQuestion 3'
+    questions: ['']
   });
 
   const fetchStudents = async () => {
@@ -35,92 +34,43 @@ export default function TaskManagement() {
 
   const handleCreateTask = async (event) => {
     event.preventDefault();
-    if (!formData.studentId || !formData.title || !formData.questionsText.trim()) {
-      return toast.error('Please choose a student, title, and at least one question');
-    }
 
-    const questions = formData.questionsText
-      .split('\n')
-      .map(line => line.trim())
+    const validQuestions = formData.questions
+      .map(q => q.trim())
       .filter(Boolean)
       .map(question => ({ question, status: 'Pending' }));
 
+    if (formData.studentIds.length === 0 || !formData.title || validQuestions.length === 0) {
+      return toast.error('Please choose at least one student, a title, and at least one valid question');
+    }
+
     try {
-      const res = await fetch(buildApiUrl('/tasks'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({
-          studentId: formData.studentId,
-          title: formData.title,
-          description: formData.description,
-          dueDate: formData.dueDate,
-          questions
+      const promises = formData.studentIds.map(studentId => 
+        fetch(buildApiUrl('/tasks'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({
+            studentId,
+            title: formData.title,
+            description: formData.description,
+            dueDate: formData.dueDate,
+            questions: validQuestions
+          })
+        }).then(res => {
+          if (!res.ok) throw new Error('Failed to create task for a student');
+          return res.json();
         })
-      });
+      );
 
-      if (!res.ok) throw new Error('Failed to create task');
-      const newTask = await res.json();
-      setTasks(prev => [newTask, ...prev]);
-      toast.success('Task assigned successfully');
-      setFormData({ studentId: '', title: '', description: '', dueDate: '', questionsText: 'Question 1\nQuestion 2\nQuestion 3' });
+      await Promise.all(promises);
+
+      toast.success(`Tasks assigned successfully to ${formData.studentIds.length} student(s)`);
+      setFormData({ studentIds: [], title: '', description: '', dueDate: '', questions: [''] });
     } catch (err) {
-      toast.error('Could not assign task');
+      toast.error('Could not assign some or all tasks');
     }
   };
 
-  const handleDelete = async (taskId) => {
-    if (!window.confirm('Delete this task assignment?')) return;
-    try {
-      const res = await fetch(buildApiUrl(`/tasks/${taskId}`), {
-        method: 'DELETE',
-        headers: { ...authHeaders() }
-      });
-      if (!res.ok) throw new Error('Delete failed');
-      setTasks(prev => prev.filter(item => item._id !== taskId));
-      setSelectedTask(prev => (prev?._id === taskId ? null : prev));
-      toast.success('Task removed');
-    } catch (err) {
-      toast.error('Could not delete task');
-    }
-  };
-
-  const openTask = async (task) => {
-    setSelectedTask(task);
-  };
-
-  const handleTaskUpdate = async () => {
-    if (!selectedTask) return;
-
-    try {
-      const res = await fetch(buildApiUrl(`/tasks/${selectedTask._id}`), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({
-          title: selectedTask.title,
-          description: selectedTask.description,
-          dueDate: selectedTask.dueDate,
-          overallStatus: selectedTask.overallStatus,
-          questions: selectedTask.questions
-        })
-      });
-
-      if (!res.ok) throw new Error('Update failed');
-      const updated = await res.json();
-      setTasks(prev => prev.map(task => (task._id === updated._id ? updated : task)));
-      setSelectedTask(updated);
-      toast.success('Task updated');
-    } catch (err) {
-      toast.error('Could not save changes');
-    }
-  };
-
-  const updateQuestionStatus = (index, status) => {
-    setSelectedTask(prev => {
-      if (!prev) return prev;
-      const nextQuestions = prev.questions.map((item, idx) => idx === index ? { ...item, status } : item);
-      return { ...prev, questions: nextQuestions };
-    });
-  };
 
   return (
     <AppShell
@@ -128,98 +78,155 @@ export default function TaskManagement() {
       subtitle="Assign new tasks to registered SPL students."
       searchPlaceholder="Search students"
     >
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <SurfaceCard className="p-6">
-          <div className="mb-6 flex items-center gap-3">
-            <ClipboardList size={22} className="text-blue-600" />
+      <div className="max-w-4xl mx-auto">
+        <SurfaceCard className="p-8">
+          <div className="mb-8 flex items-center gap-3">
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
+              <ClipboardList size={26} />
+            </div>
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">New Task Assignment</h2>
-              <p className="text-sm text-slate-500">Create tasks with question-level status tracking for student account owners.</p>
+              <h2 className="text-xl font-bold text-slate-900">New Task Assignment</h2>
+              <p className="text-slate-500 mt-1">Create tasks with question-level status tracking for student account owners.</p>
             </div>
           </div>
 
-          <form onSubmit={handleCreateTask} className="space-y-5">
-            <div>
-              <label className="crm-label">Student</label>
-              <select
-                value={formData.studentId}
-                onChange={(event) => setFormData({ ...formData, studentId: event.target.value })}
-                className="crm-input"
-              >
-                <option value="">Select a registered student</option>
-                {students.map(student => (
-                  <option key={student._id} value={student._id}>
-                    {student.name} — {student.email} {student.mobile ? `(${student.mobile})` : ''}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-2 text-sm text-slate-500">Student accounts are synced from SPL registrations. Initial password is the mobile number from registration.</p>
+          <form onSubmit={handleCreateTask} className="space-y-6">
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <label className="text-base font-semibold text-slate-800">Select Students</label>
+                  <p className="text-sm text-slate-500">Choose who should receive this task</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (formData.studentIds.length === students.length && students.length > 0) {
+                      setFormData({ ...formData, studentIds: [] });
+                    } else {
+                      setFormData({ ...formData, studentIds: students.map(s => s._id) });
+                    }
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                >
+                  {formData.studentIds.length === students.length && students.length > 0 ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
+              <div className="max-h-72 overflow-y-auto border border-slate-200 rounded-lg p-2 space-y-1 bg-slate-50/50">
+                {students.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500 italic">No students available.</div>
+                ) : (
+                  students.map(student => (
+                    <label key={student._id} className="flex items-center gap-4 p-3 hover:bg-white rounded-md cursor-pointer transition-colors border border-transparent hover:border-slate-200 hover:shadow-sm">
+                      <input
+                        type="checkbox"
+                        checked={formData.studentIds.includes(student._id)}
+                        onChange={(e) => {
+                          const newIds = e.target.checked
+                            ? [...formData.studentIds, student._id]
+                            : formData.studentIds.filter(id => id !== student._id);
+                          setFormData({ ...formData, studentIds: newIds });
+                        }}
+                        className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-slate-800">{student.name}</span>
+                        <span className="text-xs text-slate-500">{student.email} {student.mobile ? `• ${student.mobile}` : ''}</span>
+                      </div>
+                    </label>
+                  ))
+                )}
+              </div>
             </div>
 
-            <div>
-              <label className="crm-label">Task Title</label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(event) => setFormData({ ...formData, title: event.target.value })}
-                className="crm-input"
-                placeholder="Example: Weekly coding review"
-              />
-            </div>
-
-            <div>
-              <label className="crm-label">Task Description</label>
-              <textarea
-                rows={3}
-                value={formData.description}
-                onChange={(event) => setFormData({ ...formData, description: event.target.value })}
-                className="crm-input"
-                placeholder="Add context for the task assignment"
-              />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-5">
               <div>
-                <label className="crm-label">Due Date</label>
+                <label className="crm-label font-medium text-slate-800">Task Title</label>
                 <input
-                  type="date"
-                  value={formData.dueDate}
-                  onChange={(event) => setFormData({ ...formData, dueDate: event.target.value })}
-                  className="crm-input"
+                  type="text"
+                  value={formData.title}
+                  onChange={(event) => setFormData({ ...formData, title: event.target.value })}
+                  className="crm-input p-3"
+                  placeholder="Example: Weekly coding review"
                 />
               </div>
+
               <div>
-                <label className="crm-label">Questions</label>
+                <label className="crm-label font-medium text-slate-800">Task Description</label>
                 <textarea
                   rows={4}
-                  value={formData.questionsText}
-                  onChange={(event) => setFormData({ ...formData, questionsText: event.target.value })}
-                  className="crm-input"
-                  placeholder="Write one question per line"
+                  value={formData.description}
+                  onChange={(event) => setFormData({ ...formData, description: event.target.value })}
+                  className="crm-input p-3"
+                  placeholder="Add context for the task assignment"
                 />
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <div>
+                  <label className="crm-label font-medium text-slate-800">Due Date</label>
+                  <input
+                    type="date"
+                    value={formData.dueDate}
+                    onChange={(event) => setFormData({ ...formData, dueDate: event.target.value })}
+                    className="crm-input p-3"
+                  />
+                </div>
+                
+                <div className="md:col-span-2 mt-2 border-t border-slate-100 pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <label className="text-base font-semibold text-slate-800">Questions List</label>
+                      <p className="text-sm text-slate-500">Add individual tasks or questions for this assignment</p>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => setFormData({ ...formData, questions: [...formData.questions, ''] })}
+                      className="text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl flex items-center gap-2 transition-colors"
+                    >
+                      <Plus size={16} /> Add Question
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                    {formData.questions.map((q, i) => (
+                      <div key={i} className="flex items-start gap-3 bg-white p-2 rounded-lg border border-slate-200 shadow-sm transition-all hover:border-blue-300">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-sm font-bold text-blue-700">
+                          {i + 1}
+                        </div>
+                        <input
+                          type="text"
+                          value={q}
+                          onChange={(e) => {
+                            const newQs = [...formData.questions];
+                            newQs[i] = e.target.value;
+                            setFormData({ ...formData, questions: newQs });
+                          }}
+                          className="crm-input flex-1 h-10 border-transparent bg-transparent shadow-none focus:border-transparent focus:ring-0 px-2"
+                          placeholder={`Enter question or task detail ${i + 1}...`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newQs = formData.questions.filter((_, idx) => idx !== i);
+                            setFormData({ ...formData, questions: newQs.length ? newQs : [''] });
+                          }}
+                          className="flex h-10 w-10 items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <button type="submit" className="crm-btn-primary flex items-center justify-center gap-2 px-4 py-3">
-              <Plus size={16} /> Assign Task
-            </button>
-          </form>
-        </SurfaceCard>
-
-        <SurfaceCard className="p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Assigned Task List</h2>
-              <p className="text-sm text-slate-500">The assigned tasks table has been moved to its own page for better visibility.</p>
+            <div className="pt-4 mt-6 border-t border-slate-100">
+              <button type="submit" className="w-full sm:w-auto crm-btn-primary flex items-center justify-center gap-2 px-8 py-3 text-base font-medium">
+                <Plus size={20} /> Assign Task to Selected Students
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => navigate('/tasks/list')}
-              className="crm-btn-secondary"
-            >
-              Open Assigned Tasks
-            </button>
-          </div>
+          </form>
         </SurfaceCard>
       </div>
     </AppShell>

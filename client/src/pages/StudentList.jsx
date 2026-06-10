@@ -82,6 +82,7 @@ export default function StudentList() {
       Degree: s.degree,
       'Batch Year': s.passedOutYear,
       Batch: s.batch || '',
+      Grade: s.grade || '',
       Status: s.currentStatus,
       'Status Reason': s.statusReason || '',
       Others: s.others || '',
@@ -343,6 +344,7 @@ export default function StudentList() {
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Degree</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Batch Year</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Institute Batch</th>
+                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Grade</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Status</th>
                      <th className="px-3 py-2 text-right text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Actions</th>
                    </tr>
@@ -372,6 +374,15 @@ export default function StudentList() {
                        </td>
                        <td className="px-3 py-2.5">
                           <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">{student.batch || '-'}</div>
+                       </td>
+                       <td className="px-3 py-2.5">
+                          <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">
+                            {student.grade ? (
+                              <span className={`inline-flex items-center justify-center h-5 w-5 rounded text-[10px] font-bold ${student.grade === 'A' ? 'bg-emerald-100 text-emerald-700' : student.grade === 'B' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                                {student.grade}
+                              </span>
+                            ) : '-'}
+                          </div>
                        </td>
                        <td className="px-3 py-2.5">
                           <StatusBadge status={student.currentStatus} />
@@ -487,6 +498,7 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
     customDegree: isCustomDegree ? studentDegree : '',
     passedOutYear: student?.passedOutYear || '',
     batch: student?.batch || '',
+    grade: student?.grade || '',
     currentStatus: student?.currentStatus || 'Job Seeker',
     statusReason: student?.statusReason || '',
     others: student?.others || '',
@@ -589,6 +601,15 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
                 <div>
                    <label className="crm-label">Institute Batch</label>
                    <input value={formData.batch} onChange={e => setFormData({...formData, batch: e.target.value})} className="crm-input" placeholder="2024-A / Morning / Section A" />
+                </div>
+                <div className="md:col-span-2">
+                   <label className="crm-label">Student Grade</label>
+                   <select value={formData.grade} onChange={e => setFormData({...formData, grade: e.target.value})} className="crm-input w-full md:w-1/2">
+                      <option value="">Unassigned</option>
+                      <option value="A">Grade A</option>
+                      <option value="B">Grade B</option>
+                      <option value="C">Grade C</option>
+                   </select>
                 </div>
                 
                 <div className="md:col-span-2 pt-5 md:pt-6 border-t border-slate-100">
@@ -700,6 +721,7 @@ function StudentDetailModal({ onClose, student }) {
                 <DetailRow label="Phone Contact" val={student.mobile} />
                 <DetailRow label="Batch Year" val={batchYear || 'Not Added'} />
                 <DetailRow label="Institute Batch" val={student.batch || 'Not Added'} />
+                <DetailRow label="Grade" val={student.grade || 'Unassigned'} />
                 {student.statusReason && (
                   <DetailRow label="Status Reason" val={student.statusReason} />
                 )}

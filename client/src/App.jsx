@@ -15,6 +15,7 @@ import TaskList from './pages/TaskList';
 import StudentTasks from './pages/StudentTasks';
 import StudentAttendance from './pages/StudentAttendance';
 import StudentDailyActivity from './pages/StudentDailyActivity';
+import StudentDashboard from './pages/StudentDashboard';
 import AdminDailyActivities from './pages/AdminDailyActivities';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
@@ -31,7 +32,7 @@ function App() {
           element={
             isAuthenticated() ? (
               <Navigate
-                to={localStorage.getItem('userRole') === 'student' ? '/student/tasks' : '/dashboard'}
+                to={localStorage.getItem('userRole') === 'student' ? '/student/dashboard' : '/dashboard'}
                 replace
               />
             ) : (
@@ -49,6 +50,7 @@ function App() {
         <Route path="/attendance" element={<RoleRoute roles={[ 'admin' ]}><AttendancePage /></RoleRoute>} />
         <Route path="/tasks" element={<RoleRoute roles={[ 'admin' ]}><TaskManagement /></RoleRoute>} />
         <Route path="/tasks/list" element={<RoleRoute roles={[ 'admin' ]}><TaskList /></RoleRoute>} />
+        <Route path="/student/dashboard" element={<RoleRoute roles={[ 'student' ]}><StudentDashboard /></RoleRoute>} />
         <Route path="/student/tasks" element={<RoleRoute roles={[ 'student' ]}><StudentTasks /></RoleRoute>} />
         <Route path="/student/attendance" element={<RoleRoute roles={[ 'student' ]}><StudentAttendance /></RoleRoute>} />
         <Route path="/student/daily-activity" element={<RoleRoute roles={[ 'student' ]}><StudentDailyActivity /></RoleRoute>} />

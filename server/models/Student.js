@@ -6,6 +6,7 @@ const studentSchema = new mongoose.Schema({
     degree: { type: String, required: true },
     passedOutYear: { type: String, default: 'Need to filled' },
     batch: { type: String, default: '' },
+    grade: { type: String, enum: ['A', 'B', 'C', ''], default: '' },
     currentStatus: { 
         type: String, 
         default: 'Need to filled'

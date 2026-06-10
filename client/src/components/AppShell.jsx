@@ -23,6 +23,7 @@ const buildNavigationGroups = (role, onLogout) => {
       {
         title: 'Workspace',
         items: [
+          { to: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
           { to: '/student/tasks', label: 'My Tasks', icon: ClipboardList },
           { to: '/student/daily-activity', label: 'Daily Activity', icon: Clock },
           { to: '/student/attendance', label: 'My Attendance', icon: Calendar },
@@ -110,21 +111,21 @@ export function AppShell({
         )}
 
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex h-screen w-full ${sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[272px]'} flex-col border-r border-[var(--border-soft)] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)] transition-all duration-300 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shadow-none lg:h-full lg:w-auto overflow-y-auto ${
+          className={`fixed inset-y-0 left-0 z-50 flex h-screen w-full ${sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[272px]'} flex-col border-r border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)] transition-all duration-300 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shadow-none lg:h-full lg:w-auto overflow-y-auto ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <div className="flex h-[72px] items-center justify-between border-b border-[var(--border-soft)] px-5">
+          <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-slate-200 px-5 bg-white">
             <Link to="/dashboard" className={`flex items-center gap-3 ${sidebarCollapsed ? 'justify-center w-full' : ''}`}>
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#1d4ed8,#4f46e5)] text-white shadow-[0_12px_30px_rgba(59,130,246,0.22)]">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#1d4ed8,#4f46e5)] text-white shadow-[0_12px_30px_rgba(59,130,246,0.22)]">
                 <LayoutDashboard size={20} />
               </div>
               {!sidebarCollapsed && (
-                <div>
+                <div className="overflow-hidden">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
                     Placement OS
                   </p>
-                  <h1 className="text-lg font-semibold text-slate-900">PlaceTrack</h1>
+                  <h1 className="text-lg font-semibold text-slate-900 truncate">PlaceTrack</h1>
                 </div>
               )}
             </Link>
@@ -148,7 +149,7 @@ export function AppShell({
             </div>
           </div>
 
-          <div className="flex-1 space-y-8 px-4 py-6">
+          <div className="flex-1 space-y-8 px-4 py-6 bg-white">
             {navigationGroups.map(group => (
               <div key={group.title}>
                 {!sidebarCollapsed && (
@@ -171,6 +172,31 @@ export function AppShell({
                         : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                     }`;
 
+                    const iconWrapperClassName = `flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110 ${
+                      item.isLogout
+                        ? 'bg-rose-100 text-rose-600'
+                        : active
+                        ? 'bg-white text-[var(--primary)] shadow-sm'
+                        : 'bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-slate-800'
+                    }`;
+
+                    const labelContent = (
+                      <>
+                        <span className="flex flex-1 items-center gap-3 overflow-hidden">
+                          <span className={iconWrapperClassName}>
+                            <Icon size={18} />
+                          </span>
+                          {!sidebarCollapsed && <span className="truncate text-sm font-medium">{item.label}</span>}
+                        </span>
+                        {!sidebarCollapsed && (
+                          <ChevronRight
+                            size={16}
+                            className={`shrink-0 ${active ? 'text-[var(--primary)] transition-transform group-hover:translate-x-0.5' : 'text-slate-300 transition-transform group-hover:translate-x-0.5'}`}
+                          />
+                        )}
+                      </>
+                    );
+
                     if (item.onClick) {
                       return (
                         <button
@@ -179,50 +205,14 @@ export function AppShell({
                           onClick={item.onClick}
                           className={itemClassName}
                         >
-                          <span className="flex items-center gap-3">
-                            <span
-                              className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110 ${
-                                item.isLogout
-                                  ? 'bg-rose-100 text-rose-600'
-                                  : active
-                                  ? 'bg-white text-[var(--primary)] shadow-sm'
-                                  : 'bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-slate-800'
-                              }`}
-                            >
-                              <Icon size={18} />
-                            </span>
-                            {!sidebarCollapsed && <span className="text-sm font-medium">{item.label}</span>}
-                          </span>
-                          {!sidebarCollapsed && (
-                            <ChevronRight
-                              size={16}
-                              className={active ? 'text-[var(--primary)] transition-transform group-hover:translate-x-0.5' : 'text-slate-300 transition-transform group-hover:translate-x-0.5'}
-                            />
-                          )}
+                          {labelContent}
                         </button>
                       );
                     }
 
                     return (
                       <Link key={item.to} to={item.to} className={itemClassName}>
-                        <span className="flex items-center gap-3">
-                          <span
-                            className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110 ${
-                              active
-                                ? 'bg-white text-[var(--primary)] shadow-sm'
-                                : 'bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-slate-800'
-                            }`}
-                          >
-                            <Icon size={18} />
-                          </span>
-                          {!sidebarCollapsed && <span className="text-sm font-medium">{item.label}</span>}
-                        </span>
-                        {!sidebarCollapsed && (
-                          <ChevronRight
-                            size={16}
-                            className={active ? 'text-[var(--primary)] transition-transform group-hover:translate-x-0.5' : 'text-slate-300 transition-transform group-hover:translate-x-0.5'}
-                          />
-                        )}
+                        {labelContent}
                       </Link>
                     );
                   })}
@@ -231,19 +221,19 @@ export function AppShell({
             ))}
           </div>
 
-          <div className="border-t border-[var(--border-soft)] p-4">
+          <div className="border-t border-slate-200 p-4 bg-white shrink-0">
             {!sidebarCollapsed && (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                 <p className="text-xs font-semibold text-slate-500">Logged in as</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900">{profile.name}</p>
-                <p className="text-xs text-slate-500">{profile.email}</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900 truncate">{profile.name}</p>
+                <p className="text-xs text-slate-500 truncate">{profile.email}</p>
               </div>
             )}
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col transition-all duration-300">
-          <header className="sticky top-0 z-30 border-b border-[var(--border-soft)] bg-white/90 backdrop-blur-xl">
+        <div className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden bg-slate-50 transition-all duration-300">
+          <header className="shrink-0 border-b border-slate-200 bg-white">
             <div className="flex h-[72px] items-center gap-3 px-4 md:px-6 lg:px-8">
               <button
                 type="button"

@@ -147,6 +147,9 @@ export default function Dashboard() {
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                     Batch
                   </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Grade
+                  </th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                     Status
                   </th>
@@ -165,6 +168,13 @@ export default function Dashboard() {
                       <td className="px-4 py-3.5 text-sm text-slate-600">{student.degree}</td>
                       <td className="px-4 py-3.5 text-sm text-slate-600">
                         {student.batch || student.passedOutYear || 'Not added'}
+                      </td>
+                      <td className="px-4 py-3.5 text-sm font-semibold">
+                        {student.grade ? (
+                          <span className={`inline-flex items-center justify-center h-5 w-5 rounded text-[10px] font-bold ${student.grade === 'A' ? 'bg-emerald-100 text-emerald-700' : student.grade === 'B' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {student.grade}
+                          </span>
+                        ) : '-'}
                       </td>
                       <td className="px-4 py-3.5 text-right">
                         <StatusBadge status={student.currentStatus} />

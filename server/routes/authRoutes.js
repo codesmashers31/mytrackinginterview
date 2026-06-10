@@ -61,7 +61,7 @@ router.post('/login', async (req, res) => {
     }
 
     const token = signJwt({ id: user._id, email: user.email, role: user.role, name: user.name });
-    res.json({ token, user: { name: user.name, email: user.email, role: user.role } });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (error) {
     res.status(500).json({ message: 'Auth server error', error: error.message });
   }

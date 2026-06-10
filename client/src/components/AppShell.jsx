@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ChevronRight,
   ClipboardList,
+  Clock,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -23,6 +24,7 @@ const buildNavigationGroups = (role, onLogout) => {
         title: 'Workspace',
         items: [
           { to: '/student/tasks', label: 'My Tasks', icon: ClipboardList },
+          { to: '/student/daily-activity', label: 'Daily Activity', icon: Clock },
           { to: '/student/attendance', label: 'My Attendance', icon: Calendar },
           { to: '/settings', label: 'Settings', icon: SettingsIcon },
         ],
@@ -43,6 +45,7 @@ const buildNavigationGroups = (role, onLogout) => {
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { to: '/spl-registrations', label: 'SPL Registrations', icon: Users },
         { to: '/attendance', label: 'Attendance', icon: Calendar },
+        { to: '/admin/daily-activities', label: 'Daily Logs', icon: Clock },
         { to: '/students', label: 'Students', icon: Users },
         { to: '/eligibility', label: 'Eligibility', icon: CheckCircle2 },
         { to: '/tasks', label: 'Task Assignment', icon: ClipboardList },
@@ -158,12 +161,14 @@ export function AppShell({
                     const Icon = item.icon;
                     const active = item.to ? location.pathname === item.to : false;
 
-                    const itemClassName = `group flex w-full items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} rounded-2xl px-3 py-3 transition ${
+                    const itemClassName = `group flex w-full items-center ${
+                      sidebarCollapsed ? 'justify-center' : 'justify-between hover:translate-x-1'
+                    } rounded-2xl px-3 py-3 transition-all duration-200 ${
                       item.isLogout
                         ? 'border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
                         : active
-                        ? 'bg-[var(--primary-soft)] text-[var(--primary)] shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50/80 text-blue-700 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.15),0_4px_12px_rgba(59,130,246,0.04)] font-semibold'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                     }`;
 
                     if (item.onClick) {
@@ -176,7 +181,7 @@ export function AppShell({
                         >
                           <span className="flex items-center gap-3">
                             <span
-                              className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                              className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110 ${
                                 item.isLogout
                                   ? 'bg-rose-100 text-rose-600'
                                   : active
@@ -191,7 +196,7 @@ export function AppShell({
                           {!sidebarCollapsed && (
                             <ChevronRight
                               size={16}
-                              className={active ? 'text-[var(--primary)]' : 'text-slate-300'}
+                              className={active ? 'text-[var(--primary)] transition-transform group-hover:translate-x-0.5' : 'text-slate-300 transition-transform group-hover:translate-x-0.5'}
                             />
                           )}
                         </button>
@@ -202,7 +207,7 @@ export function AppShell({
                       <Link key={item.to} to={item.to} className={itemClassName}>
                         <span className="flex items-center gap-3">
                           <span
-                            className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                            className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110 ${
                               active
                                 ? 'bg-white text-[var(--primary)] shadow-sm'
                                 : 'bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-slate-800'
@@ -215,7 +220,7 @@ export function AppShell({
                         {!sidebarCollapsed && (
                           <ChevronRight
                             size={16}
-                            className={active ? 'text-[var(--primary)]' : 'text-slate-300'}
+                            className={active ? 'text-[var(--primary)] transition-transform group-hover:translate-x-0.5' : 'text-slate-300 transition-transform group-hover:translate-x-0.5'}
                           />
                         )}
                       </Link>

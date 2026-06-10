@@ -1,5 +1,6 @@
 import Attendance from '../models/Attendance.js';
 import SplRegistration from '../models/SplRegistration.js';
+import User from '../models/User.js';
 
 const parseUTCDate = (dateString) => {
   const [year, month, day] = dateString.split('-').map(Number);
@@ -369,24 +370,31 @@ export const studentCheckIn = async (req, res) => {
     }
 
     const distance = calculateDistance(TARGET_LAT, TARGET_LNG, lat, lng);
-    if (distance > MAX_RADIUS_METERS) {
-      return res.status(400).json({ message: `You are not at the office location. Distance: ${Math.round(distance)}m away.` });
+    // Temporary bypass for distance restriction
+    // if (distance > MAX_RADIUS_METERS) {
+    //   return res.status(400).json({ message: `You are not at the office location. Distance: ${Math.round(distance)}m away.` });
+    // }
+
+    // Fetch user to get their email, then find the corresponding SplRegistration
+    const user = await User.findById(studentId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    const student = await SplRegistration.findOne({ email: user.email.toLowerCase() });
+    if (!student) {
+      return res.status(404).json({ message: 'Student registration not found' });
     }
 
-    const student = await SplRegistration.findById(studentId);
-    if (!student) {
-      return res.status(404).json({ message: 'Student not found' });
-    }
+    const splStudentId = student._id;
 
     const today = parseUTCDate(new Date().toISOString().split('T')[0]);
 
-    let attendance = await Attendance.findOne({ studentId, date: today });
+    let attendance = await Attendance.findOne({ studentId: splStudentId, date: today });
     if (attendance) {
       return res.status(400).json({ message: 'Attendance record already exists for today' });
     }
 
     attendance = new Attendance({
-      studentId,
+      studentId: splStudentId,
       studentName: student.name,
       studentEmail: student.email,
       date: today,
@@ -413,13 +421,25 @@ export const studentCheckOut = async (req, res) => {
     }
 
     const distance = calculateDistance(TARGET_LAT, TARGET_LNG, lat, lng);
-    if (distance > MAX_RADIUS_METERS) {
-      return res.status(400).json({ message: `You are not at the office location. Distance: ${Math.round(distance)}m away.` });
+    // Temporary bypass for distance restriction
+    // if (distance > MAX_RADIUS_METERS) {
+    //   return res.status(400).json({ message: `You are not at the office location. Distance: ${Math.round(distance)}m away.` });
+    // }
+
+    // Fetch user to get their email, then find the corresponding SplRegistration
+    const user = await User.findById(studentId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    const student = await SplRegistration.findOne({ email: user.email.toLowerCase() });
+    if (!student) {
+      return res.status(404).json({ message: 'Student registration not found' });
     }
+
+    const splStudentId = student._id;
 
     const today = parseUTCDate(new Date().toISOString().split('T')[0]);
 
-    let attendance = await Attendance.findOne({ studentId, date: today });
+    let attendance = await Attendance.findOne({ studentId: splStudentId, date: today });
     if (!attendance) {
       return res.status(404).json({ message: 'No check-in record found for today' });
     }
@@ -451,9 +471,17 @@ export const studentCheckOut = async (req, res) => {
 export const getTodayAttendance = async (req, res) => {
   try {
     const studentId = req.user.id;
+    const user = await User.findById(studentId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    const student = await SplRegistration.findOne({ email: user.email.toLowerCase() });
+    if (!student) {
+      return res.json({ attendance: null });
+    }
+
     const today = parseUTCDate(new Date().toISOString().split('T')[0]);
     
-    const attendance = await Attendance.findOne({ studentId, date: today });
+    const attendance = await Attendance.findOne({ studentId: student._id, date: today });
     res.json({ attendance });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch attendance', error: err.message });

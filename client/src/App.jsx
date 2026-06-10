@@ -14,6 +14,8 @@ import TaskManagement from './pages/TaskManagement';
 import TaskList from './pages/TaskList';
 import StudentTasks from './pages/StudentTasks';
 import StudentAttendance from './pages/StudentAttendance';
+import StudentDailyActivity from './pages/StudentDailyActivity';
+import AdminDailyActivities from './pages/AdminDailyActivities';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
 import { isAuthenticated } from './utils/auth';
@@ -49,6 +51,8 @@ function App() {
         <Route path="/tasks/list" element={<RoleRoute roles={[ 'admin' ]}><TaskList /></RoleRoute>} />
         <Route path="/student/tasks" element={<RoleRoute roles={[ 'student' ]}><StudentTasks /></RoleRoute>} />
         <Route path="/student/attendance" element={<RoleRoute roles={[ 'student' ]}><StudentAttendance /></RoleRoute>} />
+        <Route path="/student/daily-activity" element={<RoleRoute roles={[ 'student' ]}><StudentDailyActivity /></RoleRoute>} />
+        <Route path="/admin/daily-activities" element={<RoleRoute roles={[ 'admin' ]}><AdminDailyActivities /></RoleRoute>} />
       </Routes>
     </BrowserRouter>
   );

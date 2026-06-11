@@ -16,6 +16,7 @@ import taskRoutes from './routes/taskRoutes.js';
 import User from './models/User.js';
 import emailRoutes from './routes/emailRoutes.js';
 import dailyActivityRoutes from './routes/dailyActivityRoutes.js';
+import errorHandler from './middleware/errorHandler.js';
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/admin', emailRoutes);
 app.use('/api/daily-activities', dailyActivityRoutes);
+app.use(errorHandler);
 
 // Database Connection
 mongoose.connect(process.env.MONGODB_URI)

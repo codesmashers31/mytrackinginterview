@@ -5,6 +5,10 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import StudentList from './pages/StudentList';
 import EligibilityPage from './pages/EligibilityPage';
+import CoordinatorManagement from './pages/CoordinatorManagement';
+import CoordinatorDashboard from './pages/CoordinatorDashboard';
+import CoordinatorEligibility from './pages/CoordinatorEligibility';
+import CoordinatorSplClasses from './pages/CoordinatorSplClasses';
 import Settings from './pages/Settings';
 import SplClassForm from './pages/SplClassForm';
 import SplRegistrations from './pages/SplRegistrations';
@@ -12,6 +16,7 @@ import SplSuccess from './pages/SplSuccess';
 import AttendancePage from './pages/AttendancePage';
 import TaskManagement from './pages/TaskManagement';
 import TaskList from './pages/TaskList';
+import PlacementManagement from './pages/PlacementManagement';
 import StudentTasks from './pages/StudentTasks';
 import StudentAttendance from './pages/StudentAttendance';
 import StudentDailyActivity from './pages/StudentDailyActivity';
@@ -40,13 +45,18 @@ function App() {
             )
           }
         />
-        <Route path="/dashboard" element={<RoleRoute roles={[ 'admin' ]}><Dashboard /></RoleRoute>} />
-        <Route path="/students" element={<RoleRoute roles={[ 'admin' ]}><StudentList /></RoleRoute>} />
-        <Route path="/eligibility" element={<RoleRoute roles={[ 'admin' ]}><EligibilityPage /></RoleRoute>} />
-        <Route path="/settings" element={<RoleRoute roles={[ 'admin', 'student' ]}><Settings /></RoleRoute>} />
+        <Route path="/dashboard" element={<RoleRoute roles={[ 'admin', 'placement' ]}><Dashboard /></RoleRoute>} />
+        <Route path="/students" element={<RoleRoute roles={[ 'admin', 'placement' ]}><StudentList /></RoleRoute>} />
+        <Route path="/eligibility" element={<RoleRoute roles={[ 'admin', 'placement' ]}><EligibilityPage /></RoleRoute>} />
+        <Route path="/admin/coordinators" element={<RoleRoute roles={[ 'admin' ]}><CoordinatorManagement /></RoleRoute>} />
+        <Route path="/admin/placements" element={<RoleRoute roles={[ 'admin' ]}><PlacementManagement /></RoleRoute>} />
+        <Route path="/coordinator/dashboard" element={<RoleRoute roles={[ 'coordinator' ]}><CoordinatorDashboard /></RoleRoute>} />
+        <Route path="/coordinator/eligibility" element={<RoleRoute roles={[ 'coordinator' ]}><CoordinatorEligibility /></RoleRoute>} />
+        <Route path="/coordinator/spl-classes" element={<RoleRoute roles={[ 'coordinator' ]}><CoordinatorSplClasses /></RoleRoute>} />
+        <Route path="/settings" element={<RoleRoute roles={[ 'admin', 'student', 'placement' ]}><Settings /></RoleRoute>} />
         <Route path="/spl-registration" element={<SplClassForm />} />
         <Route path="/spl-registration/success" element={<SplSuccess />} />
-        <Route path="/spl-registrations" element={<RoleRoute roles={[ 'admin' ]}><SplRegistrations /></RoleRoute>} />
+        <Route path="/spl-registrations" element={<RoleRoute roles={[ 'admin', 'placement' ]}><SplRegistrations /></RoleRoute>} />
         <Route path="/attendance" element={<RoleRoute roles={[ 'admin' ]}><AttendancePage /></RoleRoute>} />
         <Route path="/tasks" element={<RoleRoute roles={[ 'admin' ]}><TaskManagement /></RoleRoute>} />
         <Route path="/tasks/list" element={<RoleRoute roles={[ 'admin' ]}><TaskList /></RoleRoute>} />

@@ -28,6 +28,7 @@ export default function SplRegistrations() {
     needMost: '',
     status: 'New',
     statusReason: '',
+    grade: '',
   });
   const [deleteTarget, setDeleteTarget] = useState(null);
 
@@ -78,12 +79,13 @@ export default function SplRegistrations() {
       needMost: reg.needMost || '',
       status: reg.status || 'New',
       statusReason: reg.statusReason || '',
+      grade: reg.grade || '',
     });
   };
 
   const closeEditModal = () => {
     setSelectedRegistration(null);
-    setEditState({ status: 'New', statusReason: '' });
+    setEditState({ status: 'New', statusReason: '', grade: '' });
   };
 
   const saveEdit = async () => {
@@ -159,8 +161,7 @@ export default function SplRegistrations() {
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[1fr_240px]">
-            <div className="relative">
+            <div className="relative col-span-1 lg:col-span-2">
               <input
                 value={searchQuery}
                 onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
@@ -168,13 +169,6 @@ export default function SplRegistrations() {
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none shadow-sm transition focus:border-slate-400 focus:ring-2 focus:ring-blue-100"
               />
             </div>
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
-                <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Active filters</div>
-                <div className="mt-1 font-semibold text-slate-900">{searchQuery ? searchQuery : 'None'}</div>
-              </div>
-            </div>
-          </div>
 
           <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm">
             <table className="min-w-full border-separate border-spacing-0 text-sm">
@@ -183,10 +177,7 @@ export default function SplRegistrations() {
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Name</th>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Email</th>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Mobile</th>
-                  <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Degree</th>
-                  <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Batch</th>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Status</th>
-                  <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Submitted</th>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Actions</th>
                 </tr>
               </thead>
@@ -205,10 +196,7 @@ export default function SplRegistrations() {
                       <td className="whitespace-nowrap px-4 py-4 text-slate-900">{reg.name}</td>
                       <td className="whitespace-nowrap px-4 py-4 text-slate-700">{reg.email}</td>
                       <td className="whitespace-nowrap px-4 py-4 text-slate-700">{reg.mobile || '—'}</td>
-                      <td className="whitespace-nowrap px-4 py-4 text-slate-700">{reg.degree || '—'}</td>
-                      <td className="whitespace-nowrap px-4 py-4 text-slate-700">{reg.batch || '—'}</td>
                       <td className="whitespace-nowrap px-4 py-4"><StatusBadge status={reg.status} /></td>
-                      <td className="whitespace-nowrap px-4 py-4 text-slate-500">{new Date(reg.createdAt).toLocaleString()}</td>
                       <td className="whitespace-nowrap px-4 py-4">
                         <div className="flex flex-wrap gap-2">
                           <button
@@ -413,6 +401,19 @@ export default function SplRegistrations() {
                   {STATUS_OPTIONS.map(option => (
                     <option key={option} value={option}>{option}</option>
                   ))}
+                </select>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-medium text-slate-700">Grade (Optional)</label>
+                <select
+                  value={editState.grade}
+                  onChange={(e) => setEditState(prev => ({ ...prev, grade: e.target.value }))}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="">None</option>
+                  <option value="A">Grade A</option>
+                  <option value="B">Grade B</option>
+                  <option value="C">Grade C</option>
                 </select>
               </div>
               <div className="space-y-2 md:col-span-2">

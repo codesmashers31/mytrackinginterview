@@ -245,11 +245,11 @@ export default function AdminDailyActivities() {
                           {log.activity}
                         </div>
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-5 py-3 max-w-[200px]">
                         {log.companyDetails ? (
-                          <div className="inline-flex items-center gap-1.5 text-[11px] md:text-[12px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100/50">
-                            <Building2 size={11} />
-                            {log.companyDetails}
+                          <div className="inline-flex items-center gap-1.5 text-[11px] md:text-[12px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100/50 max-w-full" title={log.companyDetails}>
+                            <Building2 size={11} className="shrink-0" />
+                            <span className="truncate">{log.companyDetails}</span>
                           </div>
                         ) : (
                           <span className="text-slate-400 text-xs font-medium">-</span>

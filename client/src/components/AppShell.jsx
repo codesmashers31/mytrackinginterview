@@ -18,6 +18,7 @@ import {
 import { logout } from '../utils/auth';
 
 const buildNavigationGroups = (role, onLogout) => {
+  // Student navigation
   if (role === 'student') {
     return [
       {
@@ -39,6 +40,30 @@ const buildNavigationGroups = (role, onLogout) => {
     ];
   }
 
+  // Coordinator navigation
+  if (role === 'coordinator') {
+    return [
+      {
+        title: 'Workspace',
+        items: [
+          { to: '/coordinator/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { to: '/students', label: 'Students', icon: Users },
+          { to: '/coordinator/eligibility', label: 'Eligibility', icon: CheckCircle2 },
+          { to: '/admin/coordinators', label: 'Coordinators', icon: Users },
+          { to: '/coordinator/spl-classes', label: 'SPL Classes', icon: Users },
+          { to: '/settings', label: 'Settings', icon: SettingsIcon },
+        ],
+      },
+      {
+        title: 'Account',
+        items: [
+          { label: 'Sign Out', icon: LogOut, onClick: onLogout, isLogout: true },
+        ],
+      },
+    ];
+  }
+
+  // Admin navigation (default)
   return [
     {
       title: 'Workspace',

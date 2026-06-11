@@ -4,36 +4,37 @@ import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+// ─── Student self-service routes (specific paths FIRST before param routes) ───
+router.post('/check-in', authMiddleware, attendanceController.studentCheckIn);
+router.post('/check-out', authMiddleware, attendanceController.studentCheckOut);
+router.get('/today', authMiddleware, attendanceController.getTodayAttendance);
+
+// ─── Admin/bulk routes ────────────────────────────────────────────────────────
 // Mark attendance for a single student
 router.post('/', authMiddleware, attendanceController.markAttendance);
 
 // Mark attendance in bulk
 router.post('/bulk', authMiddleware, attendanceController.markBulkAttendance);
 
-// Get attendance for a specific student
-router.get('/student/:studentId', authMiddleware, attendanceController.getStudentAttendance);
+// Get attendance summary for date range
+router.get('/summary/range', authMiddleware, attendanceController.getAttendanceSummary);
 
-// Get attendance for a specific date
+// Get attendance for a specific date (all students)
 router.get('/date/:date', authMiddleware, attendanceController.getAttendanceByDate);
 
 // Get students not marked for a specific date
 router.get('/unmarked/:date', authMiddleware, attendanceController.getUnmarkedStudents);
 
-// Get attendance summary
-router.get('/summary/range', authMiddleware, attendanceController.getAttendanceSummary);
-
 // List all attendance with filters
 router.get('/', authMiddleware, attendanceController.listAttendance);
+
+// Get attendance for a specific student (keep after static routes)
+router.get('/student/:studentId', authMiddleware, attendanceController.getStudentAttendance);
 
 // Update attendance record
 router.put('/:id', authMiddleware, attendanceController.updateAttendance);
 
 // Delete attendance record
 router.delete('/:id', authMiddleware, attendanceController.deleteAttendance);
-
-// Geolocation Check-In / Check-Out
-router.post('/check-in', authMiddleware, attendanceController.studentCheckIn);
-router.post('/check-out', authMiddleware, attendanceController.studentCheckOut);
-router.get('/today', authMiddleware, attendanceController.getTodayAttendance);
 
 export default router;

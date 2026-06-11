@@ -110,40 +110,82 @@ router.post('/bulk-delete', authMiddleware, async (req, res) => {
     }
 });
 
+import SplRegistration from '../models/SplRegistration.js';
+
 // POST Eligibility Checker (protected)
 router.post('/eligible', authMiddleware, async (req, res) => {
     try {
-        const { degrees, minYear, maxYear, statuses } = req.body;
+        const { degrees, years, statuses, page = 1, limit = 10, fetchAll = false } = req.body;
         
-        let query = {};
+        let studentQuery = {};
+        let splQuery = {};
+
         if (degrees && degrees.length > 0) {
-            query.degree = { $in: degrees.map(d => new RegExp(`^${d}$`, 'i')) };
+            const regexes = degrees.map(d => new RegExp(`^${d}$`, 'i'));
+            studentQuery.degree = { $in: regexes };
+            splQuery.degree = { $in: regexes };
         }
         if (statuses && statuses.length > 0) {
-            query.currentStatus = { $in: statuses.map(s => new RegExp(`^${s}$`, 'i')) };
+            const regexes = statuses.map(s => new RegExp(`^${s}$`, 'i'));
+            studentQuery.currentStatus = { $in: regexes };
+            // For SPL students, we don't strictly filter by 'Job Seeker', they are automatically eligible.
         }
         
-        if (minYear || maxYear) {
-            // Because passedOutYear is a string now, we do exact matches or simple string compares if needed.
-            // Better to pull all matching string years. For simplicity, we just filter post-query if range is needed on strings,
-            // or we try to cast. Let's do post-filter for safety.
+        // Exact year matching
+        if (years && years.length > 0) {
+             const stringYears = years.map(y => String(y));
+             studentQuery.passedOutYear = { $in: stringYears };
+             splQuery.batch = { $in: stringYears };
         }
 
-        let eligibleStudents = await Student.find(query);
-        
-        if (minYear || maxYear) {
-            const min = minYear ? parseInt(minYear) : 0;
-            const max = maxYear ? parseInt(maxYear) : 9999;
-            eligibleStudents = eligibleStudents.filter(s => {
-                const year = parseInt(s.passedOutYear);
-                if (isNaN(year)) return false;
-                return year >= min && year <= max;
+        const students = await Student.find(studentQuery).lean();
+        const spls = await SplRegistration.find(splQuery).lean();
+
+        // Deduplicate using mobile and email
+        const uniqueMobiles = new Set(students.map(s => s.mobile).filter(Boolean));
+        const uniqueEmails = new Set(students.map(s => s.email).filter(Boolean));
+
+        const normalizedSpls = spls.filter(spl => {
+             if (spl.mobile && uniqueMobiles.has(spl.mobile)) return false;
+             if (spl.email && uniqueEmails.has(spl.email)) return false;
+             return true;
+        }).map(spl => ({
+             _id: spl._id,
+             name: spl.name,
+             mobile: spl.mobile,
+             email: spl.email,
+             degree: spl.degree,
+             grade: spl.grade || '',
+             passedOutYear: spl.batch,
+             currentStatus: 'SPL Student (' + spl.status + ')',
+             createdAt: spl.createdAt
+        }));
+
+        let combined = [...students, ...normalizedSpls];
+        combined.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+        const totalCount = combined.length;
+
+        if (fetchAll) {
+            return res.json({
+                count: totalCount,
+                students: combined,
+                totalPages: 1,
+                currentPage: 1
             });
         }
 
-        res.json({ count: eligibleStudents.length, students: eligibleStudents });
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const paginated = combined.slice(skip, skip + parseInt(limit));
+
+        res.json({ 
+            count: totalCount, 
+            students: paginated,
+            totalPages: Math.ceil(totalCount / parseInt(limit)),
+            currentPage: parseInt(page)
+        });
     } catch (error) {
-        res.status(500).json({ message: 'Eligibility query failed' });
+        res.status(500).json({ message: 'Eligibility query failed', error: error.message });
     }
 });
 

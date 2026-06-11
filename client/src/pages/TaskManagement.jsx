@@ -9,6 +9,9 @@ import { Plus, ClipboardList, Trash2 } from 'lucide-react';
 export default function TaskManagement() {
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [gradeFilter, setGradeFilter] = useState('');
   const [formData, setFormData] = useState({
     studentIds: [],
     description: '',
@@ -16,7 +19,15 @@ export default function TaskManagement() {
     questions: ['']
   });
 
+  const filteredStudents = students.filter(student => {
+    const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          student.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesGrade = gradeFilter ? student.grade === gradeFilter : true;
+    return matchesSearch && matchesGrade;
+  });
+
   const fetchStudents = async () => {
+    setIsLoadingStudents(true);
     try {
       const res = await fetch(buildApiUrl('/auth/spl-students'), {
         headers: { ...authHeaders() }
@@ -25,6 +36,8 @@ export default function TaskManagement() {
       setStudents(await res.json());
     } catch (err) {
       toast.error('Unable to load student accounts');
+    } finally {
+      setIsLoadingStudents(false);
     }
   };
 
@@ -92,30 +105,59 @@ export default function TaskManagement() {
 
           <form onSubmit={handleCreateTask} className="space-y-6">
             <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
                 <div>
                   <label className="text-base font-semibold text-slate-800">Select Students</label>
                   <p className="text-sm text-slate-500">Choose who should receive this task</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (formData.studentIds.length === students.length && students.length > 0) {
-                      setFormData({ ...formData, studentIds: [] });
-                    } else {
-                      setFormData({ ...formData, studentIds: students.map(s => s._id) });
-                    }
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                >
-                  {formData.studentIds.length === students.length && students.length > 0 ? 'Deselect All' : 'Select All'}
-                </button>
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                  <input
+                    type="text"
+                    placeholder="Search name or email..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="crm-input h-9 py-1 px-3 text-sm flex-1 sm:flex-none w-full sm:w-48"
+                  />
+                  <select
+                    value={gradeFilter}
+                    onChange={(e) => setGradeFilter(e.target.value)}
+                    className="crm-input h-9 py-1 px-3 text-sm flex-1 sm:flex-none w-full sm:w-32"
+                  >
+                    <option value="">All Grades</option>
+                    <option value="A">Grade A</option>
+                    <option value="B">Grade B</option>
+                    <option value="C">Grade C</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentSelectedFiltered = filteredStudents.filter(s => formData.studentIds.includes(s._id));
+                      if (currentSelectedFiltered.length === filteredStudents.length && filteredStudents.length > 0) {
+                        // Deselect all filtered
+                        const filteredIds = filteredStudents.map(s => s._id);
+                        setFormData({ ...formData, studentIds: formData.studentIds.filter(id => !filteredIds.includes(id)) });
+                      } else {
+                        // Select all filtered (keeping already selected ones)
+                        const newIds = new Set([...formData.studentIds, ...filteredStudents.map(s => s._id)]);
+                        setFormData({ ...formData, studentIds: Array.from(newIds) });
+                      }
+                    }}
+                    className="px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors whitespace-nowrap"
+                  >
+                    {filteredStudents.length > 0 && filteredStudents.every(s => formData.studentIds.includes(s._id)) ? 'Deselect Filtered' : 'Select Filtered'}
+                  </button>
+                </div>
               </div>
-              <div className="max-h-72 overflow-y-auto border border-slate-200 rounded-lg p-2 space-y-1 bg-slate-50/50">
-                {students.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500 italic">No students available.</div>
+              <div className="max-h-72 overflow-y-auto border border-slate-200 rounded-lg p-2 space-y-1 bg-slate-50/50 min-h-[150px]">
+                {isLoadingStudents ? (
+                  <div className="p-12 text-center flex flex-col items-center justify-center h-full">
+                    <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mb-3"></div>
+                    <span className="text-sm text-slate-500 font-medium">Loading students...</span>
+                  </div>
+                ) : filteredStudents.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500 italic">No matching students found.</div>
                 ) : (
-                  students.map(student => (
+                  filteredStudents.map(student => (
                     <label key={student._id} className="flex items-center gap-4 p-3 hover:bg-white rounded-md cursor-pointer transition-colors border border-transparent hover:border-slate-200 hover:shadow-sm">
                       <input
                         type="checkbox"
@@ -128,10 +170,20 @@ export default function TaskManagement() {
                         }}
                         className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
                       />
-                      <div className="flex flex-col">
+                      <div className="flex flex-col flex-1">
                         <span className="text-sm font-semibold text-slate-800">{student.name}</span>
                         <span className="text-xs text-slate-500">{student.email} {student.mobile ? `• ${student.mobile}` : ''}</span>
                       </div>
+                      {student.grade && (
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                          student.grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
+                          student.grade === 'B' ? 'bg-amber-100 text-amber-700' :
+                          student.grade === 'C' ? 'bg-rose-100 text-rose-700' :
+                          'bg-slate-100 text-slate-700'
+                        }`}>
+                          Grade {student.grade}
+                        </span>
+                      )}
                     </label>
                   ))
                 )}

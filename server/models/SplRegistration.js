@@ -14,6 +14,7 @@ const splRegistrationSchema = new mongoose.Schema({
   needMost: { type: String, default: '' },
   status: { type: String, default: 'New' },
   statusReason: { type: String, default: '' },
+  grade: { type: String, default: '' },
   ip: { type: String, default: '' },
   userAgent: { type: String, default: '' }
 }, { timestamps: true });

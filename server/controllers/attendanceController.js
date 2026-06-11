@@ -363,50 +363,51 @@ const MAX_RADIUS_METERS = 1000;
 export const studentCheckIn = async (req, res) => {
   try {
     const { lat, lng } = req.body;
-    const studentId = req.user.id;
+    const userId = req.user.id;
 
-    if (!lat || !lng) {
+    if (lat === undefined || lng === undefined) {
       return res.status(400).json({ message: 'Location coordinates are required' });
     }
 
-    const distance = calculateDistance(TARGET_LAT, TARGET_LNG, lat, lng);
-    // Temporary bypass for distance restriction
-    // if (distance > MAX_RADIUS_METERS) {
-    //   return res.status(400).json({ message: `You are not at the office location. Distance: ${Math.round(distance)}m away.` });
-    // }
-
-    // Fetch user to get their email, then find the corresponding SplRegistration
-    const user = await User.findById(studentId);
+    // Fetch user
+    const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    
-    const student = await SplRegistration.findOne({ email: user.email.toLowerCase() });
-    if (!student) {
-      return res.status(404).json({ message: 'Student registration not found' });
-    }
 
-    const splStudentId = student._id;
+    // Find SPL registration by email
+    let student = await SplRegistration.findOne({ email: user.email.toLowerCase() });
+
+    // If no SPL registration, use user details directly as a fallback studentId reference
+    // We create a synthetic record using the userId so students without SPL can still check in
+    const splStudentId = student ? student._id : userId;
+    const studentName = student ? student.name : user.name;
+    const studentEmail = student ? student.email : user.email;
 
     const today = parseUTCDate(new Date().toISOString().split('T')[0]);
 
-    let attendance = await Attendance.findOne({ studentId: splStudentId, date: today });
+    let attendance = await Attendance.findOne({ studentEmail: studentEmail.toLowerCase(), date: today });
     if (attendance) {
-      return res.status(400).json({ message: 'Attendance record already exists for today' });
+      if (attendance.checkInTime) {
+        return res.status(400).json({ message: 'You have already checked in today.' });
+      }
     }
 
-    attendance = new Attendance({
-      studentId: splStudentId,
-      studentName: student.name,
-      studentEmail: student.email,
-      date: today,
-      status: 'In Progress',
-      checkInTime: new Date(),
-      checkInLocation: { lat, lng, address: 'Office' },
-      markedBy: 'Student'
-    });
-    
-    await attendance.save();
+    if (!attendance) {
+      attendance = new Attendance({
+        studentId: splStudentId,
+        studentName,
+        studentEmail,
+        date: today,
+        status: 'In Progress',
+        checkInTime: new Date(),
+        checkInLocation: { lat, lng, address: 'Office' },
+        markedBy: 'Student'
+      });
+      await attendance.save();
+    }
+
     res.status(201).json(attendance);
   } catch (err) {
+    console.error('Check-in error:', err);
     res.status(500).json({ message: 'Check-in failed', error: err.message });
   }
 };
@@ -414,38 +415,25 @@ export const studentCheckIn = async (req, res) => {
 export const studentCheckOut = async (req, res) => {
   try {
     const { lat, lng } = req.body;
-    const studentId = req.user.id;
+    const userId = req.user.id;
 
-    if (!lat || !lng) {
+    if (lat === undefined || lng === undefined) {
       return res.status(400).json({ message: 'Location coordinates are required' });
     }
 
-    const distance = calculateDistance(TARGET_LAT, TARGET_LNG, lat, lng);
-    // Temporary bypass for distance restriction
-    // if (distance > MAX_RADIUS_METERS) {
-    //   return res.status(400).json({ message: `You are not at the office location. Distance: ${Math.round(distance)}m away.` });
-    // }
-
-    // Fetch user to get their email, then find the corresponding SplRegistration
-    const user = await User.findById(studentId);
+    const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    
-    const student = await SplRegistration.findOne({ email: user.email.toLowerCase() });
-    if (!student) {
-      return res.status(404).json({ message: 'Student registration not found' });
-    }
-
-    const splStudentId = student._id;
 
     const today = parseUTCDate(new Date().toISOString().split('T')[0]);
 
-    let attendance = await Attendance.findOne({ studentId: splStudentId, date: today });
+    // Look up by email to handle both SPL and non-SPL students
+    let attendance = await Attendance.findOne({ studentEmail: user.email.toLowerCase(), date: today });
     if (!attendance) {
-      return res.status(404).json({ message: 'No check-in record found for today' });
+      return res.status(404).json({ message: 'No check-in record found for today. Please check in first.' });
     }
 
     if (attendance.checkOutTime) {
-      return res.status(400).json({ message: 'Already checked out for today' });
+      return res.status(400).json({ message: 'You have already checked out for today.' });
     }
 
     attendance.checkOutTime = new Date();
@@ -455,8 +443,11 @@ export const studentCheckOut = async (req, res) => {
     const totalHours = diffMs / (1000 * 60 * 60);
     attendance.totalHours = parseFloat(totalHours.toFixed(2));
 
+    // Mark present if 6+ hours, otherwise half-day
     if (attendance.totalHours >= 6) {
       attendance.status = 'Present';
+    } else if (attendance.totalHours >= 3) {
+      attendance.status = 'Late';
     } else {
       attendance.status = 'Absent';
     }
@@ -464,26 +455,24 @@ export const studentCheckOut = async (req, res) => {
     await attendance.save();
     res.json(attendance);
   } catch (err) {
+    console.error('Check-out error:', err);
     res.status(500).json({ message: 'Check-out failed', error: err.message });
   }
 };
 
 export const getTodayAttendance = async (req, res) => {
   try {
-    const studentId = req.user.id;
-    const user = await User.findById(studentId);
+    const userId = req.user.id;
+    const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    
-    const student = await SplRegistration.findOne({ email: user.email.toLowerCase() });
-    if (!student) {
-      return res.json({ attendance: null });
-    }
 
     const today = parseUTCDate(new Date().toISOString().split('T')[0]);
-    
-    const attendance = await Attendance.findOne({ studentId: student._id, date: today });
-    res.json({ attendance });
+
+    // Search by email so it works for both SPL and non-SPL students
+    const attendance = await Attendance.findOne({ studentEmail: user.email.toLowerCase(), date: today });
+    res.json({ attendance: attendance || null });
   } catch (err) {
+    console.error('getTodayAttendance error:', err);
     res.status(500).json({ message: 'Failed to fetch attendance', error: err.message });
   }
 };

@@ -34,6 +34,8 @@ const ensureStudentAccountsFromSpl = async () => {
       name: user.name,
       email: user.email,
       mobile: reg.mobile || '',
+      grade: reg.grade || '',
+      status: reg.status || '',
       registrationId: reg._id
     });
   }
@@ -47,6 +49,75 @@ router.get('/spl-students', authMiddleware, requireRole('admin'), async (req, re
     res.json(students);
   } catch (error) {
     res.status(500).json({ message: 'Failed to load SPL student accounts', error: error.message });
+  }
+});
+
+// Register a Coordination user (admin only)
+router.post('/register-coordinator', authMiddleware, requireRole('admin'), async (req, res) => {
+  console.log('Register coordinator payload:', req.body);
+  const { name, email, password } = req.body;
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: 'Name, email and password are required' });
+  }
+  try {
+    const existing = await User.findOne({ email: email.trim().toLowerCase() });
+    if (existing) {
+      return res.status(409).json({ message: 'Email already registered' });
+    }
+    const user = new User({
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+      role: 'coordinator'
+    });
+    await user.save();
+    res.status(201).json({ message: 'Coordinator account created' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to create coordinator', error: error.message });
+  }
+});
+
+// Register a Placement Support user (admin only)
+router.post('/register-placement', authMiddleware, requireRole('admin'), async (req, res) => {
+  const { name, email, password } = req.body;
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: 'Name, email and password are required' });
+  }
+  try {
+    const existing = await User.findOne({ email: email.trim().toLowerCase() });
+    if (existing) {
+      return res.status(409).json({ message: 'Email already registered' });
+    }
+    const user = new User({
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+      role: 'placement'
+    });
+    await user.save();
+    res.status(201).json({ message: 'Placement Support account created' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to create placement support account', error: error.message });
+  }
+});
+
+// Get all coordinators (admin only)
+router.get('/coordinators', authMiddleware, requireRole('admin'), async (req, res) => {
+  try {
+    const coordinators = await User.find({ role: 'coordinator' }).select('name email createdAt');
+    res.json(coordinators);
+  } catch (error) {
+    res.status(500).json({ message: 'Could not fetch coordinators', error: error.message });
+  }
+});
+
+// Get all placement support accounts (admin only)
+router.get('/placements', authMiddleware, requireRole('admin'), async (req, res) => {
+  try {
+    const placements = await User.find({ role: 'placement' }).select('name email createdAt');
+    res.json(placements);
+  } catch (error) {
+    res.status(500).json({ message: 'Could not fetch placement support accounts', error: error.message });
   }
 });
 

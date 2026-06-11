@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Copy, Download, RefreshCw, Search, Sparkles, X } from 'lucide-react';
+import { Copy, Download, RefreshCw, Search, Sparkles, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { AppShell, SectionTabs, StatusBadge, SurfaceCard } from '../components/AppShell';
 import { authHeaders, logout } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
+
 export default function EligibilityPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -15,17 +16,22 @@ export default function EligibilityPage() {
   const [jobDescription, setJobDescription] = useState('');
   const [parsedCriteria, setParsedCriteria] = useState(null);
   const [lastSearchCriteria, setLastSearchCriteria] = useState(null);
+  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const refreshSearch = async () => {
+  const refreshSearch = async (targetPage = page) => {
     if (lastSearchCriteria) {
-      await performSearch(lastSearchCriteria.degrees, lastSearchCriteria.minYear, lastSearchCriteria.maxYear);
+      await performSearch(lastSearchCriteria.degrees, lastSearchCriteria.years, targetPage, null);
     }
   };
 
   useEffect(() => {
     // Auto-refresh if we have previous search criteria
     if (lastSearchCriteria && !searched) {
-      refreshSearch();
+      refreshSearch(1);
       setSearched(true);
     }
   }, []);
@@ -41,13 +47,19 @@ export default function EligibilityPage() {
     );
   };
 
-  const performSearch = async (degrees, minYear, maxYear, criteria) => {
+  const performSearch = async (degrees, years, pageNumber, criteria = null) => {
     setInternalLoading(true);
     try {
       const res = await fetch(buildApiUrl('/students/eligible'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ degrees, minYear, maxYear }),
+        body: JSON.stringify({ 
+            degrees, 
+            years, 
+            statuses: ['Job Seeker'], 
+            page: pageNumber, 
+            limit: 10 
+        }),
       });
       if (res.status === 401) {
         logout();
@@ -55,9 +67,13 @@ export default function EligibilityPage() {
       }
       const data = await res.json();
       setResults(data.students);
+      setTotalPages(data.totalPages || 1);
+      setTotalCount(data.count || 0);
+      setPage(data.currentPage || 1);
+
       if (criteria) {
         setParsedCriteria(criteria);
-        setLastSearchCriteria({ degrees, minYear, maxYear });
+        setLastSearchCriteria({ degrees, years });
         toast.success(`Matched ${data.count} candidates`);
       }
     } catch (err) {
@@ -100,25 +116,17 @@ export default function EligibilityPage() {
     const yearMatches = jobDescription.match(/\b(20[1-3][0-9])\b/g) || [];
     const years = [...new Set(yearMatches)].map(Number);
     
-    let minYear = '';
-    let maxYear = '';
-    
-    if (years.length > 0) {
-      minYear = Math.min(...years).toString();
-      maxYear = Math.max(...years).toString();
-    }
-
     const criteria = { 
       degreesForDisplay: displayDegrees, 
       degreesPayload: finalDegreesPayload,
-      minYear, 
-      maxYear 
+      years 
     };
 
     setParsedCriteria(criteria);
-    setLastSearchCriteria({ degrees: finalDegreesPayload, minYear, maxYear });
+    setLastSearchCriteria({ degrees: finalDegreesPayload, years });
 
-    await performSearch(finalDegreesPayload, minYear, maxYear, criteria);
+    // Always start at page 1 for a new search
+    await performSearch(finalDegreesPayload, years, 1, criteria);
     setLoading(false);
   };
 
@@ -128,36 +136,81 @@ export default function EligibilityPage() {
     setParsedCriteria(null);
     setLastSearchCriteria(null);
     setJobDescription('');
+    setPage(1);
+    setTotalPages(1);
+    setTotalCount(0);
   };
 
   const copyAllNumbers = () => {
-    const availableStudents = results.filter(s => s.currentStatus === 'Job Seeker');
-    if (availableStudents.length === 0) return;
-    navigator.clipboard.writeText(availableStudents.map(student => student.mobile).join(', '));
-    toast.success('Copied mobile list');
+    if (results.length === 0) return;
+    navigator.clipboard.writeText(results.map(student => student.mobile).join(', '));
+    toast.success('Copied mobile list for current page');
   };
 
-  const exportResults = () => {
-    const availableStudents = results.filter(s => s.currentStatus === 'Job Seeker');
-    if (availableStudents.length === 0) return;
+  const exportPageResults = () => {
+    if (results.length === 0) return;
     const ws = XLSX.utils.json_to_sheet(
-      availableStudents.map(student => ({
+      results.map(student => ({
         Name: student.name,
         Mobile: student.mobile,
         Degree: student.degree,
         'Batch Year': student.passedOutYear,
+        Grade: student.grade || 'N/A',
         Status: student.currentStatus,
       }))
     );
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Eligible');
-    XLSX.writeFile(wb, 'Eligible_Candidates.xlsx');
+    XLSX.writeFile(wb, 'Eligible_Candidates_Page.xlsx');
+  };
+
+  const exportAllResults = async () => {
+    if (!lastSearchCriteria) return;
+    setInternalLoading(true);
+    toast.loading('Fetching all candidates for export...', { id: 'exportAll' });
+    try {
+      const res = await fetch(buildApiUrl('/students/eligible'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ 
+            degrees: lastSearchCriteria.degrees, 
+            years: lastSearchCriteria.years, 
+            statuses: ['Job Seeker'], 
+            fetchAll: true
+        }),
+      });
+      if (res.status === 401) {
+        logout();
+        return;
+      }
+      const data = await res.json();
+      
+      const ws = XLSX.utils.json_to_sheet(
+        data.students.map(student => ({
+          Name: student.name,
+          Email: student.email || '',
+          Mobile: student.mobile,
+          Degree: student.degree,
+          'Batch Year': student.passedOutYear,
+          Grade: student.grade || 'N/A',
+          Status: student.currentStatus,
+        }))
+      );
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Eligible_All');
+      XLSX.writeFile(wb, 'All_Eligible_Candidates.xlsx');
+      toast.success(`Successfully exported ${data.students.length} candidates`, { id: 'exportAll' });
+    } catch (err) {
+      toast.error('Failed to export candidates', { id: 'exportAll' });
+    } finally {
+      setInternalLoading(false);
+    }
   };
 
   return (
     <AppShell
       title="Eligibility Engine"
-      subtitle="Filter students by degree and graduation years to generate targeted outreach lists."
+      subtitle="Filter active students by degree and graduation years to generate targeted outreach lists."
       searchPlaceholder="Search saved filters or candidate segments"
     >
       <SectionTabs
@@ -209,7 +262,7 @@ export default function EligibilityPage() {
                      <p className="text-sm text-blue-900 flex items-start gap-2">
                        <span className="font-bold w-16 shrink-0 mt-0.5">Years:</span> 
                        <span className="bg-white px-2 py-0.5 rounded-md shadow-sm border border-blue-100 text-[13px]">
-                         {parsedCriteria.minYear ? (parsedCriteria.minYear === parsedCriteria.maxYear ? parsedCriteria.minYear : `${parsedCriteria.minYear} out to ${parsedCriteria.maxYear}`) : 'Any / Not Detected'}
+                         {parsedCriteria.years.length > 0 ? parsedCriteria.years.join(', ') : 'Any / Not Detected'}
                        </span>
                      </p>
                   </div>
@@ -217,23 +270,23 @@ export default function EligibilityPage() {
             )}
 
             <button type="button" onClick={handleSearch} disabled={loading} className="crm-btn-primary w-full h-12 text-sm shadow-md shadow-blue-200 hover:shadow-lg transition-shadow">
-              {loading ? 'Analyzing Content...' : 'Auto-Parse & Filter Candidates'}
+              {loading ? 'Analyzing Content...' : 'Auto-Parse & Filter Active Candidates'}
             </button>
           </div>
         </SurfaceCard>
 
-        <SurfaceCard className="overflow-hidden">
-          <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 md:flex-row md:items-center md:justify-between md:px-6">
+        <SurfaceCard className="overflow-hidden flex flex-col">
+          <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 md:flex-row md:items-center md:justify-between md:px-6 shrink-0">
             <div>
-              <p className="text-sm font-medium text-slate-500">Eligible Candidates</p>
-              <h2 className="mt-1 text-xl font-semibold text-slate-950">Filtered results</h2>
+              <p className="text-sm font-medium text-slate-500">Eligible Active Candidates</p>
+              <h2 className="mt-1 text-xl font-semibold text-slate-950">Filtered results ({totalCount})</h2>
             </div>
             <div className="flex flex-wrap gap-2">
               {searched && (
                 <>
                   <button 
                     type="button" 
-                    onClick={refreshSearch} 
+                    onClick={() => refreshSearch(page)} 
                     disabled={internalLoading}
                     className="crm-btn-secondary"
                   >
@@ -251,18 +304,22 @@ export default function EligibilityPage() {
                   </button>
                 </>
               )}
-              <button type="button" onClick={copyAllNumbers} disabled={results.filter(s => s.currentStatus === 'Job Seeker').length === 0 || internalLoading} className="crm-btn-secondary">
+              <button type="button" onClick={copyAllNumbers} disabled={results.length === 0 || internalLoading} className="crm-btn-secondary">
                 <Copy size={16} />
                 <span>Copy Phones</span>
               </button>
-              <button type="button" onClick={exportResults} disabled={results.filter(s => s.currentStatus === 'Job Seeker').length === 0 || internalLoading} className="crm-btn-secondary">
+              <button type="button" onClick={exportPageResults} disabled={results.length === 0 || internalLoading} className="crm-btn-secondary">
                 <Download size={16} />
-                <span>Export Sheet</span>
+                <span>Export Page</span>
+              </button>
+              <button type="button" onClick={exportAllResults} disabled={results.length === 0 || internalLoading} className="crm-btn-primary h-auto py-2 px-3 text-sm flex items-center gap-2 shadow-sm">
+                <Download size={16} />
+                <span>Export All ({totalCount})</span>
               </button>
             </div>
           </div>
 
-          <div className="min-h-[420px] overflow-auto">
+          <div className="min-h-[420px] overflow-auto flex-1">
             {internalLoading ? (
               <div className="flex min-h-[420px] flex-col items-center justify-center px-6 text-center">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-blue-600">
@@ -278,12 +335,12 @@ export default function EligibilityPage() {
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-400">
                   <Search size={26} />
                 </div>
-                <h3 className="mt-5 text-lg font-semibold text-slate-900">Run a filter to view results</h3>
+                <h3 className="mt-5 text-lg font-semibold text-slate-900">Run a filter to view active results</h3>
                 <p className="mt-2 max-w-sm text-sm text-slate-500">
-                  Select degrees and year range to generate a refined list of candidates for outreach.
+                  Select degrees and exact years to generate a refined list of active Job Seekers for outreach.
                 </p>
               </div>
-            ) : results.filter(s => s.currentStatus === 'Job Seeker').length > 0 ? (
+            ) : results.length > 0 ? (
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
@@ -294,6 +351,9 @@ export default function EligibilityPage() {
                       Degree
                     </th>
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      Grade
+                    </th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                       Contact
                     </th>
                     <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -302,7 +362,7 @@ export default function EligibilityPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
-                  {results.filter(s => s.currentStatus === 'Job Seeker').map(student => (
+                  {results.map(student => (
                     <tr key={student._id} className="transition hover:bg-slate-50">
                       <td className="px-5 py-4">
                         <p className="text-sm font-semibold text-slate-900">{student.name}</p>
@@ -312,6 +372,18 @@ export default function EligibilityPage() {
                         <p className="mt-1 text-xs text-slate-500">
                           Batch Year: {student.passedOutYear || 'Not added'}
                         </p>
+                      </td>
+                      <td className="px-5 py-4">
+                        {student.grade ? (
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                            student.grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
+                            student.grade === 'B' ? 'bg-amber-100 text-amber-700' :
+                            student.grade === 'C' ? 'bg-rose-100 text-rose-700' :
+                            'bg-slate-100 text-slate-700'
+                          }`}>
+                            Grade {student.grade}
+                          </span>
+                        ) : <span className="text-slate-400 text-xs">—</span>}
                       </td>
                       <td className="px-5 py-4 text-sm font-medium text-blue-700">{student.mobile}</td>
                       <td className="px-5 py-4 text-right">
@@ -323,13 +395,41 @@ export default function EligibilityPage() {
               </table>
             ) : (
               <div className="flex min-h-[420px] flex-col items-center justify-center px-6 text-center">
-                <h3 className="text-lg font-semibold text-slate-900">No available candidates matched</h3>
+                <h3 className="text-lg font-semibold text-slate-900">No active candidates matched</h3>
                 <p className="mt-2 max-w-sm text-sm text-slate-500">
-                  Try widening the graduation range or selecting more degrees.
+                  Try widening the graduation years or selecting more degrees.
                 </p>
               </div>
             )}
           </div>
+          
+          {/* Pagination Controls */}
+          {searched && results.length > 0 && !internalLoading && (
+            <div className="border-t border-slate-200 px-6 py-4 flex items-center justify-between shrink-0 bg-slate-50">
+                <p className="text-sm text-slate-600 font-medium">
+                    Showing <span className="font-bold text-slate-900">{(page - 1) * 10 + 1}</span> to <span className="font-bold text-slate-900">{Math.min(page * 10, totalCount)}</span> of <span className="font-bold text-slate-900">{totalCount}</span> active candidates
+                </p>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => refreshSearch(page - 1)} 
+                        disabled={page === 1}
+                        className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                        <ChevronLeft size={18} />
+                    </button>
+                    <div className="flex items-center px-3 text-sm font-medium text-slate-700">
+                        Page {page} of {totalPages}
+                    </div>
+                    <button 
+                        onClick={() => refreshSearch(page + 1)} 
+                        disabled={page === totalPages}
+                        className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                        <ChevronRight size={18} />
+                    </button>
+                </div>
+            </div>
+          )}
         </SurfaceCard>
       </div>
     </AppShell>

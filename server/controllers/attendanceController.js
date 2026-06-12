@@ -142,7 +142,13 @@ export const getStudentAttendance = async (req, res) => {
     const { studentId } = req.params;
     const { startDate, endDate } = req.query;
 
-    const query = { studentId };
+    let query = {};
+    const user = await User.findById(studentId).catch(() => null);
+    if (user) {
+      query.studentEmail = user.email.toLowerCase();
+    } else {
+      query.studentId = studentId;
+    }
 
     if (startDate && endDate) {
       const start = parseUTCDate(startDate);

@@ -104,7 +104,10 @@ export default function StudentDashboard() {
 
     // 3. Tasks Completed
     const totalTasksCount = tasks.length;
-    const completedTasksCount = tasks.filter(t => t.overallStatus === 'Completed').length;
+    const completedTasksCount = tasks.filter(t => 
+      t.overallStatus === 'Completed' || 
+      (t.questions && t.questions.length > 0 && t.questions.every(q => q.status === 'Completed'))
+    ).length;
 
     return {
       totalHours: totalHours.toFixed(1),
@@ -120,7 +123,7 @@ export default function StudentDashboard() {
   const recentActivities = [
     ...logs.map(l => ({ type: 'log', date: new Date(l.date), title: 'Daily Log Created', desc: `${l.module} - ${l.topicCovered}`, id: l._id })),
     ...attendance.filter(a => a.checkInTime).map(a => ({ type: 'attendance', date: new Date(a.date), title: 'Attendance Marked', desc: `Status: ${a.status} ${a.totalHours ? `(${a.totalHours} hrs)` : ''}`, id: a._id })),
-    ...tasks.filter(t => t.overallStatus === 'Completed').map(t => ({ type: 'task', date: new Date(t.createdAt), title: 'Task Completed', desc: t.title, id: t._id }))
+    ...tasks.filter(t => t.overallStatus === 'Completed' || (t.questions && t.questions.length > 0 && t.questions.every(q => q.status === 'Completed'))).map(t => ({ type: 'task', date: new Date(t.updatedAt || t.createdAt), title: 'Task Completed', desc: t.title, id: t._id }))
   ].sort((a, b) => b.date - a.date).slice(0, 5);
 
   return (

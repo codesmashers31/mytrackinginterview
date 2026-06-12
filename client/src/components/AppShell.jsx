@@ -15,6 +15,7 @@ import {
   Users,
   X,
   BriefcaseBusiness,
+  FileText
 } from 'lucide-react';
 import { logout } from '../utils/auth';
 
@@ -29,6 +30,7 @@ const buildNavigationGroups = (role, onLogout) => {
           { to: '/student/tasks', label: 'My Tasks', icon: ClipboardList },
           { to: '/student/daily-activity', label: 'Daily Activity', icon: Clock },
           { to: '/student/attendance', label: 'My Attendance', icon: Calendar },
+          { to: '/student/resume-builder', label: 'Resume Builder', icon: FileText },
           { to: '/settings', label: 'Settings', icon: SettingsIcon },
         ],
       },

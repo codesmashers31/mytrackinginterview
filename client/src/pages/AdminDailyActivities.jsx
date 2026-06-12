@@ -203,9 +203,8 @@ export default function AdminDailyActivities() {
               <tr>
                 <th className="px-5 py-2.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Student</th>
                 <th className="px-5 py-2.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Date</th>
-                <th className="px-5 py-2.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Module</th>
-                <th className="px-5 py-2.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Topic Covered</th>
-                <th className="px-5 py-2.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Timing</th>
+                <th className="px-5 py-2.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Company Apply</th>
+                <th className="px-5 py-2.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Task / Process</th>
                 <th className="px-5 py-2.5 text-right text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Action</th>
               </tr>
             </thead>
@@ -242,18 +241,13 @@ export default function AdminDailyActivities() {
                         </div>
                       </td>
                       <td className="px-5 py-3 max-w-[200px]">
-                        <div className="text-[12px] md:text-[13px] font-bold text-[#1e293b] truncate" title={log.module}>
-                          {log.module}
+                        <div className="text-[12px] md:text-[13px] font-bold text-[#1e293b] truncate" title={log.companyApply}>
+                          {log.companyApply || 'Company Apply'}
                         </div>
                       </td>
                       <td className="px-5 py-3 max-w-[250px]">
-                        <div className="text-[11px] md:text-[12px] font-medium text-slate-700 truncate" title={log.topicCovered}>
-                          {log.topicCovered}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="text-[11px] md:text-[12px] font-semibold text-slate-600">
-                          {log.timingDuration || '-'}
+                        <div className="text-[11px] md:text-[12px] font-medium text-slate-700 truncate" title={log.taskWorkProcess}>
+                          {log.taskWorkProcess}
                         </div>
                       </td>
                       <td className="px-5 py-3 text-right">
@@ -352,49 +346,28 @@ function LogDetailModal({ onClose, log }) {
             </div>
           </div>
 
-          {/* Module & Topic */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Module</span>
-              <div className="text-sm text-slate-800 font-bold bg-slate-50 p-3 rounded-xl border border-slate-100">
-                {log.module}
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Timing</span>
-              <div className="text-sm text-slate-700 font-bold bg-slate-50 p-3 rounded-xl border border-slate-100">
-                {log.timingDuration || '-'}
-              </div>
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Company Apply</span>
+            <div className="text-sm text-slate-800 font-bold bg-slate-50 p-4 rounded-xl border border-slate-100">
+              {log.companyApply || 'N/A'}
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Topic Covered</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Task / Process</span>
             <div className="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap">
-              {log.topicCovered}
+              {log.taskWorkProcess}
             </div>
           </div>
 
-          {/* Trainer and Remarks */}
-          <div className="grid grid-cols-2 gap-4">
-            {log.trainer && (
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Trainer</span>
-                <div className="text-sm text-slate-700 font-medium bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  {log.trainer}
-                </div>
+          {log.remarks && (
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Remarks</span>
+              <div className="text-sm text-slate-600 italic bg-slate-50 p-3 rounded-xl border border-slate-100 whitespace-pre-wrap">
+                {log.remarks}
               </div>
-            )}
-            
-            {log.remarks && (
-              <div className={`space-y-1.5 ${!log.trainer ? 'col-span-2' : ''}`}>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Remarks</span>
-                <div className="text-sm text-slate-600 italic bg-slate-50 p-3 rounded-xl border border-slate-100 whitespace-pre-wrap">
-                  {log.remarks}
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

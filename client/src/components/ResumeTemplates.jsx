@@ -85,6 +85,26 @@ const Template1 = ({ data }) => (
       </section>
     )}
 
+    {data.certifications && data.certifications.length > 0 && (
+      <section className="mb-6">
+        <SectionHeader title="Certifications" className="border-b border-slate-300" />
+        <div className="space-y-3 mt-3">
+          {data.certifications.map((cert, i) => (
+            <div key={i} className="flex justify-between items-start">
+              <div>
+                <h4 className="font-bold">{cert.title}</h4>
+                <div className="text-sm">{cert.issuer}</div>
+              </div>
+              <div className="text-right text-sm">
+                <div className="italic">{cert.year}</div>
+                {cert.link && <a href={cert.link} className="text-xs text-blue-600 underline">View Credential</a>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
+
     {data.skills.length > 0 && (
       <section className="mb-6">
         <SectionHeader title="Skills" className="border-b border-slate-300" />
@@ -128,6 +148,20 @@ const Template2 = ({ data }) => (
                 <div className="font-bold text-sm leading-tight">{edu.degree}</div>
                 <div className="text-xs mt-1 text-slate-600">{edu.institution}</div>
                 <div className="text-xs text-slate-500">{edu.year} | {edu.score}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {data.certifications && data.certifications.length > 0 && (
+          <div className="mt-8">
+            <h3 className="font-bold text-blue-900 uppercase tracking-widest text-sm mb-3">Certifications</h3>
+            {data.certifications.map((cert, i) => (
+              <div key={i} className="mb-4">
+                <div className="font-bold text-sm leading-tight">{cert.title}</div>
+                <div className="text-xs mt-1 text-slate-600">{cert.issuer}</div>
+                <div className="text-xs text-slate-500">{cert.year}</div>
+                {cert.link && <a href={cert.link} className="text-xs text-blue-600">Credential</a>}
               </div>
             ))}
           </div>
@@ -218,6 +252,21 @@ const Template3 = ({ data }) => (
                 <div className="font-bold text-sm text-emerald-400">{edu.degree}</div>
                 <div className="text-xs text-slate-300 mt-1">{edu.institution}</div>
                 <div className="text-xs text-slate-400 mt-1">{edu.year} | {edu.score}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.certifications && data.certifications.length > 0 && (
+        <div className="mt-8">
+          <h3 className="uppercase tracking-widest text-sm font-bold text-white mb-4 border-b border-slate-600 pb-2">Certifications</h3>
+          <div className="space-y-4">
+            {data.certifications.map((cert, i) => (
+              <div key={i}>
+                <div className="font-bold text-sm text-emerald-400">{cert.title}</div>
+                <div className="text-xs text-slate-300 mt-1">{cert.issuer}</div>
+                <div className="text-xs text-slate-400 mt-1">{cert.year}</div>
               </div>
             ))}
           </div>
@@ -349,6 +398,21 @@ const Template4 = ({ data }) => (
             </div>
           </section>
         )}
+
+        {data.certifications && data.certifications.length > 0 && (
+          <section className="mb-6">
+            <h3 className="text-lg font-bold text-indigo-800 uppercase tracking-wider border-b-2 border-indigo-100 mb-4 pb-1">Certifications</h3>
+            <div className="space-y-4">
+              {data.certifications.map((cert, i) => (
+                <div key={i}>
+                  <div className="font-bold text-gray-900">{cert.title}</div>
+                  <div className="text-sm text-gray-600">{cert.issuer}</div>
+                  <div className="text-xs text-gray-500 mt-1">{cert.year}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
 
@@ -427,6 +491,20 @@ const Template5 = ({ data }) => (
               <span className="font-normal italic">{proj.techStack}</span>
             </div>
             <p className="mt-0.5">{proj.description}</p>
+          </div>
+        ))}
+      </div>
+    )}
+
+    {data.certifications && data.certifications.length > 0 && (
+      <div className="mb-3">
+        <h3 className="uppercase font-bold border-b border-black mb-1">Certifications</h3>
+        {data.certifications.map((cert, i) => (
+          <div key={i} className="flex justify-between mb-1">
+            <div>
+              <span className="font-bold">{cert.title}</span> — <span>{cert.issuer}</span>
+            </div>
+            <div>{cert.year}</div>
           </div>
         ))}
       </div>

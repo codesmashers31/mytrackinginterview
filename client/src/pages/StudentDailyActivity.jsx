@@ -24,11 +24,8 @@ export default function StudentDailyActivity() {
   
   // Form State
   const [formData, setFormData] = useState({
-    module: '',
-    topicCovered: '',
-    trainer: '',
-    timingDuration: '',
-    remarks: '',
+    companyApply: '',
+    taskWorkProcess: '',
     date: new Date().toISOString().split('T')[0]
   });
 
@@ -135,9 +132,10 @@ export default function StudentDailyActivity() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.module.trim()) return toast.error('Please enter the module name');
-    if (!formData.topicCovered.trim()) return toast.error('Please enter the topic covered');
-
+    if (!formData.companyApply.trim() || !formData.taskWorkProcess.trim() || !formData.date) {
+      toast.error('Company Apply, Task Work Process, and Date are required');
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch(buildApiUrl('/daily-activities'), {
@@ -155,14 +153,11 @@ export default function StudentDailyActivity() {
       toast.success('Activity logged successfully!');
       
       // Reset form title and description, keep date as today
-      setFormData(prev => ({
-        ...prev,
-        module: '',
-        topicCovered: '',
-        trainer: '',
-        timingDuration: '',
-        remarks: ''
-      }));
+      setFormData({
+        companyApply: '',
+        taskWorkProcess: '',
+        date: new Date().toISOString().split('T')[0]
+      });
 
       // Reload data
       fetchWorkspaceData();
@@ -178,10 +173,8 @@ export default function StudentDailyActivity() {
   const filteredLogs = logs.filter(log => {
     const searchLower = searchTerm.toLowerCase();
     return (
-      (log.module || '').toLowerCase().includes(searchLower) ||
-      (log.topicCovered || '').toLowerCase().includes(searchLower) ||
-      (log.trainer || '').toLowerCase().includes(searchLower) ||
-      (log.remarks || '').toLowerCase().includes(searchLower) ||
+      (log.companyApply || '').toLowerCase().includes(searchLower) ||
+      (log.taskWorkProcess || '').toLowerCase().includes(searchLower) ||
       new Date(log.date).toLocaleDateString().includes(searchLower)
     );
   });
@@ -258,53 +251,11 @@ export default function StudentDailyActivity() {
                     <div className="absolute -left-[23px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-blue-500 shadow-sm transition-transform group-hover:scale-125" />
 
                     <SurfaceCard className="p-5 hover:shadow-md transition-shadow">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider bg-slate-100 px-2.5 py-1 rounded-md w-fit">
-                          {logDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
-                        
-                        {log.timingDuration && (
-                          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100/50">
-                            <Clock size={12} />
-                            {log.timingDuration}
-                          </div>
-                        )}
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[10px] md:text-xs font-bold text-blue-600 uppercase tracking-widest">{logDate.toDateString()}</span>
                       </div>
-
-                      <div className="space-y-2">
-                        <div>
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Module</p>
-                          <div className="flex gap-2">
-                            <BookOpen size={16} className="text-blue-500 shrink-0 mt-0.5" />
-                            <p className="text-sm font-semibold text-slate-800">{log.module}</p>
-                          </div>
-                        </div>
-
-                        <div>
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 mt-3">Topic Covered</p>
-                          <div className="flex gap-2">
-                            <FileText size={16} className="text-emerald-500 shrink-0 mt-0.5" />
-                            <p className="text-sm text-slate-700">{log.topicCovered}</p>
-                          </div>
-                        </div>
-
-                        {(log.trainer || log.remarks) && (
-                          <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-100">
-                            {log.trainer && (
-                              <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Trainer</p>
-                                <p className="text-sm text-slate-600">{log.trainer}</p>
-                              </div>
-                            )}
-                            {log.remarks && (
-                              <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Remarks</p>
-                                <p className="text-sm text-slate-600 italic">{log.remarks}</p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                      <h4 className="text-sm md:text-base font-bold text-[#1e293b] mb-1">{log.companyApply || 'Company Apply'}</h4>
+                      <p className="text-xs md:text-sm text-slate-600 mb-2">{log.taskWorkProcess}</p>
                     </SurfaceCard>
                   </div>
                 );
@@ -316,102 +267,72 @@ export default function StudentDailyActivity() {
         {/* Right Side: Submission Form */}
         <div className="order-1 lg:order-2">
           <div className="sticky top-[100px]">
-            <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4 mb-6">Log Today's Work</h2>
+            <SurfaceCard className="p-6 md:p-8 flex flex-col border-t-[12px] border-blue-600 rounded-3xl shadow-lg relative overflow-hidden max-h-[calc(100vh-120px)]">
+              <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+              <BookOpen size={120} />
+            </div>
+            <div className="shrink-0">
+              <h2 className="text-xl font-black text-[#1e293b] mb-2 relative z-10">Log Today's Work</h2>
+              <p className="text-sm text-slate-500 mb-6 font-medium relative z-10">Record your company applications and tasks to maintain your streak.</p>
+            </div>
             
-            <SurfaceCard className="p-6 border-slate-200/60 shadow-[0_16px_40px_rgba(15,23,42,0.08)] bg-white/80 backdrop-blur-md">
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div>
-                  <label className="crm-label">Activity Date</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3.5 top-3 text-slate-400 pointer-events-none" size={16} />
-                    <input 
-                      type="date"
-                      name="date"
-                      value={formData.date}
-                      onChange={handleInputChange}
-                      className="crm-input pl-11"
-                      required
-                    />
-                  </div>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5 flex-1 relative z-10 overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin' }}>
+              
+              {/* Date Selection */}
+              <div>
+                <label className="block text-xs font-extrabold text-slate-600 uppercase tracking-wider mb-2">Activity Date <span className="text-rose-500">*</span></label>
+                <div className="relative">
+                  <Calendar className="absolute left-3.5 top-3.5 text-slate-400" size={16} />
+                  <input 
+                    type="date" 
+                    value={formData.date}
+                    onChange={(e) => setFormData({...formData, date: e.target.value})}
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm font-semibold text-[#1e293b] transition-all"
+                    required
+                  />
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <label className="crm-label">Module *</label>
-                    <input
-                      type="text"
-                      name="module"
-                      value={formData.module}
-                      onChange={handleInputChange}
-                      placeholder="e.g. React.js, Node.js"
-                      className="crm-input py-2.5"
-                      required
-                    />
-                  </div>
+              {/* Company Apply */}
+              <div>
+                <label className="block text-xs font-extrabold text-slate-600 uppercase tracking-wider mb-2">Company Apply <span className="text-rose-500">*</span></label>
+                <textarea 
+                  value={formData.companyApply}
+                  onChange={(e) => setFormData({...formData, companyApply: e.target.value})}
+                  placeholder="e.g. Google, Microsoft, Infosys..."
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm font-semibold text-[#1e293b] placeholder-slate-400 min-h-[80px] resize-y transition-all"
+                  required
+                ></textarea>
+              </div>
 
-                  <div className="col-span-2">
-                    <label className="crm-label">Topic Covered *</label>
-                    <input
-                      type="text"
-                      name="topicCovered"
-                      value={formData.topicCovered}
-                      onChange={handleInputChange}
-                      placeholder="e.g. React Hooks, Express Middleware"
-                      className="crm-input py-2.5"
-                      required
-                    />
-                  </div>
+              {/* Task Work Process */}
+              <div>
+                <label className="block text-xs font-extrabold text-slate-600 uppercase tracking-wider mb-2">Task Work Process <span className="text-rose-500">*</span></label>
+                <textarea 
+                  value={formData.taskWorkProcess}
+                  onChange={(e) => setFormData({...formData, taskWorkProcess: e.target.value})}
+                  placeholder="Describe the tasks, interviews, or preparation completed today..."
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm font-medium text-[#1e293b] placeholder-slate-400 min-h-[120px] resize-y transition-all"
+                  required
+                ></textarea>
+              </div>
 
-                  <div>
-                    <label className="crm-label">Trainer</label>
-                    <input
-                      type="text"
-                      name="trainer"
-                      value={formData.trainer}
-                      onChange={handleInputChange}
-                      placeholder="Trainer name"
-                      className="crm-input py-2.5"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="crm-label">Timing (Hrs)</label>
-                    <input
-                      type="text"
-                      name="timingDuration"
-                      value={formData.timingDuration}
-                      onChange={handleInputChange}
-                      placeholder="e.g. 10 to 6"
-                      className="crm-input py-2.5"
-                    />
-                  </div>
-
-                  <div className="col-span-2">
-                    <label className="crm-label">Remarks</label>
-                    <textarea 
-                      name="remarks"
-                      value={formData.remarks}
-                      onChange={handleInputChange}
-                      placeholder="Additional notes..."
-                      className="crm-input py-2.5 resize-y min-h-[60px]"
-                    />
-                  </div>
+                <div className="mt-auto pt-6">
+                  <button 
+                    type="submit" 
+                    disabled={submitting}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-200 flex items-center justify-center gap-2 transition-all disabled:opacity-70 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    {submitting ? (
+                      <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                    ) : (
+                      <>
+                        <Plus size={18} strokeWidth={2.5} />
+                        <span>Save Daily Activity</span>
+                      </>
+                    )}
+                  </button>
                 </div>
-
-                <button 
-                  type="submit"
-                  disabled={submitting}
-                  className="crm-btn-primary w-full h-[46px] rounded-2xl font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {submitting ? (
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  ) : (
-                    <>
-                      <Plus size={18} />
-                      Save Log Entry
-                    </>
-                  )}
-                </button>
               </form>
             </SurfaceCard>
           </div>

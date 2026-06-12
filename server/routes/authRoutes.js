@@ -143,17 +143,59 @@ router.get('/me', authMiddleware, async (req, res) => {
     const user = await User.findById(req.user.id).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
     
-    let grade = '';
+    let splRegistration = null;
     if (user.role === 'student') {
-      const spl = await SplRegistration.findOne({ email: user.email.toLowerCase() });
-      if (spl && spl.grade) {
-        grade = spl.grade;
-      }
+      splRegistration = await SplRegistration.findOne({ email: user.email.trim().toLowerCase() });
     }
-    
-    res.json({ ...user.toObject(), grade });
+
+    res.json({
+      ...user.toObject(),
+      grade: splRegistration?.grade || '',
+      splRegistrationId: splRegistration?._id || null
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch user data' });
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get user resume data from SPL Registration
+router.get('/my-resume', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== 'student') {
+      return res.status(403).json({ message: 'Only students have a resume' });
+    }
+
+    const splRegistration = await SplRegistration.findOne({ email: user.email.trim().toLowerCase() });
+    if (!splRegistration) {
+      return res.status(404).json({ message: 'SPL Registration not found for this user' });
+    }
+
+    res.json(splRegistration.resumeData || {});
+  } catch (error) {
+    res.status(500).json({ message: 'Server error fetching resume', error: error.message });
+  }
+});
+
+// Update user resume data on SPL Registration
+router.put('/my-resume', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== 'student') {
+      return res.status(403).json({ message: 'Only students can update resumes' });
+    }
+
+    const splRegistration = await SplRegistration.findOne({ email: user.email.trim().toLowerCase() });
+    if (!splRegistration) {
+      return res.status(404).json({ message: 'SPL Registration not found for this user' });
+    }
+
+    splRegistration.resumeData = req.body;
+    await splRegistration.save();
+
+    res.json({ message: 'Resume saved successfully', resumeData: splRegistration.resumeData });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error saving resume', error: error.message });
   }
 });
 

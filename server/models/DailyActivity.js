@@ -13,10 +13,8 @@ const dailyActivitySchema = new mongoose.Schema({
     required: true,
     default: Date.now
   },
-  module: { type: String, required: true },
-  topicCovered: { type: String, required: true },
-  trainer: { type: String, default: '' },
-  timingDuration: { type: String, default: '' },
+  companyApply: { type: String, required: true },
+  taskWorkProcess: { type: String, required: true },
   remarks: { type: String, default: '' }
 }, { timestamps: true });
 

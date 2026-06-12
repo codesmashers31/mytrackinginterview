@@ -20,16 +20,16 @@ const parseDateRange = (startDateStr, endDateStr) => {
 // Create a daily activity log (Student only)
 export const createActivityLog = async (req, res) => {
   try {
-    const { module, topicCovered, trainer, timingDuration, remarks, date } = req.body;
+    const { companyApply, taskWorkProcess, remarks, date } = req.body;
     const studentId = req.user.id;
     const studentName = req.user.name || 'Student';
     const studentEmail = req.user.email;
 
-    if (!module || !module.trim()) {
-      return res.status(400).json({ message: 'Module is required' });
+    if (!companyApply || !companyApply.trim()) {
+      return res.status(400).json({ message: 'Company Apply is required' });
     }
-    if (!topicCovered || !topicCovered.trim()) {
-      return res.status(400).json({ message: 'Topic covered is required' });
+    if (!taskWorkProcess || !taskWorkProcess.trim()) {
+      return res.status(400).json({ message: 'Task Work Process is required' });
     }
 
     const logDate = date ? new Date(date) : new Date();
@@ -39,10 +39,8 @@ export const createActivityLog = async (req, res) => {
       studentName,
       studentEmail,
       date: logDate,
-      module: module.trim(),
-      topicCovered: topicCovered.trim(),
-      trainer: trainer ? trainer.trim() : '',
-      timingDuration: timingDuration ? timingDuration.trim() : '',
+      companyApply: companyApply.trim(),
+      taskWorkProcess: taskWorkProcess.trim(),
       remarks: remarks ? remarks.trim() : ''
     });
 
@@ -86,9 +84,8 @@ export const getAllActivityLogs = async (req, res) => {
     if (search) {
       const regex = new RegExp(search, 'i');
       query.$or = [
-        { module: regex },
-        { topicCovered: regex },
-        { trainer: regex },
+        { companyApply: regex },
+        { taskWorkProcess: regex },
         { remarks: regex },
         { studentName: regex },
         { studentEmail: regex }

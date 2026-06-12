@@ -16,7 +16,8 @@ const splRegistrationSchema = new mongoose.Schema({
   statusReason: { type: String, default: '' },
   grade: { type: String, default: '' },
   ip: { type: String, default: '' },
-  userAgent: { type: String, default: '' }
+  userAgent: { type: String, default: '' },
+  resumeData: { type: Object, default: {} }
 }, { timestamps: true });
 
 export default mongoose.model('SplRegistration', splRegistrationSchema);

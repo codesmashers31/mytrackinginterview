@@ -13,6 +13,7 @@ export default function TaskList() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [filterDate, setFilterDate] = useState('');
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -32,6 +33,11 @@ export default function TaskList() {
   useEffect(() => {
     fetchTasks();
   }, []);
+
+  const filteredTasks = React.useMemo(() => {
+    if (!filterDate) return tasks;
+    return tasks.filter(t => t.dueDate && t.dueDate.split('T')[0] === filterDate);
+  }, [tasks, filterDate]);
 
   const handleDelete = async (taskId) => {
     if (!window.confirm('Delete this task assignment?')) return;
@@ -101,14 +107,33 @@ export default function TaskList() {
                 <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Active Assignments</h2>
                 <p className="mt-1 text-sm text-slate-500">Monitor student progress and manage assigned tasks.</p>
               </div>
-              <button
-                type="button"
-                onClick={() => navigate('/tasks')}
-                className="crm-btn-primary px-6 py-2.5 rounded-xl shadow-md flex items-center gap-2"
-              >
-                Assign New Task
-                <ChevronRight size={16} />
-              </button>
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    className="crm-input max-w-[160px] py-2 text-sm"
+                    value={filterDate}
+                    onChange={(e) => setFilterDate(e.target.value)}
+                  />
+                  {filterDate && (
+                    <button
+                      type="button"
+                      onClick={() => setFilterDate('')}
+                      className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/tasks')}
+                  className="crm-btn-primary px-6 py-2.5 rounded-xl shadow-md flex items-center gap-2"
+                >
+                  Assign New Task
+                  <ChevronRight size={16} />
+                </button>
+              </div>
             </div>
 
             {loading ? (
@@ -124,9 +149,15 @@ export default function TaskList() {
                 <p className="text-slate-500 max-w-md mb-6">You haven't assigned any tasks yet, or all assignments have been completed and deleted.</p>
                 <button onClick={() => navigate('/tasks')} className="crm-btn-primary px-6 py-2">Create Assignment</button>
               </SurfaceCard>
+            ) : filteredTasks.length === 0 ? (
+              <SurfaceCard className="p-12 text-center flex flex-col items-center justify-center border-dashed border-2 border-slate-200 bg-slate-50">
+                <h3 className="text-lg font-bold text-slate-900 mb-2">No tasks for this date</h3>
+                <p className="text-slate-500 max-w-md mb-6">There are no assignments due on the selected date.</p>
+                <button onClick={() => setFilterDate('')} className="crm-btn-primary px-6 py-2">Clear Date Filter</button>
+              </SurfaceCard>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {tasks.map(task => {
+                {filteredTasks.map(task => {
                   const completedCount = task.questions?.filter(q => q.status === 'Completed').length || 0;
                   const totalCount = task.questions?.length || 0;
                   const progress = totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);

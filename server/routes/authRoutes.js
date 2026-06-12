@@ -138,6 +138,25 @@ router.post('/login', async (req, res) => {
   }
 });
 
+router.get('/me', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    let grade = '';
+    if (user.role === 'student') {
+      const spl = await SplRegistration.findOne({ email: user.email.toLowerCase() });
+      if (spl && spl.grade) {
+        grade = spl.grade;
+      }
+    }
+    
+    res.json({ ...user.toObject(), grade });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch user data' });
+  }
+});
+
 router.post('/register-student', async (req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password) {

@@ -32,6 +32,10 @@ export default function Login() {
         toast.success(`Welcome back, ${data.user.name.split(' ')[0]}`);
         if (data.user.role === 'student') {
           navigate('/student/tasks');
+        } else if (data.user.role === 'placement') {
+          navigate('/placement/dashboard');
+        } else if (data.user.role === 'coordinator') {
+          navigate('/coordinator/dashboard');
         } else {
           navigate('/dashboard');
         }

@@ -13,8 +13,11 @@ const dailyActivitySchema = new mongoose.Schema({
     required: true,
     default: Date.now
   },
-  activity: { type: String, required: true },
-  companyDetails: { type: String, default: '' }
+  module: { type: String, required: true },
+  topicCovered: { type: String, required: true },
+  trainer: { type: String, default: '' },
+  timingDuration: { type: String, default: '' },
+  remarks: { type: String, default: '' }
 }, { timestamps: true });
 
 // Optimize search by student & date

@@ -20,13 +20,16 @@ const parseDateRange = (startDateStr, endDateStr) => {
 // Create a daily activity log (Student only)
 export const createActivityLog = async (req, res) => {
   try {
-    const { activity, companyDetails, date } = req.body;
+    const { module, topicCovered, trainer, timingDuration, remarks, date } = req.body;
     const studentId = req.user.id;
     const studentName = req.user.name || 'Student';
     const studentEmail = req.user.email;
 
-    if (!activity || !activity.trim()) {
-      return res.status(400).json({ message: 'Activity description is required' });
+    if (!module || !module.trim()) {
+      return res.status(400).json({ message: 'Module is required' });
+    }
+    if (!topicCovered || !topicCovered.trim()) {
+      return res.status(400).json({ message: 'Topic covered is required' });
     }
 
     const logDate = date ? new Date(date) : new Date();
@@ -36,8 +39,11 @@ export const createActivityLog = async (req, res) => {
       studentName,
       studentEmail,
       date: logDate,
-      activity: activity.trim(),
-      companyDetails: companyDetails ? companyDetails.trim() : ''
+      module: module.trim(),
+      topicCovered: topicCovered.trim(),
+      trainer: trainer ? trainer.trim() : '',
+      timingDuration: timingDuration ? timingDuration.trim() : '',
+      remarks: remarks ? remarks.trim() : ''
     });
 
     await newLog.save();
@@ -76,12 +82,14 @@ export const getAllActivityLogs = async (req, res) => {
       if (end) query.date.$lte = end;
     }
 
-    // Text search in activity, companyDetails, or student details
+    // Text search in new fields
     if (search) {
       const regex = new RegExp(search, 'i');
       query.$or = [
-        { activity: regex },
-        { companyDetails: regex },
+        { module: regex },
+        { topicCovered: regex },
+        { trainer: regex },
+        { remarks: regex },
         { studentName: regex },
         { studentEmail: regex }
       ];

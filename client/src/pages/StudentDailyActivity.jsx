@@ -24,8 +24,11 @@ export default function StudentDailyActivity() {
   
   // Form State
   const [formData, setFormData] = useState({
-    activity: '',
-    companyDetails: '',
+    module: '',
+    topicCovered: '',
+    trainer: '',
+    timingDuration: '',
+    remarks: '',
     date: new Date().toISOString().split('T')[0]
   });
 
@@ -132,7 +135,8 @@ export default function StudentDailyActivity() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.activity.trim()) return toast.error('Please describe your activity');
+    if (!formData.module.trim()) return toast.error('Please enter the module name');
+    if (!formData.topicCovered.trim()) return toast.error('Please enter the topic covered');
 
     setSubmitting(true);
     try {
@@ -153,8 +157,11 @@ export default function StudentDailyActivity() {
       // Reset form title and description, keep date as today
       setFormData(prev => ({
         ...prev,
-        activity: '',
-        companyDetails: ''
+        module: '',
+        topicCovered: '',
+        trainer: '',
+        timingDuration: '',
+        remarks: ''
       }));
 
       // Reload data
@@ -171,8 +178,10 @@ export default function StudentDailyActivity() {
   const filteredLogs = logs.filter(log => {
     const searchLower = searchTerm.toLowerCase();
     return (
-      log.activity.toLowerCase().includes(searchLower) ||
-      (log.companyDetails || '').toLowerCase().includes(searchLower) ||
+      (log.module || '').toLowerCase().includes(searchLower) ||
+      (log.topicCovered || '').toLowerCase().includes(searchLower) ||
+      (log.trainer || '').toLowerCase().includes(searchLower) ||
+      (log.remarks || '').toLowerCase().includes(searchLower) ||
       new Date(log.date).toLocaleDateString().includes(searchLower)
     );
   });
@@ -254,17 +263,47 @@ export default function StudentDailyActivity() {
                           {logDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
                         
-                        {log.companyDetails && (
+                        {log.timingDuration && (
                           <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100/50">
-                            <Building2 size={12} />
-                            {log.companyDetails}
+                            <Clock size={12} />
+                            {log.timingDuration}
                           </div>
                         )}
                       </div>
 
-                      <div className="flex gap-2">
-                        <FileText size={16} className="text-slate-400 shrink-0 mt-1" />
-                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{log.activity}</p>
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Module</p>
+                          <div className="flex gap-2">
+                            <BookOpen size={16} className="text-blue-500 shrink-0 mt-0.5" />
+                            <p className="text-sm font-semibold text-slate-800">{log.module}</p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 mt-3">Topic Covered</p>
+                          <div className="flex gap-2">
+                            <FileText size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                            <p className="text-sm text-slate-700">{log.topicCovered}</p>
+                          </div>
+                        </div>
+
+                        {(log.trainer || log.remarks) && (
+                          <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-100">
+                            {log.trainer && (
+                              <div>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Trainer</p>
+                                <p className="text-sm text-slate-600">{log.trainer}</p>
+                              </div>
+                            )}
+                            {log.remarks && (
+                              <div>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Remarks</p>
+                                <p className="text-sm text-slate-600 italic">{log.remarks}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </SurfaceCard>
                   </div>
@@ -296,28 +335,65 @@ export default function StudentDailyActivity() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="crm-label">Activity Details</label>
-                  <textarea
-                    name="activity"
-                    value={formData.activity}
-                    onChange={handleInputChange}
-                    placeholder="Describe what tasks or activities you performed today..."
-                    className="crm-input h-32 py-3 resize-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="crm-label">Company Details / Search</label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" size={16} />
-                    <textarea 
-                      name="companyDetails"
-                      value={formData.companyDetails}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="crm-label">Module *</label>
+                    <input
+                      type="text"
+                      name="module"
+                      value={formData.module}
                       onChange={handleInputChange}
-                      placeholder="e.g. Applied to SLA, searched frontend jobs..."
-                      className="crm-input pl-11 py-3 min-h-[80px] resize-y"
+                      placeholder="e.g. React.js, Node.js"
+                      className="crm-input py-2.5"
+                      required
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="crm-label">Topic Covered *</label>
+                    <input
+                      type="text"
+                      name="topicCovered"
+                      value={formData.topicCovered}
+                      onChange={handleInputChange}
+                      placeholder="e.g. React Hooks, Express Middleware"
+                      className="crm-input py-2.5"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="crm-label">Trainer</label>
+                    <input
+                      type="text"
+                      name="trainer"
+                      value={formData.trainer}
+                      onChange={handleInputChange}
+                      placeholder="Trainer name"
+                      className="crm-input py-2.5"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="crm-label">Timing (Hrs)</label>
+                    <input
+                      type="text"
+                      name="timingDuration"
+                      value={formData.timingDuration}
+                      onChange={handleInputChange}
+                      placeholder="e.g. 10 to 6"
+                      className="crm-input py-2.5"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="crm-label">Remarks</label>
+                    <textarea 
+                      name="remarks"
+                      value={formData.remarks}
+                      onChange={handleInputChange}
+                      placeholder="Additional notes..."
+                      className="crm-input py-2.5 resize-y min-h-[60px]"
                     />
                   </div>
                 </div>

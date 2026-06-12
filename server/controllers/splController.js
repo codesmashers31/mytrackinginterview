@@ -1,4 +1,8 @@
 import SplRegistration from '../models/SplRegistration.js';
+import User from '../models/User.js';
+import Task from '../models/Task.js';
+import DailyActivity from '../models/DailyActivity.js';
+import Attendance from '../models/Attendance.js';
 import { sendRegistrationConfirmation } from '../utils/mailer.js';
 
 export const createRegistration = async (req, res) => {
@@ -63,8 +67,28 @@ export const updateRegistration = async (req, res) => {
 export const deleteRegistration = async (req, res) => {
   try {
     const { id } = req.params;
-    const reg = await SplRegistration.findByIdAndDelete(id);
+    const reg = await SplRegistration.findById(id);
     if (!reg) return res.status(404).json({ message: 'Registration not found' });
+
+    // 1. Delete all Attendance linked to this SPL Registration
+    await Attendance.deleteMany({ studentId: reg._id });
+
+    // 2. Find associated User account via email
+    if (reg.email) {
+      const user = await User.findOne({ email: reg.email.trim().toLowerCase() });
+      if (user) {
+        // 3. Delete Tasks linked to User
+        await Task.deleteMany({ studentId: user._id });
+        // 4. Delete Daily Activities linked to User
+        await DailyActivity.deleteMany({ studentId: user._id });
+        // 5. Delete the User account
+        await User.findByIdAndDelete(user._id);
+      }
+    }
+
+    // 6. Delete the SPL Registration itself
+    await SplRegistration.findByIdAndDelete(id);
+
     res.json({ message: 'Registration deleted successfully' });
   } catch (err) {
     res.status(400).json({ message: 'Delete failed', error: err.message });

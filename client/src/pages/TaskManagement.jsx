@@ -235,25 +235,25 @@ export default function TaskManagement() {
                       onClick={() => setFormData({ ...formData, questions: [...formData.questions, ''] })}
                       className="text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl flex items-center gap-2 transition-colors"
                     >
-                      <Plus size={16} /> Add Question
+                      <Plus size={16} /> Add Task Box
                     </button>
                   </div>
                   
-                  <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                  <div className="space-y-4 bg-slate-50 border border-slate-200 rounded-xl p-4">
                     {formData.questions.map((q, i) => (
-                      <div key={i} className="flex items-start gap-3 bg-white p-2 rounded-lg border border-slate-200 shadow-sm transition-all hover:border-blue-300">
+                      <div key={i} className="flex items-start gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-sm transition-all hover:border-blue-300">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-sm font-bold text-blue-700">
                           {i + 1}
                         </div>
-                        <input
-                          type="text"
+                        <textarea
+                          rows={2}
                           value={q}
                           onChange={(e) => {
                             const newQs = [...formData.questions];
                             newQs[i] = e.target.value;
                             setFormData({ ...formData, questions: newQs });
                           }}
-                          className="crm-input flex-1 h-10 border-transparent bg-transparent shadow-none focus:border-transparent focus:ring-0 px-2"
+                          className="crm-input flex-1 border-transparent bg-transparent shadow-none focus:border-transparent focus:ring-0 px-2 py-2 resize-y min-h-[60px]"
                           placeholder={`Enter question or task detail ${i + 1}...`}
                         />
                         <button
@@ -262,7 +262,7 @@ export default function TaskManagement() {
                             const newQs = formData.questions.filter((_, idx) => idx !== i);
                             setFormData({ ...formData, questions: newQs.length ? newQs : [''] });
                           }}
-                          className="flex h-10 w-10 items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         >
                           <Trash2 size={18} />
                         </button>

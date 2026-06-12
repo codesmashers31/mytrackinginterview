@@ -14,6 +14,7 @@ import {
   Settings as SettingsIcon,
   Users,
   X,
+  BriefcaseBusiness,
 } from 'lucide-react';
 import { logout } from '../utils/auth';
 
@@ -63,6 +64,27 @@ const buildNavigationGroups = (role, onLogout) => {
     ];
   }
 
+  // Placement navigation
+  if (role === 'placement') {
+    return [
+      {
+        title: 'Workspace',
+        items: [
+          { to: '/placement/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { to: '/placement/eligibility', label: 'Eligible Students', icon: CheckCircle2 },
+          { to: '/placement/spl-classes', label: 'SPL Classes', icon: Users },
+          { to: '/settings', label: 'Settings', icon: SettingsIcon },
+        ],
+      },
+      {
+        title: 'Account',
+        items: [
+          { label: 'Sign Out', icon: LogOut, onClick: onLogout, isLogout: true },
+        ],
+      },
+    ];
+  }
+
   // Admin navigation (default)
   return [
     {
@@ -80,7 +102,10 @@ const buildNavigationGroups = (role, onLogout) => {
     },
     {
       title: 'Administration',
-      items: [{ to: '/settings', label: 'Settings', icon: SettingsIcon }],
+      items: [
+        { to: '/admin/placements', label: 'Placement Team', icon: BriefcaseBusiness },
+        { to: '/settings', label: 'Settings', icon: SettingsIcon }
+      ],
     },
     {
       title: 'Account',

@@ -20,6 +20,7 @@ export default function StudentDashboard() {
   const [logs, setLogs] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [grade, setGrade] = useState('N/A');
   const [loading, setLoading] = useState(true);
 
   const fetchWorkspaceData = async () => {
@@ -31,13 +32,14 @@ export default function StudentDashboard() {
     }
 
     try {
-      const [logsRes, attendanceRes, tasksRes] = await Promise.all([
+      const [logsRes, attendanceRes, tasksRes, meRes] = await Promise.all([
         fetch(buildApiUrl('/daily-activities/my'), { headers: authHeaders() }),
         fetch(buildApiUrl(`/attendance/student/${studentId}`), { headers: authHeaders() }),
-        fetch(buildApiUrl('/tasks/my/list'), { headers: authHeaders() })
+        fetch(buildApiUrl('/tasks/my/list'), { headers: authHeaders() }),
+        fetch(buildApiUrl('/auth/me'), { headers: authHeaders() })
       ]);
 
-      if (logsRes.status === 401 || attendanceRes.status === 401 || tasksRes.status === 401) {
+      if (logsRes.status === 401 || attendanceRes.status === 401 || tasksRes.status === 401 || meRes.status === 401) {
         logout();
         return;
       }
@@ -45,10 +47,12 @@ export default function StudentDashboard() {
       const logsData = logsRes.ok ? await logsRes.json() : [];
       const attendanceData = attendanceRes.ok ? await attendanceRes.json() : [];
       const tasksData = tasksRes.ok ? await tasksRes.json() : [];
+      const meData = meRes.ok ? await meRes.json() : {};
 
       setLogs(logsData);
       setAttendance(attendanceData);
       setTasks(tasksData);
+      if (meData.grade) setGrade(meData.grade);
     } catch (err) {
       toast.error('Failed to sync dashboard telemetry');
     } finally {
@@ -114,7 +118,7 @@ export default function StudentDashboard() {
 
   // Combine logs and tasks for recent activity feed
   const recentActivities = [
-    ...logs.map(l => ({ type: 'log', date: new Date(l.date), title: 'Daily Log Created', desc: l.activity, id: l._id })),
+    ...logs.map(l => ({ type: 'log', date: new Date(l.date), title: 'Daily Log Created', desc: `${l.module} - ${l.topicCovered}`, id: l._id })),
     ...attendance.filter(a => a.checkInTime).map(a => ({ type: 'attendance', date: new Date(a.date), title: 'Attendance Marked', desc: `Status: ${a.status} ${a.totalHours ? `(${a.totalHours} hrs)` : ''}`, id: a._id })),
     ...tasks.filter(t => t.overallStatus === 'Completed').map(t => ({ type: 'task', date: new Date(t.createdAt), title: 'Task Completed', desc: t.title, id: t._id }))
   ].sort((a, b) => b.date - a.date).slice(0, 5);
@@ -124,7 +128,7 @@ export default function StudentDashboard() {
       title="Student Dashboard"
       subtitle="Overview of your tasks, attendance, and daily logs."
     >
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
         <MetricCard 
           title="Total Hours Invested" 
           value={`${telemetry.totalHours} hrs`} 
@@ -145,6 +149,13 @@ export default function StudentDashboard() {
           helper={`${telemetry.completedPercent}% overall completion`}
           icon={<CheckSquare size={22} />}
           tone="success"
+        />
+        <MetricCard 
+          title="Overall Grade" 
+          value={grade || 'N/A'} 
+          helper="Your current performance grade"
+          icon={<BookOpen size={22} />}
+          tone="primary"
         />
       </div>
 

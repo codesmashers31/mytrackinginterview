@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard, StatusBadge, SectionTabs } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
@@ -225,6 +226,36 @@ export default function AttendancePage() {
     return Math.round((data.Present / data.total) * 100);
   };
 
+  const exportDailyAttendance = () => {
+    const exportData = students.map(student => {
+      const record = attendance.find(a => a.studentId === student._id);
+      let statusLetter = '';
+      if (record) {
+        if (record.status === 'Present') statusLetter = 'P';
+        else if (record.status === 'Absent') statusLetter = 'A';
+        else statusLetter = record.status;
+      }
+
+      return {
+        'Date': selectedDate,
+        'Tech Stack': 'MERN',
+        'Trainer': '',
+        'Student Name': student.name,
+        'Attendance (P/A)': statusLetter,
+        'Remarks': record ? record.remarks || '' : '',
+        'Module': '',
+        'Topic Covered': '',
+        'Timing Duration (Hrs)': '10 to 6'
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
+    XLSX.writeFile(wb, `Attendance_${selectedDate}.xlsx`);
+    toast.success('Attendance exported to Excel');
+  };
+
   return (
     <AppShell
       title="Attendance Management"
@@ -255,7 +286,7 @@ export default function AttendancePage() {
       {activeTab === 'daily' && (
         <div className="space-y-6">
           <SurfaceCard className="p-6">
-            <div className="mb-6 flex items-center gap-4">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <Calendar size={20} className="text-blue-600" />
                 <input
@@ -265,6 +296,13 @@ export default function AttendancePage() {
                   className="crm-input"
                 />
               </div>
+              <button
+                type="button"
+                onClick={exportDailyAttendance}
+                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 transition"
+              >
+                <Download size={16} /> Export Excel
+              </button>
             </div>
 
             {loading ? (

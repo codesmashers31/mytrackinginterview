@@ -103,11 +103,24 @@ export default function StudentTasks() {
       index === questionIndex ? { ...question, ...updates } : question
     );
 
+    const allCompleted = updatedQuestions.length > 0 && updatedQuestions.every(q => q.status === 'Completed');
+    const anyInProgress = updatedQuestions.some(q => q.status === 'In Progress');
+    const anyBlocked = updatedQuestions.some(q => ['Blocked', 'Doubt'].includes(q.status));
+    
+    let overallStatus = task.overallStatus;
+    if (allCompleted) {
+      overallStatus = 'Completed';
+    } else if (anyBlocked) {
+      overallStatus = 'Blocked';
+    } else if (anyInProgress || updatedQuestions.some(q => q.status === 'Completed')) {
+      overallStatus = 'In Progress';
+    }
+
     try {
       const res = await fetch(buildApiUrl(`/tasks/${taskId}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ questions: updatedQuestions })
+        body: JSON.stringify({ questions: updatedQuestions, overallStatus })
       });
       if (!res.ok) throw new Error('Update failed');
       const data = await res.json();

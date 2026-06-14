@@ -89,25 +89,25 @@ export default function Login() {
               </div>
               <h2 className="mt-6 text-3xl font-semibold tracking-tight text-slate-950">Sign in to PlaceTrack</h2>
               <p className="mt-2 text-sm text-slate-500">
-                Use your registered email and mobile number to access your account.
+                Use your registered email or mobile number to access your account.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="crm-label">Registered Email</label>
+                <label className="crm-label">Registered Email or Mobile Number</label>
                 <div className="relative">
                   <Mail
                     size={18}
                     className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
                   />
                   <input
-                    type="email"
+                    type="text"
                     required
                     value={formData.email}
                     onChange={event => setFormData({ ...formData, email: event.target.value })}
                     className="crm-input pl-11"
-                    placeholder="admin@placetrack.com"
+                    placeholder="email@example.com or Mobile Number"
                   />
                 </div>
               </div>
@@ -142,7 +142,7 @@ export default function Login() {
               </button>
             </form>
             <p className="mt-4 text-sm text-slate-500">
-              SPL-registered students should log in using their registered email and mobile number as the initial password.
+              Students should log in using their registered email or mobile number, and their mobile number as the password.
             </p>
           </div>
         </div>

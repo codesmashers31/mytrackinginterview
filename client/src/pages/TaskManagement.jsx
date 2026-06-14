@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
@@ -8,12 +8,16 @@ import { Plus, ClipboardList, Trash2 } from 'lucide-react';
 
 export default function TaskManagement() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [students, setStudents] = useState([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [gradeFilter, setGradeFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [batchFilter, setBatchFilter] = useState('');
   const [formData, setFormData] = useState({
     studentIds: [],
+    title: '',
     description: '',
     dueDate: '',
     questions: ['']
@@ -21,15 +25,20 @@ export default function TaskManagement() {
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          student.email.toLowerCase().includes(searchQuery.toLowerCase());
+                          student.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (student.mobile && student.mobile.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesGrade = gradeFilter ? student.grade === gradeFilter : true;
-    return matchesSearch && matchesGrade;
+    const matchesType = typeFilter ? student.type === typeFilter : true;
+    const matchesBatch = batchFilter ? student.batch === batchFilter : true;
+    return matchesSearch && matchesGrade && matchesType && matchesBatch;
   });
+
+  const uniqueBatches = Array.from(new Set(students.map(s => s.batch).filter(Boolean))).sort();
 
   const fetchStudents = async () => {
     setIsLoadingStudents(true);
     try {
-      const res = await fetch(buildApiUrl('/auth/spl-students'), {
+      const res = await fetch(buildApiUrl('/auth/task-students'), {
         headers: { ...authHeaders() }
       });
       if (!res.ok) throw new Error('Failed to load students');
@@ -43,7 +52,13 @@ export default function TaskManagement() {
 
   useEffect(() => {
     fetchStudents();
-  }, []);
+    if (location.state?.selectedStudentIds) {
+      setFormData(prev => ({
+        ...prev,
+        studentIds: location.state.selectedStudentIds
+      }));
+    }
+  }, [location.state]);
 
   const handleCreateTask = async (event) => {
     event.preventDefault();
@@ -113,11 +128,30 @@ export default function TaskManagement() {
                 <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                   <input
                     type="text"
-                    placeholder="Search name or email..."
+                    placeholder="Search name, email, mobile..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="crm-input h-9 py-1 px-3 text-sm flex-1 sm:flex-none w-full sm:w-48"
                   />
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="crm-input h-9 py-1 px-3 text-sm flex-1 sm:flex-none w-full sm:w-36"
+                  >
+                    <option value="">All Types</option>
+                    <option value="SPL Class Student">SPL Class</option>
+                    <option value="Directory Student">Directory</option>
+                  </select>
+                  <select
+                    value={batchFilter}
+                    onChange={(e) => setBatchFilter(e.target.value)}
+                    className="crm-input h-9 py-1 px-3 text-sm flex-1 sm:flex-none w-full sm:w-32"
+                  >
+                    <option value="">All Batches</option>
+                    {uniqueBatches.map(b => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
                   <select
                     value={gradeFilter}
                     onChange={(e) => setGradeFilter(e.target.value)}
@@ -172,18 +206,28 @@ export default function TaskManagement() {
                       />
                       <div className="flex flex-col flex-1">
                         <span className="text-sm font-semibold text-slate-800">{student.name}</span>
-                        <span className="text-xs text-slate-500">{student.email} {student.mobile ? `• ${student.mobile}` : ''}</span>
-                      </div>
-                      {student.grade && (
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                          student.grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
-                          student.grade === 'B' ? 'bg-amber-100 text-amber-700' :
-                          student.grade === 'C' ? 'bg-rose-100 text-rose-700' :
-                          'bg-slate-100 text-slate-700'
-                        }`}>
-                          Grade {student.grade}
+                        <span className="text-xs text-slate-500">
+                          {student.email} {student.mobile ? `• ${student.mobile}` : ''}
+                          {student.batch ? ` • Batch: ${student.batch}` : ''}
                         </span>
-                      )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-medium ${
+                          student.type === 'SPL Class Student' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-slate-50 text-slate-700 border border-slate-100'
+                        }`}>
+                          {student.type === 'SPL Class Student' ? 'SPL Class' : 'Directory'}
+                        </span>
+                        {student.grade && (
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                            student.grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
+                            student.grade === 'B' ? 'bg-amber-100 text-amber-700' :
+                            student.grade === 'C' ? 'bg-rose-100 text-rose-700' :
+                            'bg-slate-100 text-slate-700'
+                          }`}>
+                            Grade {student.grade}
+                          </span>
+                        )}
+                      </div>
                     </label>
                   ))
                 )}

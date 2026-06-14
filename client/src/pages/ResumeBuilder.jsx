@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { AppShell, SurfaceCard } from '../components/AppShell';
 import { getTemplateById, Templates } from '../components/ResumeTemplates';
-import { Download, Plus, Trash2, Save, Loader2 } from 'lucide-react';
+import { Download, Plus, Trash2, Save, Loader2, Upload, Sparkles, History } from 'lucide-react';
 import { getUserName, getUserEmail, authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
 import toast from 'react-hot-toast';
@@ -25,11 +25,130 @@ export default function ResumeBuilder() {
     experience: [],
     projects: [],
     skills: [],
-    certifications: []
+    certifications: [],
+    languages: [],
+    awards: ''
   });
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
+  const [isPasteMode, setIsPasteMode] = useState(false);
+  const [pastedText, setPastedText] = useState('');
+  const fileInputRef = useRef(null);
+
+  const handleResumeUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Support pdf and txt based on file name or type
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isTxt = file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt');
+
+    if (!isPdf && !isTxt) {
+      toast.error('Only PDF and TXT files are supported.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setIsParsing(true);
+    const toastId = toast.loading('Extracting data from your resume...');
+
+    try {
+      const res = await fetch(buildApiUrl('/auth/parse-resume'), {
+        method: 'POST',
+        headers: {
+          ...authHeaders()
+        },
+        body: formData
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        setData(prev => ({
+          basicInfo: {
+            name: result.basicInfo?.name || prev.basicInfo.name,
+            email: result.basicInfo?.email || prev.basicInfo.email,
+            phone: result.basicInfo?.phone || prev.basicInfo.phone || '',
+            linkedin: result.basicInfo?.linkedin || prev.basicInfo.linkedin || '',
+            github: result.basicInfo?.github || prev.basicInfo.github || '',
+            summary: result.basicInfo?.summary || prev.basicInfo.summary || ''
+          },
+          education: result.education || [],
+          experience: result.experience || [],
+          projects: result.projects || [],
+          skills: result.skills || [],
+          certifications: result.certifications || [],
+          languages: result.languages || [],
+          awards: result.awards || ''
+        }));
+        toast.success('Resume parsed and loaded successfully!', { id: toastId });
+      } else {
+        toast.error(result.message || 'Failed to parse resume.', { id: toastId });
+      }
+    } catch (error) {
+      console.error('Resume upload error:', error);
+      toast.error('Network error. Failed to upload and parse resume.', { id: toastId });
+    } finally {
+      setIsParsing(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleResumeTextParse = async () => {
+    if (!pastedText.trim()) return;
+
+    setIsParsing(true);
+    const toastId = toast.loading('Extracting data from text...');
+
+    try {
+      const res = await fetch(buildApiUrl('/auth/parse-resume'), {
+        method: 'POST',
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ text: pastedText })
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        setData(prev => ({
+          basicInfo: {
+            name: result.basicInfo?.name || prev.basicInfo.name,
+            email: result.basicInfo?.email || prev.basicInfo.email,
+            phone: result.basicInfo?.phone || prev.basicInfo.phone || '',
+            linkedin: result.basicInfo?.linkedin || prev.basicInfo.linkedin || '',
+            github: result.basicInfo?.github || prev.basicInfo.github || '',
+            summary: result.basicInfo?.summary || prev.basicInfo.summary || ''
+          },
+          education: result.education || [],
+          experience: result.experience || [],
+          projects: result.projects || [],
+          skills: result.skills || [],
+          certifications: result.certifications || [],
+          languages: result.languages || [],
+          awards: result.awards || ''
+        }));
+        toast.success('Resume text parsed and loaded successfully!', { id: toastId });
+        setPastedText('');
+        setIsPasteMode(false);
+      } else {
+        toast.error(result.message || 'Failed to parse text.', { id: toastId });
+      }
+    } catch (error) {
+      console.error('Resume text parsing error:', error);
+      toast.error('Network error. Failed to parse text.', { id: toastId });
+    } finally {
+      setIsParsing(false);
+    }
+  };
 
   useEffect(() => {
     const fetchResume = async () => {
@@ -47,7 +166,9 @@ export default function ResumeBuilder() {
               experience: savedData.experience || [],
               projects: savedData.projects || [],
               skills: savedData.skills || [],
-              certifications: savedData.certifications || []
+              certifications: savedData.certifications || [],
+              languages: savedData.languages || [],
+              awards: savedData.awards || ''
             }));
           }
         }
@@ -60,7 +181,9 @@ export default function ResumeBuilder() {
     fetchResume();
   }, []);
 
-  const handleSave = async () => {
+  const [lastSaved, setLastSaved] = useState(null);
+
+  const handleSave = async (silent = false) => {
     setIsSaving(true);
     try {
       const res = await fetch(buildApiUrl('/auth/my-resume'), {
@@ -72,14 +195,92 @@ export default function ResumeBuilder() {
         body: JSON.stringify(data)
       });
       if (res.ok) {
-        toast.success('Resume saved successfully!');
+        if (!silent) toast.success('Resume saved successfully!');
+        setLastSaved(new Date().toLocaleTimeString());
+        return true;
       } else {
-        toast.error('Failed to save resume.');
+        if (!silent) toast.error('Failed to save resume.');
+        return false;
       }
     } catch (error) {
-      toast.error('Network error. Could not save.');
+      if (!silent) toast.error('Network error. Could not save.');
+      return false;
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePreviewAndGenerate = async () => {
+    const success = await handleSave(true);
+    if (success) {
+      setStep('preview');
+    } else {
+      toast.error('Could not save your latest progress. Please check your network and try again.');
+    }
+  };
+
+  const handleLoadHistoryVersion = (version) => {
+    setData(prev => ({
+      ...prev,
+      ...version.dataSnapshot,
+      history: prev.history
+    }));
+    toast.success('Restored selected version to editor!');
+  };
+
+  const handleDeleteHistoryVersion = async (versionId) => {
+    const updatedHistory = (data.history || []).filter(v => v.id !== versionId);
+    const updatedData = { ...data, history: updatedHistory };
+    setData(updatedData);
+
+    try {
+      await fetch(buildApiUrl('/auth/my-resume'), {
+        method: 'PUT',
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatedData)
+      });
+      toast.success('Version deleted.');
+    } catch (err) {
+      toast.error('Failed to save changes.');
+    }
+  };
+
+  const triggerSaveHistory = async () => {
+    const newVersion = {
+      id: Date.now().toString(),
+      filename: `${data.basicInfo.name || 'Resume'}_Resume_${new Date().toISOString().slice(0, 10)}.pdf`,
+      timestamp: new Date().toISOString(),
+      templateId: activeTemplate,
+      dataSnapshot: {
+        basicInfo: data.basicInfo,
+        education: data.education,
+        experience: data.experience,
+        projects: data.projects,
+        skills: data.skills,
+        certifications: data.certifications,
+        languages: data.languages,
+        awards: data.awards
+      }
+    };
+
+    const updatedHistory = [newVersion, ...(data.history || [])];
+    const updatedData = { ...data, history: updatedHistory };
+    setData(updatedData);
+
+    try {
+      await fetch(buildApiUrl('/auth/my-resume'), {
+        method: 'PUT',
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatedData)
+      });
+    } catch (err) {
+      console.error('Failed to save version to history:', err);
     }
   };
 
@@ -87,6 +288,11 @@ export default function ResumeBuilder() {
     contentRef: printRef,
     documentTitle: `${data.basicInfo.name || 'Resume'}_Resume`,
   });
+
+  const handleExportPDF = async () => {
+    await triggerSaveHistory();
+    handlePrint();
+  };
 
   const updateBasicInfo = (field, value) => {
     setData(prev => ({
@@ -151,6 +357,15 @@ export default function ResumeBuilder() {
     setData(prev => ({ ...prev, skills: skillsArray }));
   };
 
+  const handleLanguagesChange = (e) => {
+    const langsArray = e.target.value.split(',').map(s => s.trim()).filter(s => s);
+    setData(prev => ({ ...prev, languages: langsArray }));
+  };
+
+  const updateAwards = (value) => {
+    setData(prev => ({ ...prev, awards: value }));
+  };
+
   const addCertification = () => {
     setData(prev => ({
       ...prev,
@@ -192,6 +407,112 @@ export default function ResumeBuilder() {
                 {isSaving ? 'Saving...' : 'Save Progress'}
               </button>
           </div>
+
+          {/* Import Previous Resume Widget */}
+          <SurfaceCard className="p-6 border-dashed border-2 border-slate-300 hover:border-blue-500 transition-colors bg-blue-50/20">
+            <div className="flex flex-col items-center text-center">
+              <div className="p-3 bg-blue-100 rounded-full text-blue-600 mb-3">
+                <Sparkles size={24} className="animate-pulse" />
+              </div>
+              <h3 className="text-base font-bold text-slate-800 mb-1">Import from Previous Resume</h3>
+              <p className="text-xs text-slate-500 max-w-lg mb-4">
+                Upload your previous PDF or TXT resume, or paste the text below. Our AI assistant will extract your information (Basic Info, Experience, Projects, Education, Certifications, Skills, Languages, and Awards) to pre-fill the form.
+              </p>
+              
+              <div className="flex gap-4 mb-4">
+                <button 
+                  onClick={() => setIsPasteMode(false)}
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${!isPasteMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
+                >
+                  Upload File (PDF/TXT)
+                </button>
+                <button 
+                  onClick={() => setIsPasteMode(true)}
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${isPasteMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
+                >
+                  Paste Raw Text
+                </button>
+              </div>
+
+              {!isPasteMode ? (
+                <>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    onChange={handleResumeUpload}
+                    accept=".pdf,.txt"
+                    className="hidden" 
+                  />
+                  
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isParsing}
+                    className="crm-button flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 font-medium shadow-sm transition-all disabled:opacity-50"
+                  >
+                    {isParsing ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                    {isParsing ? 'Parsing Resume...' : 'Upload & Auto-fill'}
+                  </button>
+                </>
+              ) : (
+                <div className="w-full max-w-xl flex flex-col items-center gap-3">
+                  <textarea 
+                    className="crm-input h-36 text-left" 
+                    value={pastedText}
+                    onChange={e => setPastedText(e.target.value)}
+                    placeholder="Paste the raw text copied from your resume here..."
+                  ></textarea>
+                  <button 
+                    onClick={handleResumeTextParse}
+                    disabled={isParsing || !pastedText.trim()}
+                    className="crm-button flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 font-medium shadow-sm transition-all disabled:opacity-50"
+                  >
+                    {isParsing ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                    {isParsing ? 'Parsing Text...' : 'Parse Text & Auto-fill'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </SurfaceCard>
+
+          {/* Exported Versions History */}
+          {data.history && data.history.length > 0 && (
+            <SurfaceCard className="p-6 bg-slate-50/50 border border-slate-200">
+              <div className="flex items-center gap-2 mb-4 border-b pb-2">
+                <History className="text-blue-600 animate-pulse" size={20} />
+                <h2 className="text-lg font-bold text-slate-800">Exported Versions History</h2>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {data.history.map((version) => (
+                  <div key={version.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-blue-400 transition-colors">
+                    <div>
+                      <p className="font-semibold text-sm text-slate-800 truncate" title={version.filename}>
+                        {version.filename}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Exported at: {new Date(version.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={() => handleLoadHistoryVersion(version)}
+                        className="flex-1 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-xs font-semibold transition-colors"
+                      >
+                        Restore
+                      </button>
+                      <button
+                        onClick={() => handleDeleteHistoryVersion(version.id)}
+                        className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-md transition-colors"
+                        title="Delete Version"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SurfaceCard>
+          )}
+
           {/* Form Panel */}
           <SurfaceCard className="p-6">
             <h2 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Basic Info</h2>
@@ -366,9 +687,31 @@ export default function ResumeBuilder() {
               ></textarea>
             </SurfaceCard>
 
+            <SurfaceCard className="p-6">
+              <h2 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Languages</h2>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Enter languages separated by commas</label>
+              <textarea 
+                className="crm-input h-24" 
+                value={data.languages.join(', ')} 
+                onChange={handleLanguagesChange} 
+                placeholder="English, Spanish, Hindi, French"
+              ></textarea>
+            </SurfaceCard>
+
+            <SurfaceCard className="p-6">
+              <h2 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Awards & Achievements</h2>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Enter awards and achievements (bullet points, separated by newlines)</label>
+              <textarea 
+                className="crm-input h-24" 
+                value={data.awards} 
+                onChange={e => updateAwards(e.target.value)} 
+                placeholder="Won 1st place in Hackathon 2023...&#10;Awarded Best Student Merit Scholarship...&#10;Dean's List for academic excellence..."
+              ></textarea>
+            </SurfaceCard>
+
             <div className="flex justify-end mt-6">
               <button 
-                onClick={() => setStep('preview')} 
+                onClick={handlePreviewAndGenerate} 
                 className="crm-button text-lg px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md"
               >
                 Preview & Generate Resume
@@ -394,7 +737,7 @@ export default function ResumeBuilder() {
                 ))}
               </select>
             </div>
-            <button onClick={() => handlePrint()} className="crm-button flex items-center gap-2">
+            <button onClick={handleExportPDF} className="crm-button flex items-center gap-2">
               <Download size={16} /> Export PDF
             </button>
           </div>

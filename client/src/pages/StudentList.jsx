@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Search, Download, Upload, Plus, Edit, Eye, Trash2, X, ChevronLeft, ChevronRight
+  Search, Download, Upload, Plus, Edit, Eye, Trash2, X, ChevronLeft, ChevronRight, ClipboardList
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
@@ -36,6 +36,9 @@ export default function StudentList() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
+  const [isDeleteSelectedOpen, setIsDeleteSelectedOpen] = useState(false);
+  const [isDeletingSelected, setIsDeletingSelected] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -75,10 +78,68 @@ export default function StudentList() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  const handleToggleSelect = (id) => {
+    setSelectedStudentIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAllPage = () => {
+    const currentPageIds = currentItems.map(item => item._id);
+    const allSelected = currentPageIds.every(id => selectedStudentIds.includes(id));
+
+    if (allSelected) {
+      setSelectedStudentIds(prev => prev.filter(id => !currentPageIds.includes(id)));
+    } else {
+      setSelectedStudentIds(prev => {
+        const toAdd = currentPageIds.filter(id => !prev.includes(id));
+        return [...prev, ...toAdd];
+      });
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedStudentIds([]);
+  };
+
+  const handleDeleteSelected = async () => {
+    setIsDeletingSelected(true);
+    const loadToast = toast.loading('Deleting selected candidates...');
+    try {
+      const res = await fetch(buildApiUrl('/students/bulk-delete'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ ids: selectedStudentIds })
+      });
+      if (res.status === 401) {
+        logout();
+        return;
+      }
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Successfully deleted selected candidates', { id: loadToast });
+        setSelectedStudentIds([]);
+        setIsDeleteSelectedOpen(false);
+        fetchStudents();
+      } else {
+        toast.error(data.message || 'Bulk deletion failed', { id: loadToast });
+      }
+    } catch (err) {
+      toast.error('Deletion error', { id: loadToast });
+    } finally {
+      setIsDeletingSelected(false);
+    }
+  };
+
   const handleExport = () => {
-    const ws = XLSX.utils.json_to_sheet(students.map(s => ({
+    const targetStudents = selectedStudentIds.length > 0
+      ? students.filter(s => selectedStudentIds.includes(s._id))
+      : students;
+
+    const ws = XLSX.utils.json_to_sheet(targetStudents.map(s => ({
       Name: s.name,
       Mobile: s.mobile,
+      Email: s.email || '',
       Degree: s.degree,
       'Batch Year': s.passedOutYear,
       Batch: s.batch || '',
@@ -86,13 +147,15 @@ export default function StudentList() {
       Status: s.currentStatus,
       'Status Reason': s.statusReason || '',
       Others: s.others || '',
+      Skills: s.skills || '',
       Company: s.companyName,
       'Package (LPA)': s.packageLpa,
       Mode: s.jobGetMode
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Candidates");
-    XLSX.writeFile(wb, "Placement_Candidates.xlsx");
+    const fileName = selectedStudentIds.length > 0 ? "Selected_Placement_Candidates.xlsx" : "Placement_Candidates.xlsx";
+    XLSX.writeFile(wb, fileName);
   };
 
   const handleDelete = async (id) => {
@@ -237,6 +300,8 @@ export default function StudentList() {
       title="Student Directory"
       subtitle="Manage candidate records, imports, exports, and placement status updates."
       searchPlaceholder="Search students, mobile number, company, or institute batch"
+      searchValue={searchTerm}
+      onSearchChange={setSearchTerm}
     >
            <SectionTabs
              items={[
@@ -248,17 +313,7 @@ export default function StudentList() {
 
            {/* Toolbar */}
            <div className="mb-3 flex flex-col gap-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full">
-                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-2.5 md:top-3 text-slate-400" size={16} />
-                    <input 
-                      type="text" 
-                      placeholder="Search candidates..." 
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 bg-white border border-slate-200 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4338ca] focus:border-[#4338ca] text-[12px] md:text-[13px] font-medium transition-shadow" 
-                    />
-                 </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 w-full">
                  <select 
                    value={statusFilter} 
                    onChange={(e) => setStatusFilter(e.target.value)}
@@ -297,6 +352,19 @@ export default function StudentList() {
                  </select>
               </div>
 
+              <div className="sm:hidden w-full mb-2">
+                 <div className="relative w-full">
+                    <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search candidates, mobile, company..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none focus:border-[#4338ca] focus:ring-2 focus:ring-[#4338ca]/10"
+                    />
+                 </div>
+              </div>
+
               <div className="flex flex-wrap gap-1.5">
                  <label className="crm-btn-secondary crm-btn-compact cursor-pointer">
                     <Upload size={16} />
@@ -305,7 +373,7 @@ export default function StudentList() {
                  </label>
                  <button onClick={handleExport} className="crm-btn-secondary crm-btn-compact">
                     <Download size={16} />
-                    <span>Export</span>
+                    <span>{selectedStudentIds.length > 0 ? `Export Selected (${selectedStudentIds.length})` : 'Export All'}</span>
                  </button>
                  <button
                    onClick={() => setIsDeleteAllOpen(true)}
@@ -315,6 +383,30 @@ export default function StudentList() {
                     <Trash2 size={16} />
                     <span>Delete All</span>
                  </button>
+                 {selectedStudentIds.length > 0 && (
+                    <>
+                       <button
+                         onClick={() => navigate('/tasks', { state: { selectedStudentIds } })}
+                         className="px-3.5 md:px-4 py-2 md:py-2.5 bg-blue-50 border border-blue-200 text-blue-600 rounded-full text-[12px] md:text-sm font-semibold hover:bg-blue-100 hover:border-blue-300 transition-colors flex items-center justify-center space-x-2"
+                       >
+                          <ClipboardList size={16} />
+                          <span>Assign Task ({selectedStudentIds.length})</span>
+                       </button>
+                       <button
+                         onClick={() => setIsDeleteSelectedOpen(true)}
+                         className="px-3.5 md:px-4 py-2 md:py-2.5 bg-red-50 border border-red-200 text-red-600 rounded-full text-[12px] md:text-sm font-semibold hover:bg-red-100 hover:border-red-300 transition-colors flex items-center justify-center space-x-2"
+                       >
+                          <Trash2 size={16} />
+                          <span>Delete Selected ({selectedStudentIds.length})</span>
+                       </button>
+                       <button
+                         onClick={handleClearSelection}
+                         className="px-3.5 md:px-4 py-2 md:py-2.5 bg-slate-50 border border-slate-200 text-slate-600 rounded-full text-[12px] md:text-sm font-semibold hover:bg-slate-100 hover:border-slate-300 transition-colors flex items-center justify-center"
+                       >
+                          <span>Clear Selection</span>
+                       </button>
+                    </>
+                 )}
                  <button 
                    onClick={() => { setEditMode(false); setSelectedStudent(null); setIsModalOpen(true); }}
                    className="crm-btn-primary crm-btn-compact"
@@ -339,11 +431,20 @@ export default function StudentList() {
                <table className="w-full min-w-[720px] text-left">
                  <thead className="bg-[#f8fafc] border-b border-slate-100">
                    <tr>
+                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 bg-slate-50/50 w-10">
+                       <input
+                         type="checkbox"
+                         checked={currentItems.length > 0 && currentItems.every(student => selectedStudentIds.includes(student._id))}
+                         onChange={handleToggleSelectAllPage}
+                         className="w-4 h-4 text-[#4338ca] rounded border-slate-300 focus:ring-[#4338ca] cursor-pointer"
+                       />
+                     </th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Name</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Mobile</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Degree</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Batch Year</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Institute Batch</th>
+                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Skills</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Grade</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Status</th>
                      <th className="px-3 py-2 text-right text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Actions</th>
@@ -352,12 +453,20 @@ export default function StudentList() {
                  <tbody className="bg-white">
                    {loading ? (
                      <tr>
-                       <td colSpan="7" className="px-4 py-8 md:py-10 text-center">
+                       <td colSpan="10" className="px-4 py-8 md:py-10 text-center">
                           <div className="animate-spin h-8 w-8 border-4 border-[#4338ca] border-t-transparent flex items-center justify-center rounded-full mx-auto mb-4"></div>
                        </td>
                      </tr>
                    ) : currentItems.length > 0 ? currentItems.map(student => (
                      <tr key={student._id} className="border-b border-slate-50 hover:bg-[#f8fafc] transition-colors group">
+                       <td className="px-3 py-2.5 w-10">
+                         <input
+                           type="checkbox"
+                           checked={selectedStudentIds.includes(student._id)}
+                           onChange={() => handleToggleSelect(student._id)}
+                           className="w-4 h-4 text-[#4338ca] rounded border-slate-300 focus:ring-[#4338ca] cursor-pointer"
+                         />
+                       </td>
                        <td className="px-3 py-2.5">
                           <div className="text-[12px] md:text-[13px] font-bold text-[#1e293b] whitespace-nowrap">{student.name}</div>
                        </td>
@@ -374,6 +483,11 @@ export default function StudentList() {
                        </td>
                        <td className="px-3 py-2.5">
                           <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">{student.batch || '-'}</div>
+                       </td>
+                       <td className="px-3 py-2.5">
+                          <div className="text-[11px] md:text-[12px] font-medium text-slate-600 max-w-[150px] truncate" title={student.skills}>
+                            {student.skills || '-'}
+                          </div>
                        </td>
                        <td className="px-3 py-2.5">
                           <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">
@@ -415,7 +529,7 @@ export default function StudentList() {
                      </tr>
                    )) : (
                      <tr>
-                       <td colSpan="7" className="px-4 py-8 md:py-10 text-center text-slate-400 font-medium text-[12px]">
+                       <td colSpan="10" className="px-4 py-8 md:py-10 text-center text-slate-400 font-medium text-[12px]">
                           No records matched search parameters
                        </td>
                      </tr>
@@ -479,6 +593,15 @@ export default function StudentList() {
           isDeletingAll={isDeletingAll}
         />
       )}
+      
+      {isDeleteSelectedOpen && (
+        <ConfirmDeleteSelectedModal
+          onClose={() => setIsDeleteSelectedOpen(false)}
+          onConfirm={handleDeleteSelected}
+          count={selectedStudentIds.length}
+          isDeleting={isDeletingSelected}
+        />
+      )}
     </AppShell>
   );
 }
@@ -494,6 +617,7 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
   const [formData, setFormData] = useState({
     name: student?.name || '',
     mobile: student?.mobile || '',
+    email: student?.email || '',
     degree: isCustomDegree ? 'Other' : studentDegree || '',
     customDegree: isCustomDegree ? studentDegree : '',
     passedOutYear: student?.passedOutYear || '',
@@ -502,6 +626,7 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
     currentStatus: student?.currentStatus || 'Job Seeker',
     statusReason: student?.statusReason || '',
     others: student?.others || '',
+    skills: student?.skills || '',
     companyName: student?.companyName || '',
     packageLpa: student?.packageLpa || '',
     jobGetMode: student?.jobGetMode || ''
@@ -573,6 +698,10 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
                    <input required value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} className="crm-input" />
                 </div>
                 <div>
+                   <label className="crm-label">Email Address</label>
+                   <input type="email" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} className="crm-input" />
+                </div>
+                <div>
                    <label className="crm-label">Academic Origin (Degree)</label>
                    <select required value={formData.degree} onChange={e => setFormData({...formData, degree: e.target.value, customDegree: e.target.value !== 'Other' ? '' : formData.customDegree})} className="crm-input">
                       <option value="">Select Origin</option>
@@ -639,6 +768,16 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
                            />
                         </div>
                       )}
+
+                      <div className="md:col-span-2">
+                         <label className="crm-label">Skills</label>
+                         <input
+                            value={formData.skills}
+                            onChange={e => setFormData({...formData, skills: e.target.value})}
+                            className="crm-input"
+                            placeholder="Enter candidate skills (e.g. React, Node.js, Python)"
+                         />
+                      </div>
 
                       <div className="md:col-span-2">
                          <label className="crm-label">Other Notes</label>
@@ -722,6 +861,9 @@ function StudentDetailModal({ onClose, student }) {
                 <DetailRow label="Batch Year" val={batchYear || 'Not Added'} />
                 <DetailRow label="Institute Batch" val={student.batch || 'Not Added'} />
                 <DetailRow label="Grade" val={student.grade || 'Unassigned'} />
+                {student.skills && (
+                  <DetailRow label="Skills" val={student.skills} />
+                )}
                 {student.statusReason && (
                   <DetailRow label="Status Reason" val={student.statusReason} />
                 )}
@@ -794,6 +936,38 @@ function ConfirmDeleteAllModal({ onClose, onConfirm, count, isDeletingAll }) {
              <button
                onClick={onClose}
                disabled={isDeletingAll}
+               className="w-full py-3.5 bg-white text-slate-600 font-bold hover:bg-slate-50 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+             >
+               Cancel
+             </button>
+          </div>
+       </div>
+    </div>
+   );
+}
+
+function ConfirmDeleteSelectedModal({ onClose, onConfirm, count, isDeleting }) {
+   return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+       <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-sm text-center p-8">
+          <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+             <Trash2 size={28} className="text-red-500" />
+          </div>
+          <h3 className="text-xl font-extrabold text-[#1e293b] mb-3">Delete Selected Candidates</h3>
+          <p className="text-[15px] font-medium text-slate-500 mb-8 leading-relaxed">
+             Are you sure you want to permanently delete the <strong className="text-[#1e293b]">{count}</strong> selected student record{count === 1 ? '' : 's'}? This action cannot be undone.
+          </p>
+          <div className="flex flex-col space-y-3">
+             <button
+               onClick={onConfirm}
+               disabled={isDeleting}
+               className="w-full py-3.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-[15px] font-bold shadow-sm shadow-red-200 transition-colors mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
+             >
+               {isDeleting ? 'Deleting Records...' : 'Confirm Delete Selected'}
+             </button>
+             <button
+               onClick={onClose}
+               disabled={isDeleting}
                className="w-full py-3.5 bg-white text-slate-600 font-bold hover:bg-slate-50 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
              >
                Cancel

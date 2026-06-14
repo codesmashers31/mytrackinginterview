@@ -98,3 +98,35 @@
   border: 2px solid transparent;
   background-clip: content-box;
 }
+
+@media print {
+  /* Prevent page breaks inside important sections and list items */
+  section,
+  h2,
+  h3,
+  h4,
+  .mb-6,
+  .mb-8,
+  .mb-3,
+  .space-y-4 > div,
+  .space-y-6 > div,
+  .space-y-5 > div,
+  .space-y-3 > div,
+  ul > li,
+  ol > li {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Prevent headings from being separated from their content */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  /* Fix background colors and images printing in browsers */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

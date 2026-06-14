@@ -17,7 +17,8 @@ router.get('/', authMiddleware, async (req, res) => {
         if (search) {
             query.$or = [
                 { name: { $regex: search, $options: 'i' } },
-                { mobile: { $regex: search, $options: 'i' } }
+                { mobile: { $regex: search, $options: 'i' } },
+                { skills: { $regex: search, $options: 'i' } }
             ];
         }
         
@@ -201,12 +202,14 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
         const students = data.map(row => ({
             name: row.Name || row.name || 'Unknown',
             mobile: String(row.Mobile || row.mobile || ''),
+            email: row.Email || row.email || '',
             degree: row.Degree || row.degree || 'Not Provided',
             passedOutYear: String(row['Batch Year'] || row.Year || row['Passed Out Year'] || row.passedOutYear || 'Need to filled'),
             batch: String(row.Batch || row.batch || ''),
             currentStatus: row.Status || row.currentStatus || 'Need to filled',
             statusReason: row['Status Reason'] || row.statusReason || row.Reason || row.reason || '',
             others: row.Others || row.others || row['Other Notes'] || row.otherNotes || '',
+            skills: row.Skills || row.skills || '',
             companyName: row.Company || row['Company Name'] || row.companyName || '',
             packageLpa: String(row.Package || row.packageLpa || ''),
             jobGetMode: row.Mode || row.jobGetMode || ''

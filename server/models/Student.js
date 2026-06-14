@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const studentSchema = new mongoose.Schema({
     name: { type: String, required: true },
     mobile: { type: String, required: true },
+    email: { type: String, default: '' },
     degree: { type: String, required: true },
     passedOutYear: { type: String, default: 'Need to filled' },
     batch: { type: String, default: '' },
@@ -13,9 +14,11 @@ const studentSchema = new mongoose.Schema({
     },
     statusReason: { type: String, default: '' },
     others: { type: String, default: '' },
+    skills: { type: String, default: '' },
     companyName: { type: String, default: '' },
     packageLpa: { type: String, default: '' },
-    jobGetMode: { type: String, default: '' }
+    jobGetMode: { type: String, default: '' },
+    resumeData: { type: Object, default: {} }
 }, { timestamps: true });
 
 export default mongoose.model('Student', studentSchema);

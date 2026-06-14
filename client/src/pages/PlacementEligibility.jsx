@@ -156,6 +156,7 @@ export default function PlacementEligibility() {
         Degree: student.degree,
         'Batch Year': student.passedOutYear,
         Grade: student.grade || 'N/A',
+        Skills: student.skills || '',
         Status: student.currentStatus,
       }))
     );
@@ -193,6 +194,7 @@ export default function PlacementEligibility() {
           Degree: student.degree,
           'Batch Year': student.passedOutYear,
           Grade: student.grade || 'N/A',
+          Skills: student.skills || '',
           Status: student.currentStatus,
         }))
       );

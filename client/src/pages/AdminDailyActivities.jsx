@@ -111,6 +111,8 @@ export default function AdminDailyActivities() {
       title="Student Daily Logs Dashboard"
       subtitle="Monitor day-to-day candidate activities and audit search / company updates."
       searchPlaceholder="Search by student name, email, or log content..."
+      searchValue={searchTerm}
+      onSearchChange={setSearchTerm}
     >
       <SectionTabs
         items={[
@@ -128,18 +130,7 @@ export default function AdminDailyActivities() {
           <span>Filter Logs</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3.5 top-3 text-slate-400" size={16} />
-            <input 
-              type="text" 
-              placeholder="Search activity details..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs font-semibold text-[#1e293b] transition-shadow" 
-            />
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 
           {/* Student Filter */}
           <select 

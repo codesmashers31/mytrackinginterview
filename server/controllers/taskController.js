@@ -1,6 +1,24 @@
 import Task from '../models/Task.js';
 import User from '../models/User.js';
 
+const calculateOverallStatus = (questions) => {
+  if (!Array.isArray(questions) || questions.length === 0) return 'Pending';
+  
+  const allCompleted = questions.every(q => q.status === 'Completed');
+  if (allCompleted) return 'Completed';
+
+  const anyBlocked = questions.some(q => ['Blocked', 'Doubt', 'Not Completed'].includes(q.status));
+  if (anyBlocked) {
+    const found = questions.map(q => q.status).find(s => ['Blocked', 'Doubt', 'Not Completed'].includes(s));
+    return found || 'Blocked';
+  }
+
+  const anyInProgress = questions.some(q => q.status === 'In Progress' || q.status === 'Completed');
+  if (anyInProgress) return 'In Progress';
+
+  return 'Pending';
+};
+
 export const createTask = async (req, res) => {
   try {
     const { studentId, title, description, dueDate, questions } = req.body;
@@ -27,7 +45,7 @@ export const createTask = async (req, res) => {
       description: description || '',
       dueDate: dueDate ? new Date(dueDate) : null,
       questions: normalizedQuestions,
-      overallStatus: 'Pending',
+      overallStatus: calculateOverallStatus(normalizedQuestions),
       assignedBy: req.user.name || req.user.email || 'Admin'
     });
 
@@ -87,7 +105,6 @@ export const updateTask = async (req, res) => {
       if (title) updates.title = title;
       if (description) updates.description = description;
       if (dueDate) updates.dueDate = new Date(dueDate);
-      if (overallStatus) updates.overallStatus = overallStatus;
       if (Array.isArray(questions)) {
         updates.questions = questions.map((item) => ({
           question: item.question || item,
@@ -95,6 +112,7 @@ export const updateTask = async (req, res) => {
           remarks: item.remarks || ''
         }));
       }
+      updates.overallStatus = updates.questions ? calculateOverallStatus(updates.questions) : (overallStatus || task.overallStatus);
     } else if (req.user.role === 'student') {
       const { questions, overallStatus } = req.body;
       if (Array.isArray(questions)) {
@@ -104,7 +122,7 @@ export const updateTask = async (req, res) => {
           remarks: item.remarks || ''
         }));
       }
-      if (overallStatus) updates.overallStatus = overallStatus;
+      updates.overallStatus = updates.questions ? calculateOverallStatus(updates.questions) : (overallStatus || task.overallStatus);
     }
 
     updates.updatedAt = new Date();

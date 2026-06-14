@@ -123,10 +123,13 @@ export function AppShell({
   title,
   subtitle,
   searchPlaceholder = 'Search',
+  searchValue = '',
+  onSearchChange = null,
   headerActions = null,
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -302,29 +305,68 @@ export function AppShell({
                 ) : null}
               </div>
 
-              <div className="hidden max-w-md flex-1 lg:block">
-                <label className="relative block">
-                  <Search
-                    size={16}
-                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-                  <input
-                    type="text"
-                    placeholder={searchPlaceholder}
-                    className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm text-slate-700 outline-none transition focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary-soft)]"
-                  />
-                </label>
-              </div>
+              {onSearchChange && (
+                <div className="hidden sm:block max-w-xs md:max-w-md flex-1">
+                  <label className="relative block">
+                    <Search
+                      size={16}
+                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+                    <input
+                      type="text"
+                      placeholder={searchPlaceholder}
+                      value={searchValue}
+                      onChange={(e) => onSearchChange(e.target.value)}
+                      className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm text-slate-700 outline-none transition focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary-soft)]"
+                    />
+                  </label>
+                </div>
+              )}
 
               <div className="flex items-center gap-2 md:gap-3">
                 {headerActions}
-                <button
-                  type="button"
-                  className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
-                >
-                  <Bell size={18} />
-                  <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
-                </button>
+                
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setNotificationsOpen(!notificationsOpen)}
+                    className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
+                  >
+                    <Bell size={18} />
+                    <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                  </button>
+                  
+                  {notificationsOpen && (
+                    <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl z-50">
+                      <div className="flex justify-between items-center mb-3 pb-2 border-b">
+                        <span className="font-bold text-sm text-slate-800">Notifications</span>
+                        <button 
+                          onClick={() => setNotificationsOpen(false)} 
+                          className="text-xs text-blue-600 hover:underline"
+                        >
+                          Mark all read
+                        </button>
+                      </div>
+                      <div className="space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
+                        <div className="p-2.5 hover:bg-slate-50 rounded-xl transition cursor-pointer text-left">
+                          <p className="text-xs font-semibold text-slate-800">New Resume Uploaded</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">A student recently imported their resume.</p>
+                          <p className="text-[9px] text-slate-400 mt-1">2 mins ago</p>
+                        </div>
+                        <div className="p-2.5 hover:bg-slate-50 rounded-xl transition cursor-pointer text-left">
+                          <p className="text-xs font-semibold text-slate-800">Attendance Completed</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Daily attendance sheet is updated.</p>
+                          <p className="text-[9px] text-slate-400 mt-1">1 hour ago</p>
+                        </div>
+                        <div className="p-2.5 hover:bg-slate-50 rounded-xl transition cursor-pointer text-left">
+                          <p className="text-xs font-semibold text-slate-800">System Backup Success</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Database auto-sync completed successfully.</p>
+                          <p className="text-[9px] text-slate-400 mt-1">Yesterday</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <div className="hidden items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm sm:flex">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#dbeafe,#e0e7ff)] text-sm font-semibold text-[var(--primary)]">

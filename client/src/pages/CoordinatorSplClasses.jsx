@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Clock, CheckCircle } from 'lucide-react';
 import { AppShell, SectionTabs, SurfaceCard, MetricCard } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
@@ -46,7 +46,9 @@ export default function CoordinatorSplClasses() {
     <AppShell
       title="SPL Classes"
       subtitle="View and manage all SPL class registrations assigned to your group."
-      searchPlaceholder="Search registrations"
+      searchPlaceholder="Search registrations by name, email or batch..."
+      searchValue={search}
+      onSearchChange={setSearch}
     >
       <SectionTabs
         items={[
@@ -69,12 +71,14 @@ export default function CoordinatorSplClasses() {
           value={newCount}
           helper="Pending review"
           tone="warning"
+          icon={<Clock size={20} />} // adding missing icon
         />
         <MetricCard
           title="Approved"
           value={approvedCount}
           helper="Confirmed registrations"
           tone="success"
+          icon={<CheckCircle size={20} />} // adding missing icon
         />
       </div>
 
@@ -84,13 +88,6 @@ export default function CoordinatorSplClasses() {
             Registration List
             <span className="ml-2 text-base font-normal text-slate-400">({filtered.length})</span>
           </h2>
-          <input
-            type="text"
-            placeholder="Search by name, email or batch..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="border border-slate-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-          />
         </div>
 
         {filtered.length === 0 ? (

@@ -356,7 +356,7 @@ router.put('/my-resume', authMiddleware, async (req, res) => {
       const student = await Student.findByIdAndUpdate(
         user.studentId,
         { resumeData: req.body },
-        { new: true }
+        { returnDocument: 'after' }
       );
       if (!student) {
         return res.status(404).json({ message: 'Student record not found' });

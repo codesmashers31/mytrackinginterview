@@ -27,7 +27,8 @@ export default function ResumeBuilder() {
     skills: [],
     certifications: [],
     languages: [],
-    awards: ''
+    awards: '',
+    history: []
   });
   
   const [isLoading, setIsLoading] = useState(true);
@@ -36,6 +37,84 @@ export default function ResumeBuilder() {
   const [isPasteMode, setIsPasteMode] = useState(false);
   const [pastedText, setPastedText] = useState('');
   const fileInputRef = useRef(null);
+
+  const parseProfileSkills = (skills) => {
+    if (!skills) return [];
+    if (Array.isArray(skills)) return skills.map(s => String(s).trim()).filter(Boolean);
+    return String(skills)
+      .split(',')
+      .map(skill => skill.trim())
+      .filter(Boolean);
+  };
+
+  const buildResumeDefaultsFromProfile = (profile = {}) => {
+    const basicInfo = {
+      name: profile.name || getUserName() || '',
+      email: profile.email || getUserEmail() || '',
+      phone: profile.mobile || '',
+      linkedin: profile.linkedin || '',
+      github: profile.github || '',
+      summary: profile.others || profile.statusReason || ''
+    };
+
+    const education = [];
+    if (profile.degree) {
+      education.push({
+        degree: profile.degree,
+        institution: '',
+        year: profile.passedOutYear || profile.batch || '',
+        score: ''
+      });
+    }
+
+    const experience = [];
+    if (profile.currentStatus?.toLowerCase() === 'placed' && profile.companyName) {
+      experience.push({
+        role: 'Placed Candidate',
+        company: profile.companyName,
+        duration: '',
+        description: `Package: ${profile.packageLpa || 'N/A'}; Mode: ${profile.jobGetMode || 'N/A'}`
+      });
+    }
+
+    return {
+      basicInfo,
+      education,
+      experience,
+      projects: [],
+      skills: parseProfileSkills(profile.skills),
+      certifications: [],
+      languages: [],
+      awards: ''
+    };
+  };
+
+  const mergeResumeData = (profileDefaults, savedData) => ({
+    basicInfo: {
+      ...profileDefaults.basicInfo,
+      ...(savedData.basicInfo || {})
+    },
+    education: (savedData.education && savedData.education.length > 0)
+      ? savedData.education
+      : profileDefaults.education,
+    experience: (savedData.experience && savedData.experience.length > 0)
+      ? savedData.experience
+      : profileDefaults.experience,
+    projects: (savedData.projects && savedData.projects.length > 0)
+      ? savedData.projects
+      : profileDefaults.projects,
+    skills: (savedData.skills && savedData.skills.length > 0)
+      ? savedData.skills
+      : profileDefaults.skills,
+    certifications: (savedData.certifications && savedData.certifications.length > 0)
+      ? savedData.certifications
+      : profileDefaults.certifications,
+    languages: (savedData.languages && savedData.languages.length > 0)
+      ? savedData.languages
+      : profileDefaults.languages,
+    awards: savedData.awards || profileDefaults.awards || '',
+    history: savedData.history || []
+  });
 
   const handleResumeUpload = async (e) => {
     const file = e.target.files[0];
@@ -153,27 +232,19 @@ export default function ResumeBuilder() {
   useEffect(() => {
     const fetchResume = async () => {
       try {
-        const res = await fetch(buildApiUrl('/auth/my-resume'), {
-          headers: authHeaders()
-        });
-        if (res.ok) {
-          const savedData = await res.json();
-          if (Object.keys(savedData).length > 0) {
-            // Merge saved data with default structure to prevent missing keys
-            setData(prev => ({
-              basicInfo: savedData.basicInfo || prev.basicInfo,
-              education: savedData.education || [],
-              experience: savedData.experience || [],
-              projects: savedData.projects || [],
-              skills: savedData.skills || [],
-              certifications: savedData.certifications || [],
-              languages: savedData.languages || [],
-              awards: savedData.awards || ''
-            }));
-          }
-        }
+        const [profileRes, resumeRes] = await Promise.all([
+          fetch(buildApiUrl('/auth/me'), { headers: authHeaders() }),
+          fetch(buildApiUrl('/auth/my-resume'), { headers: authHeaders() })
+        ]);
+
+        const profileData = profileRes.ok ? await profileRes.json() : {};
+        const savedData = resumeRes.ok ? await resumeRes.json() : {};
+
+        const defaults = buildResumeDefaultsFromProfile(profileData.studentProfile || {});
+
+        setData(mergeResumeData(defaults, savedData));
       } catch (error) {
-        console.error('Failed to load resume data:', error);
+        console.error('Failed to load resume or profile data:', error);
       } finally {
         setIsLoading(false);
       }

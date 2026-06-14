@@ -285,19 +285,12 @@ export default function Settings() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
                           <label className="crm-label">Status</label>
-                          <select
+                          <input
+                            type="text"
                             value={profileData.currentStatus || 'Job Seeker'}
-                            onChange={e => setProfileData({ ...profileData, currentStatus: e.target.value })}
-                            className="crm-input"
-                          >
-                            <option value="Job Seeker">Job Seeker</option>
-                            <option value="Placed">Placed</option>
-                            <option value="Need to filled">Need to filled</option>
-                            <option value="Interview Process">Interview Process</option>
-                            <option value="Inactive - Not Responded">Inactive - Not Responded</option>
-                            <option value="Not Picking the call">Not Picking the call</option>
-                            <option value="Not Reachable">Not Reachable</option>
-                          </select>
+                            readOnly
+                            className="crm-input bg-slate-50 cursor-not-allowed"
+                          />
                         </div>
 
                         {profileData.currentStatus?.toLowerCase() === 'placed' && (

@@ -59,8 +59,19 @@ export const createTask = async (req, res) => {
 export const listTasks = async (req, res) => {
   try {
     const { studentId, status, studentEmail } = req.query;
-    const query = {};
-    if (studentId) query.studentId = studentId;
+
+    // Get all SPL student user IDs (role = 'student', studentId = null)
+    const splUsers = await User.find({ role: 'student', studentId: { $eq: null } }).select('_id');
+    const splUserIds = splUsers.map(u => u._id);
+
+    const query = { studentId: { $in: splUserIds } };
+    if (studentId) {
+      if (splUserIds.map(id => id.toString()).includes(studentId.toString())) {
+        query.studentId = studentId;
+      } else {
+        return res.json([]);
+      }
+    }
     if (studentEmail) query.studentEmail = studentEmail;
     if (status) query.overallStatus = status;
 

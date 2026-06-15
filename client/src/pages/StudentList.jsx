@@ -307,6 +307,7 @@ export default function StudentList() {
              items={[
                { label: 'Overview', onClick: () => navigate('/dashboard') },
                { label: 'Students', active: true },
+               { label: 'Frontend Students', onClick: () => navigate('/admin/frontend-students') },
                { label: 'Eligibility', onClick: () => navigate('/eligibility') },
              ]}
            />

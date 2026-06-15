@@ -219,6 +219,7 @@ export default function EligibilityPage() {
         items={[
           { label: 'Overview', onClick: () => navigate('/dashboard') },
           { label: 'Students', onClick: () => navigate('/students') },
+          { label: 'Frontend Students', onClick: () => navigate('/admin/frontend-students') },
           { label: 'Eligibility', active: true },
         ]}
       />

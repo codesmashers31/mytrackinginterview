@@ -88,7 +88,33 @@ const ensureStudentAccount = async (emailOrMobile) => {
   let user = await User.findOne({ email: normalized });
   if (user) return;
 
-  // 2. Check if there is an SPL registration matching this email or mobile
+  // 2. Check if there is a Frontend student record matching this email or mobile
+  const frontendStudent = await Student.findOne({
+    isFrontend: true,
+    $or: [
+      { email: normalized },
+      { mobile: emailOrMobile.trim() }
+    ]
+  });
+
+  if (frontendStudent) {
+    const email = frontendStudent.email ? frontendStudent.email.trim().toLowerCase() : frontendStudent.mobile.trim();
+    user = await User.findOne({ email });
+    if (!user) {
+      const password = frontendStudent.mobile.trim();
+      user = new User({
+        name: frontendStudent.name || 'Student',
+        email,
+        password, // mobile as password
+        role: 'student',
+        studentId: frontendStudent._id
+      });
+      await user.save();
+    }
+    return;
+  }
+
+  // 3. Check if there is an SPL registration matching this email or mobile
   const reg = await SplRegistration.findOne({
     $or: [
       { email: normalized },
@@ -112,8 +138,8 @@ const ensureStudentAccount = async (emailOrMobile) => {
     return;
   }
 
-  // 3. Check if there is a Student directory record matching this mobile
-  const student = await Student.findOne({ mobile: emailOrMobile.trim() });
+  // 4. Check if there is a Student directory record matching this mobile (regular student)
+  const student = await Student.findOne({ mobile: emailOrMobile.trim(), isFrontend: { $ne: true } });
   if (student) {
     const mobile = student.mobile.trim();
     user = new User({
@@ -178,6 +204,7 @@ router.get('/task-students', authMiddleware, requireRole('admin'), async (req, r
       
       return {
         _id: user._id,
+        studentId: user.studentId,
         name: user.name,
         email: user.email,
         mobile,

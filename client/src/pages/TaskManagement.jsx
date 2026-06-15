@@ -15,6 +15,7 @@ export default function TaskManagement() {
   const [gradeFilter, setGradeFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [batchFilter, setBatchFilter] = useState('');
+  const [prevTypeFilter, setPrevTypeFilter] = useState('');
   const [formData, setFormData] = useState({
     studentIds: [],
     title: '',
@@ -52,13 +53,29 @@ export default function TaskManagement() {
 
   useEffect(() => {
     fetchStudents();
-    if (location.state?.selectedStudentIds) {
+  }, []);
+
+  useEffect(() => {
+    if (students.length > 0 && location.state?.selectedStudentIds) {
+      const mappedUserIds = students
+        .filter(s => 
+          (s.studentId && location.state.selectedStudentIds.includes(s.studentId.toString())) || 
+          location.state.selectedStudentIds.includes(s._id.toString())
+        )
+        .map(s => s._id);
       setFormData(prev => ({
         ...prev,
-        studentIds: location.state.selectedStudentIds
+        studentIds: mappedUserIds
       }));
     }
-  }, [location.state]);
+  }, [students, location.state]);
+
+  useEffect(() => {
+    if (typeFilter !== prevTypeFilter) {
+      setFormData(prev => ({ ...prev, studentIds: [] }));
+      setPrevTypeFilter(typeFilter);
+    }
+  }, [typeFilter, prevTypeFilter]);
 
   const handleCreateTask = async (event) => {
     event.preventDefault();
@@ -182,6 +199,39 @@ export default function TaskManagement() {
                   </button>
                 </div>
               </div>
+              {formData.studentIds.length > 0 && (
+                <div className="mb-4 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-blue-800">Selected Candidates ({formData.studentIds.length})</span>
+                    <button 
+                      type="button" 
+                      onClick={() => setFormData({ ...formData, studentIds: [] })} 
+                      className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                    >
+                      Clear Selection
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto custom-scrollbar p-1">
+                    {formData.studentIds.map(id => {
+                      const student = students.find(s => s._id === id);
+                      if (!student) return null;
+                      return (
+                        <span key={id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-blue-700 border border-blue-200 shadow-sm">
+                          {student.name}
+                          <button 
+                            type="button" 
+                            onClick={() => setFormData({ ...formData, studentIds: formData.studentIds.filter(x => x !== id) })}
+                            className="text-blue-400 hover:text-red-500 font-bold transition-colors"
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="max-h-72 overflow-y-auto border border-slate-200 rounded-lg p-2 space-y-1 bg-slate-50/50 min-h-[150px]">
                 {isLoadingStudents ? (
                   <div className="p-12 text-center flex flex-col items-center justify-center h-full">

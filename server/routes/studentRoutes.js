@@ -8,17 +8,23 @@ import authMiddleware from '../middleware/authMiddleware.js';
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
 
-// GET all students (protected)
 router.get('/', authMiddleware, async (req, res) => {
     try {
-        const { search, status, degree, year } = req.query;
+        const { search, status, degree, year, isFrontend } = req.query;
         let query = {};
+        
+        if (isFrontend === 'true') {
+            query.isFrontend = true;
+        } else {
+            query.isFrontend = { $ne: true };
+        }
         
         if (search) {
             query.$or = [
                 { name: { $regex: search, $options: 'i' } },
                 { mobile: { $regex: search, $options: 'i' } },
-                { skills: { $regex: search, $options: 'i' } }
+                { skills: { $regex: search, $options: 'i' } },
+                { city: { $regex: search, $options: 'i' } }
             ];
         }
         
@@ -36,18 +42,38 @@ router.get('/', authMiddleware, async (req, res) => {
 // GET dashboard stats (protected)
 router.get('/stats', authMiddleware, async (req, res) => {
     try {
-        const total = await Student.countDocuments();
+        const regularQuery = { isFrontend: { $ne: true } };
+        const total = await Student.countDocuments(regularQuery);
         
         // Use case-insensitive matching for robust counting
-        const jobSeekers = await Student.countDocuments({ currentStatus: { $regex: /^job seeker$/i } });
-        const placed = await Student.countDocuments({ currentStatus: { $regex: /^placed$/i } });
-        const needToFilled = await Student.countDocuments({ currentStatus: { $regex: /^need to filled$/i } });
-        const inactiveUsers = await Student.countDocuments({ currentStatus: { $regex: /^inactive - not responded$/i } });
-        const interviewProcess = await Student.countDocuments({ currentStatus: { $regex: /^interview process$/i } });
+        const jobSeekers = await Student.countDocuments({ ...regularQuery, currentStatus: { $regex: /^job seeker$/i } });
+        const placed = await Student.countDocuments({ ...regularQuery, currentStatus: { $regex: /^placed$/i } });
+        const needToFilled = await Student.countDocuments({ ...regularQuery, currentStatus: { $regex: /^need to filled$/i } });
+        const inactiveUsers = await Student.countDocuments({ ...regularQuery, currentStatus: { $regex: /^inactive - not responded$/i } });
+        const interviewProcess = await Student.countDocuments({ ...regularQuery, currentStatus: { $regex: /^interview process$/i } });
         
-        const recent = await Student.find().sort({ createdAt: -1 }).limit(5);
+        const recent = await Student.find(regularQuery).sort({ createdAt: -1 }).limit(5);
 
-        res.json({ total, jobSeekers, placed, needToFilled, inactiveUsers, interviewProcess, recent });
+        // Stats for Frontend track
+        const frontendQuery = { isFrontend: true };
+        const frontendTotal = await Student.countDocuments(frontendQuery);
+        const frontendPlaced = await Student.countDocuments({ ...frontendQuery, currentStatus: { $regex: /^placed$/i } });
+        const frontendJobSeekers = await Student.countDocuments({ ...frontendQuery, currentStatus: { $regex: /^job seeker$/i } });
+        const recentFrontend = await Student.find(frontendQuery).sort({ createdAt: -1 }).limit(5);
+
+        res.json({ 
+            total, 
+            jobSeekers, 
+            placed, 
+            needToFilled, 
+            inactiveUsers, 
+            interviewProcess, 
+            recent,
+            frontendTotal,
+            frontendPlaced,
+            frontendJobSeekers,
+            recentFrontend
+        });
     } catch (error) {
         res.status(500).json({ message: 'Dashboard stats failure' });
     }
@@ -199,11 +225,13 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const data = xlsx.utils.sheet_to_json(sheet);
         
+        const isFrontend = req.query.isFrontend === 'true';
+
         const students = data.map(row => ({
             name: row.Name || row.name || 'Unknown',
             mobile: String(row.Mobile || row.mobile || ''),
             email: row.Email || row.email || '',
-            degree: row.Degree || row.degree || 'Not Provided',
+            degree: row.Degree || row.degree || (isFrontend ? 'Frontend' : 'Not Provided'),
             passedOutYear: String(row['Batch Year'] || row.Year || row['Passed Out Year'] || row.passedOutYear || 'Need to filled'),
             batch: String(row.Batch || row.batch || ''),
             currentStatus: row.Status || row.currentStatus || 'Need to filled',
@@ -212,7 +240,9 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
             skills: row.Skills || row.skills || '',
             companyName: row.Company || row['Company Name'] || row.companyName || '',
             packageLpa: String(row.Package || row.packageLpa || ''),
-            jobGetMode: row.Mode || row.jobGetMode || ''
+            jobGetMode: row.Mode || row.jobGetMode || '',
+            city: row.City || row.city || row.Town || row.town || '',
+            isFrontend: isFrontend
         }));
 
         await Student.insertMany(students);

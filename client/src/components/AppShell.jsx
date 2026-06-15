@@ -97,6 +97,7 @@ const buildNavigationGroups = (role, onLogout) => {
         { to: '/attendance', label: 'Attendance', icon: Calendar },
         { to: '/admin/daily-activities', label: 'Daily Logs', icon: Clock },
         { to: '/students', label: 'Students', icon: Users },
+        { to: '/admin/frontend-students', label: 'Frontend Students', icon: Users },
         { to: '/eligibility', label: 'Eligibility', icon: CheckCircle2 },
         { to: '/tasks', label: 'Task Assignment', icon: ClipboardList },
         { to: '/tasks/list', label: 'Assigned Tasks', icon: CheckCircle2 },

@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import StudentList from './pages/StudentList';
+import FrontendStudentList from './pages/FrontendStudentList';
 import EligibilityPage from './pages/EligibilityPage';
 import CoordinatorManagement from './pages/CoordinatorManagement';
 import CoordinatorDashboard from './pages/CoordinatorDashboard';
@@ -55,6 +56,7 @@ function App() {
         />
         <Route path="/dashboard" element={<RoleRoute roles={[ 'admin' ]}><Dashboard /></RoleRoute>} />
         <Route path="/students" element={<RoleRoute roles={[ 'admin' ]}><StudentList /></RoleRoute>} />
+        <Route path="/admin/frontend-students" element={<RoleRoute roles={[ 'admin' ]}><FrontendStudentList /></RoleRoute>} />
         <Route path="/eligibility" element={<RoleRoute roles={[ 'admin' ]}><EligibilityPage /></RoleRoute>} />
         <Route path="/admin/placements" element={<RoleRoute roles={[ 'admin' ]}><PlacementManagement /></RoleRoute>} />
         <Route path="/coordinator/dashboard" element={<RoleRoute roles={[ 'coordinator' ]}><CoordinatorDashboard /></RoleRoute>} />

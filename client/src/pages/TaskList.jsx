@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard, StatusBadge } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
-import { Pencil, Trash2, ArrowLeft, Clock, AlertCircle, CheckCircle2, ChevronRight, MessageSquare } from 'lucide-react';
+import { Pencil, Trash2, ArrowLeft, Clock, AlertCircle, CheckCircle2, ChevronRight, MessageSquare, Search, Filter, X } from 'lucide-react';
 
 const STATUS_OPTIONS = ['Pending', 'In Progress', 'Review', 'Blocked', 'Completed'];
 
@@ -14,6 +14,8 @@ export default function TaskList() {
   const [loading, setLoading] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [filterDate, setFilterDate] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -35,9 +37,27 @@ export default function TaskList() {
   }, []);
 
   const filteredTasks = React.useMemo(() => {
-    if (!filterDate) return tasks;
-    return tasks.filter(t => t.dueDate && t.dueDate.split('T')[0] === filterDate);
-  }, [tasks, filterDate]);
+    return tasks.filter(task => {
+      // Date filter
+      if (filterDate && (!task.dueDate || task.dueDate.split('T')[0] !== filterDate)) {
+        return false;
+      }
+      // Status filter
+      if (statusFilter !== 'All' && task.overallStatus !== statusFilter) {
+        return false;
+      }
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesTitle = task.title?.toLowerCase().includes(query);
+        const matchesStudent = task.studentName?.toLowerCase().includes(query);
+        if (!matchesTitle && !matchesStudent) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [tasks, filterDate, statusFilter, searchQuery]);
 
   const handleDelete = async (taskId) => {
     if (!window.confirm('Delete this task assignment?')) return;
@@ -97,43 +117,99 @@ export default function TaskList() {
     <AppShell
       title="Assigned Tasks"
       subtitle="Review and update task assignments in a dedicated table view."
-      searchPlaceholder="Search tasks"
+      searchPlaceholder="Search tasks..."
+      searchValue={searchQuery}
+      onSearchChange={setSearchQuery}
     >
       <div className="space-y-6">
         {!selectedTask ? (
           <>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Active Assignments</h2>
-                <p className="mt-1 text-sm text-slate-500">Monitor student progress and manage assigned tasks.</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="date"
-                    className="crm-input max-w-[160px] py-2 text-sm"
-                    value={filterDate}
-                    onChange={(e) => setFilterDate(e.target.value)}
-                  />
-                  {filterDate && (
-                    <button
-                      type="button"
-                      onClick={() => setFilterDate('')}
-                      className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
-                    >
-                      Clear
-                    </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Active Assignments</h2>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                    {filteredTasks.length} {filteredTasks.length === 1 ? 'task' : 'tasks'}
+                  </span>
+                  {tasks.length !== filteredTasks.length && (
+                    <span className="text-xs text-slate-400 font-medium">
+                      (filtered from {tasks.length})
+                    </span>
                   )}
                 </div>
+                <p className="mt-1 text-sm text-slate-500">Monitor student progress and manage assigned tasks.</p>
+              </div>
+              <div>
                 <button
                   type="button"
                   onClick={() => navigate('/tasks')}
-                  className="crm-btn-primary px-6 py-2.5 rounded-xl shadow-md flex items-center gap-2"
+                  className="crm-btn-primary px-6 py-2.5 rounded-xl shadow-md flex items-center gap-2 w-full sm:w-auto"
                 >
                   Assign New Task
                   <ChevronRight size={16} />
                 </button>
               </div>
+            </div>
+
+            {/* Modern Filters Toolbar */}
+            <div className="grid gap-4 sm:grid-cols-12 items-center bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm mb-6">
+              <div className="relative sm:col-span-5">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="Search student or task title..."
+                  className="crm-input pl-10 h-10 rounded-xl"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+
+              <div className="relative sm:col-span-3">
+                <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <select
+                  className="crm-input pl-10 h-10 rounded-xl bg-white"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="All">All Statuses</option>
+                  {STATUS_OPTIONS.map(status => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="relative sm:col-span-3">
+                <input
+                  type="date"
+                  className="crm-input h-10 rounded-xl"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                />
+              </div>
+
+              {(searchQuery || statusFilter !== 'All' || filterDate) ? (
+                <div className="sm:col-span-1 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setStatusFilter('All');
+                      setFilterDate('');
+                    }}
+                    className="text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             {loading ? (
@@ -151,9 +227,18 @@ export default function TaskList() {
               </SurfaceCard>
             ) : filteredTasks.length === 0 ? (
               <SurfaceCard className="p-12 text-center flex flex-col items-center justify-center border-dashed border-2 border-slate-200 bg-slate-50">
-                <h3 className="text-lg font-bold text-slate-900 mb-2">No tasks for this date</h3>
-                <p className="text-slate-500 max-w-md mb-6">There are no assignments due on the selected date.</p>
-                <button onClick={() => setFilterDate('')} className="crm-btn-primary px-6 py-2">Clear Date Filter</button>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">No matching tasks</h3>
+                <p className="text-slate-500 max-w-md mb-6">No assignments match your search query or selected filters.</p>
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setStatusFilter('All');
+                    setFilterDate('');
+                  }}
+                  className="crm-btn-primary px-6 py-2"
+                >
+                  Clear All Filters
+                </button>
               </SurfaceCard>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">

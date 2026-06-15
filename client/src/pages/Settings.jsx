@@ -300,8 +300,8 @@ export default function Settings() {
                               <input
                                 type="text"
                                 value={profileData.companyName || ''}
-                                onChange={e => setProfileData({ ...profileData, companyName: e.target.value })}
-                                className="crm-input bg-emerald-50/50 border-emerald-100"
+                                readOnly
+                                className="crm-input bg-slate-50 cursor-not-allowed"
                               />
                             </div>
 
@@ -310,8 +310,8 @@ export default function Settings() {
                               <input
                                 type="text"
                                 value={profileData.packageLpa || ''}
-                                onChange={e => setProfileData({ ...profileData, packageLpa: e.target.value })}
-                                className="crm-input bg-emerald-50/50 border-emerald-100"
+                                readOnly
+                                className="crm-input bg-slate-50 cursor-not-allowed"
                               />
                             </div>
 
@@ -319,8 +319,8 @@ export default function Settings() {
                               <label className="crm-label">Job Get Mode</label>
                               <select
                                 value={profileData.jobGetMode || ''}
-                                onChange={e => setProfileData({ ...profileData, jobGetMode: e.target.value })}
-                                className="crm-input bg-emerald-50/50 border-emerald-100"
+                                disabled
+                                className="crm-input bg-slate-50 cursor-not-allowed"
                               >
                                 <option value="">Select Mode</option>
                                 <option value="Self Placed">Self Placed</option>
@@ -336,9 +336,8 @@ export default function Settings() {
                             <label className="crm-label">Status Reason (Remarks)</label>
                             <textarea
                               value={profileData.statusReason || ''}
-                              onChange={e => setProfileData({ ...profileData, statusReason: e.target.value })}
-                              className="crm-input min-h-[5rem] resize-y"
-                              placeholder="Describe the reason/remarks for the status"
+                              readOnly
+                              className="crm-input bg-slate-50 cursor-not-allowed min-h-[5rem] resize-none"
                             />
                           </div>
                         )}
@@ -361,85 +360,6 @@ export default function Settings() {
                             onChange={e => setProfileData({ ...profileData, others: e.target.value })}
                             className="crm-input min-h-[5rem] resize-y"
                             placeholder="Any other details"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {profileType === 'spl' && (
-                    <div className="pt-5 border-t border-slate-100">
-                      <h3 className="text-sm font-bold text-slate-800 mb-4">Assessment & Enrollment</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div className="flex items-center gap-3 py-3">
-                          <input
-                            type="checkbox"
-                            id="willingCompanyProcess"
-                            checked={!!profileData.willingCompanyProcess}
-                            onChange={e => setProfileData({ ...profileData, willingCompanyProcess: e.target.checked })}
-                            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                          />
-                          <label htmlFor="willingCompanyProcess" className="text-sm font-medium text-slate-700 cursor-pointer">
-                            Willing Company Process
-                          </label>
-                        </div>
-
-                        <div>
-                          <label className="crm-label">Will you attend 30 days?</label>
-                          <select
-                            value={profileData.willing30Days || ''}
-                            onChange={e => setProfileData({ ...profileData, willing30Days: e.target.value })}
-                            className="crm-input"
-                          >
-                            <option value="">Select Option</option>
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="crm-label">Accept Offer</label>
-                          <select
-                            value={profileData.acceptOffer || ''}
-                            onChange={e => setProfileData({ ...profileData, acceptOffer: e.target.value })}
-                            className="crm-input"
-                          >
-                            <option value="">Select Option</option>
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="crm-label">Did you give full effort?</label>
-                          <select
-                            value={profileData.fullEffort || ''}
-                            onChange={e => setProfileData({ ...profileData, fullEffort: e.target.value })}
-                            className="crm-input"
-                          >
-                            <option value="">Select Option</option>
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
-                          </select>
-                        </div>
-
-                        <div className="md:col-span-2">
-                          <label className="crm-label">Any issues? (blockers, environment issues, etc.)</label>
-                          <textarea
-                            value={profileData.issues || ''}
-                            onChange={e => setProfileData({ ...profileData, issues: e.target.value })}
-                            className="crm-input min-h-[5rem] resize-y"
-                            placeholder="List any blocker or support details"
-                          />
-                        </div>
-
-                        <div className="md:col-span-2">
-                          <label className="crm-label">What do you need the most?</label>
-                          <textarea
-                            value={profileData.needMost || ''}
-                            onChange={e => setProfileData({ ...profileData, needMost: e.target.value })}
-                            className="crm-input min-h-[5rem] resize-y"
-                            placeholder="e.g. study material, mentorship, placement assistance"
                           />
                         </div>
                       </div>

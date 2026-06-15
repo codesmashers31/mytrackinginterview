@@ -262,6 +262,48 @@ router.get('/placements', authMiddleware, requireRole('admin'), async (req, res)
   }
 });
 
+// Update a user account (admin only)
+router.put('/users/:id', authMiddleware, requireRole('admin'), async (req, res) => {
+  const { name, email, password } = req.body;
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (email && email.trim().toLowerCase() !== user.email) {
+      const existing = await User.findOne({ email: email.trim().toLowerCase() });
+      if (existing) {
+        return res.status(409).json({ message: 'Email already registered' });
+      }
+      user.email = email.trim().toLowerCase();
+    }
+
+    if (name) user.name = name.trim();
+    if (password && password.trim() !== '') {
+      user.password = password;
+    }
+
+    await user.save();
+    res.json({ message: 'User account updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to update user', error: error.message });
+  }
+});
+
+// Delete a user account (admin only)
+router.delete('/users/:id', authMiddleware, requireRole('admin'), async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ message: 'User account deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to delete user', error: error.message });
+  }
+});
+
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {

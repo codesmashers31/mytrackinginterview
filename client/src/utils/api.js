@@ -69,3 +69,28 @@ export const fetchPlacements = async () => {
   }
   return await response.json();
 };
+
+export const updateUser = async (id, data) => {
+  const response = await fetch(buildApiUrl(`auth/users/${id}`), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.message || 'Failed to update user account');
+  }
+  return await response.json();
+};
+
+export const deleteUser = async (id) => {
+  const response = await fetch(buildApiUrl(`auth/users/${id}`), {
+    method: 'DELETE',
+    headers: { ...authHeaders() },
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.message || 'Failed to delete user account');
+  }
+  return await response.json();
+};

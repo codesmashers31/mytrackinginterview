@@ -858,6 +858,7 @@ function StudentDetailModal({ onClose, student }) {
 
              <div className="space-y-3">
                 <DetailRow label="Phone Contact" val={student.mobile} />
+                {student.email && <DetailRow label="Email Contact" val={student.email} />}
                 <DetailRow label="Batch Year" val={batchYear || 'Not Added'} />
                 <DetailRow label="Institute Batch" val={student.batch || 'Not Added'} />
                 <DetailRow label="Grade" val={student.grade || 'Unassigned'} />

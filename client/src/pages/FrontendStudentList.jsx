@@ -199,7 +199,7 @@ export default function FrontendStudentList() {
     <AppShell
       title="Frontend Student Directory"
       subtitle="Manage Frontend track records, excel bulk uploads, and location-based details."
-      searchPlaceholder="Search by name, mobile, skills, or city..."
+      searchPlaceholder="Search by name, email, mobile, batch, year, city..."
       searchValue={searchTerm}
       onSearchChange={setSearchTerm}
     >
@@ -212,26 +212,71 @@ export default function FrontendStudentList() {
         ]}
       />
 
-      {/* Toolbar */}
-      <div className="mb-3 flex justify-end gap-2">
-        <button 
-          onClick={handleExport}
-          className="px-3 py-1.5 md:py-2 text-[12px] md:text-[13px] font-bold text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all rounded-lg md:rounded-xl flex items-center gap-1 bg-white"
-        >
-          <Download size={14} /> Export {selectedStudentIds.length > 0 ? `(${selectedStudentIds.length})` : ''}
-        </button>
-        
-        <label className="px-3 py-1.5 md:py-2 text-[12px] md:text-[13px] font-bold text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all rounded-lg md:rounded-xl flex items-center gap-1 bg-white cursor-pointer">
-          <Upload size={14} /> Import
-          <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} className="hidden" />
-        </label>
-        
-        <button 
-          onClick={() => { setEditMode(false); setSelectedStudent(null); setIsModalOpen(true); }}
-          className="px-4 py-1.5 md:py-2 text-[12px] md:text-[13px] font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg transition-all rounded-lg md:rounded-xl flex items-center gap-1"
-        >
-          <Plus size={14} /> Add Student
-        </button>
+      {/* Filter & Actions Toolbar */}
+      <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-white p-4 rounded-[20px] border border-slate-200/85 shadow-sm">
+        <div className="flex flex-col sm:flex-row gap-2 flex-1 max-w-2xl">
+          {/* Visible In-Page Search Option */}
+          <div className="relative flex-1">
+            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by name, email, mobile, batch, year, city..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100 rounded-xl text-xs font-semibold text-slate-700 outline-none transition-all"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+
+          {/* Status pipeline selector */}
+          <div className="w-full sm:w-[200px]">
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full py-2.5 px-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100 rounded-xl text-xs font-semibold text-slate-700 outline-none transition-all cursor-pointer"
+            >
+              <option value="All">All Pipelines</option>
+              {availableStatuses.map(status => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 self-end md:self-auto">
+          <button 
+            onClick={handleExport}
+            className="px-3 py-2.5 text-xs font-bold text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all rounded-xl flex items-center gap-1 bg-white cursor-pointer shadow-sm"
+          >
+            <Download size={14} /> Export {selectedStudentIds.length > 0 ? `(${selectedStudentIds.length})` : ''}
+          </button>
+          
+          <label className="px-3 py-2.5 text-xs font-bold text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all rounded-xl flex items-center gap-1 bg-white cursor-pointer shadow-sm">
+            <Upload size={14} /> Import
+            <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} className="hidden" />
+          </label>
+          
+          <button 
+            onClick={() => { setEditMode(false); setSelectedStudent(null); setIsModalOpen(true); }}
+            className="px-4 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg transition-all rounded-xl flex items-center gap-1"
+          >
+            <Plus size={14} /> Add Student
+          </button>
+        </div>
       </div>
 
       {selectedStudentIds.length > 0 && (

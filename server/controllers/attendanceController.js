@@ -320,8 +320,8 @@ export const getUnmarkedStudents = async (req, res) => {
     const nextDate = new Date(targetDate);
     nextDate.setUTCDate(nextDate.getUTCDate() + 1);
 
-    // Get all SPL students
-    const allStudents = await SplRegistration.find();
+    // Get only shortlisted SPL students
+    const allStudents = await SplRegistration.find({ status: 'Shortlisted' });
 
     // Get marked attendance for this date
     const markedAttendance = await Attendance.find({

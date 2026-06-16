@@ -7,6 +7,14 @@ import { Edit, Check, X, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
 
 const STATUS_OPTIONS = ['New', 'Reviewed', 'Shortlisted', 'Rejected', 'Placed'];
 const ITEMS_PER_PAGE = 8;
+const STANDARD_STACKS = [
+  'MERN Stack',
+  'Java Full Stack',
+  'Python Full Stack',
+  'Frontend Development',
+  'QA / Testing',
+  'Data Science / AI'
+];
 
 export default function SplRegistrations() {
   const [regs, setRegs] = useState([]);
@@ -20,6 +28,7 @@ export default function SplRegistrations() {
     mobile: '',
     degree: '',
     batch: '',
+    stack: '',
     willingCompanyProcess: false,
     willing30Days: '',
     acceptOffer: '',
@@ -30,6 +39,8 @@ export default function SplRegistrations() {
     statusReason: '',
     grade: '',
   });
+  const [modalStackSelect, setModalStackSelect] = useState('');
+  const [modalCustomStack, setModalCustomStack] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const fetchRegs = async () => {
@@ -54,7 +65,7 @@ export default function SplRegistrations() {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return regs;
     return regs.filter(reg =>
-      [reg.name, reg.email, reg.mobile, reg.degree, reg.batch, reg.status]
+      [reg.name, reg.email, reg.mobile, reg.degree, reg.batch, reg.stack, reg.status]
         .filter(Boolean)
         .some(value => value.toString().toLowerCase().includes(query))
     );
@@ -65,12 +76,16 @@ export default function SplRegistrations() {
 
   const openEditModal = (reg) => {
     setSelectedRegistration(reg);
+    const isStandard = reg.stack && STANDARD_STACKS.includes(reg.stack);
+    setModalStackSelect(reg.stack ? (isStandard ? reg.stack : 'Other') : '');
+    setModalCustomStack(reg.stack && !isStandard ? reg.stack : '');
     setEditState({
       name: reg.name || '',
       email: reg.email || '',
       mobile: reg.mobile || '',
       degree: reg.degree || '',
       batch: reg.batch || '',
+      stack: reg.stack || '',
       willingCompanyProcess: !!reg.willingCompanyProcess,
       willing30Days: reg.willing30Days || '',
       acceptOffer: reg.acceptOffer || '',
@@ -85,16 +100,21 @@ export default function SplRegistrations() {
 
   const closeEditModal = () => {
     setSelectedRegistration(null);
-    setEditState({ status: 'New', statusReason: '', grade: '' });
+    setEditState({ status: 'New', statusReason: '', grade: '', stack: '' });
+    setModalStackSelect('');
+    setModalCustomStack('');
   };
 
   const saveEdit = async () => {
     if (!selectedRegistration) return;
     try {
+      const finalStack = modalStackSelect === 'Other' ? modalCustomStack.trim() : modalStackSelect;
+      const payload = { ...editState, stack: finalStack };
+
       const res = await fetch(buildApiUrl(`/spl-registration/${selectedRegistration._id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify(editState),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
@@ -177,6 +197,7 @@ export default function SplRegistrations() {
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Name</th>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Email</th>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Mobile</th>
+                  <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Stack</th>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Status</th>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Actions</th>
                 </tr>
@@ -184,11 +205,11 @@ export default function SplRegistrations() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-slate-500">Loading registrations ...</td>
+                    <td colSpan={9} className="px-4 py-12 text-center text-slate-500">Loading registrations ...</td>
                   </tr>
                 ) : currentItems.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-slate-500">No matching registrations found.</td>
+                    <td colSpan={9} className="px-4 py-12 text-center text-slate-500">No matching registrations found.</td>
                   </tr>
                 ) : (
                   currentItems.map((reg, index) => (
@@ -196,6 +217,7 @@ export default function SplRegistrations() {
                       <td className="whitespace-nowrap px-4 py-4 text-slate-900">{reg.name}</td>
                       <td className="whitespace-nowrap px-4 py-4 text-slate-700">{reg.email}</td>
                       <td className="whitespace-nowrap px-4 py-4 text-slate-700">{reg.mobile || '—'}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-slate-700">{reg.stack || '—'}</td>
                       <td className="whitespace-nowrap px-4 py-4"><StatusBadge status={reg.status} /></td>
                       <td className="whitespace-nowrap px-4 py-4">
                         <div className="flex flex-wrap gap-2">
@@ -326,6 +348,31 @@ export default function SplRegistrations() {
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">Tech Stack</label>
+                <select
+                  value={modalStackSelect}
+                  onChange={(e) => setModalStackSelect(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="">Select Stack</option>
+                  {STANDARD_STACKS.map(stackOpt => (
+                    <option key={stackOpt} value={stackOpt}>{stackOpt}</option>
+                  ))}
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              {modalStackSelect === 'Other' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Custom Tech Stack</label>
+                  <input
+                    value={modalCustomStack}
+                    onChange={(e) => setModalCustomStack(e.target.value)}
+                    placeholder="Enter custom stack"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
                   <input

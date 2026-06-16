@@ -31,6 +31,7 @@ const buildNavigationGroups = (role, onLogout) => {
           { to: '/student/daily-activity', label: 'Daily Activity', icon: Clock },
           { to: '/student/attendance', label: 'My Attendance', icon: Calendar },
           { to: '/student/resume-builder', label: 'Resume Builder', icon: FileText },
+          { to: '/student/mock-interviews', label: 'Mock Interviews', icon: CheckCircle2 },
           { to: '/settings', label: 'Settings', icon: SettingsIcon },
         ],
       },
@@ -101,6 +102,7 @@ const buildNavigationGroups = (role, onLogout) => {
         { to: '/eligibility', label: 'Eligibility', icon: CheckCircle2 },
         { to: '/tasks', label: 'Task Assignment', icon: ClipboardList },
         { to: '/tasks/list', label: 'Assigned Tasks', icon: CheckCircle2 },
+        { to: '/admin/mock-interviews', label: 'Mock Board', icon: ClipboardList },
       ],
     },
     {

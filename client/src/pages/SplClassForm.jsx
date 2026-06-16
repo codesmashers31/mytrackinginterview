@@ -12,6 +12,7 @@ export default function SplClassForm() {
     mobile: '',
     degree: '',
     batch: '',
+    stack: '',
     willingCompanyProcess: false,
     willing30Days: '',
     acceptOffer: '',
@@ -19,6 +20,7 @@ export default function SplClassForm() {
     issues: '',
     needMost: '',
   });
+  const [customStack, setCustomStack] = useState('');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -42,6 +44,8 @@ export default function SplClassForm() {
     if (cleanedMobile && cleanedMobile.length !== 10) newErrors.mobile = 'Enter a valid 10-digit mobile number';
     if (!form.degree.trim()) newErrors.degree = 'Degree is required';
     if (form.batch && !/^\d{4}$/.test(form.batch)) newErrors.batch = 'Enter a valid 4-digit year';
+    if (!form.stack) newErrors.stack = 'Please select a tech stack';
+    if (form.stack === 'Other' && !customStack.trim()) newErrors.stack = 'Please specify your tech stack';
     if (!form.willing30Days) newErrors.willing30Days = 'Please choose an option';
     if (!form.acceptOffer) newErrors.acceptOffer = 'Please choose an option';
     if (!form.fullEffort) newErrors.fullEffort = 'Please choose an option';
@@ -58,6 +62,7 @@ export default function SplClassForm() {
       mobile: cleanedMobile || 'Not Provided',
       degree: form.degree || 'Not Provided',
       batch: form.batch || '',
+      stack: form.stack === 'Other' ? customStack.trim() : form.stack,
       willingCompanyProcess: form.willingCompanyProcess,
       willing30Days: form.willing30Days,
       acceptOffer: form.acceptOffer,
@@ -89,6 +94,7 @@ export default function SplClassForm() {
         mobile: '',
         degree: '',
         batch: '',
+        stack: '',
         willingCompanyProcess: false,
         willing30Days: '',
         acceptOffer: '',
@@ -96,6 +102,7 @@ export default function SplClassForm() {
         issues: '',
         needMost: '',
       });
+      setCustomStack('');
       setErrors({});
       navigate('/spl-registration/success');
     } catch (err) {
@@ -228,7 +235,38 @@ export default function SplClassForm() {
             {errors.batch && <p className="mt-1 text-rose-600 text-sm">{errors.batch}</p>}
           </label>
 
-          
+          <label className="block sm:col-span-2">
+            <span className="text-sm font-medium">Primary Tech Stack <span className="text-rose-500">*</span></span>
+            <div className="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <select
+                name="stack"
+                value={form.stack}
+                onChange={handleChange}
+                aria-invalid={errors.stack ? 'true' : 'false'}
+                className="w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="">Select Stack</option>
+                <option value="MERN Stack">MERN Stack</option>
+                <option value="Java Full Stack">Java Full Stack</option>
+                <option value="Python Full Stack">Python Full Stack</option>
+                <option value="Frontend Development">Frontend Development</option>
+                <option value="QA / Testing">QA / Testing</option>
+                <option value="Data Science / AI">Data Science / AI</option>
+                <option value="Other">Other</option>
+              </select>
+
+              {form.stack === 'Other' && (
+                <input
+                  type="text"
+                  placeholder="Specify custom stack"
+                  value={customStack}
+                  onChange={e => setCustomStack(e.target.value)}
+                  className="w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-blue-200"
+                />
+              )}
+            </div>
+            {errors.stack && <p className="mt-1 text-rose-600 text-sm">{errors.stack}</p>}
+          </label>
         </div>
 
         <div>

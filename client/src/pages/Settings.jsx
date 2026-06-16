@@ -200,7 +200,7 @@ export default function Settings() {
                       />
                     </div>
 
-                    {profileType === 'spl' && (
+                    {(profileType === 'spl' || profileData.isFrontend) && (
                       <div>
                         <label className="crm-label">Email Address</label>
                         <input
@@ -224,22 +224,40 @@ export default function Settings() {
                       />
                     </div>
 
-                    <div>
-                      <label className="crm-label">Degree / Course</label>
-                      <input
-                        type="text"
-                        required
-                        value={profileData.degree || ''}
-                        onChange={e => setProfileData({ ...profileData, degree: e.target.value })}
-                        className="crm-input"
-                      />
-                    </div>
+                    {!profileData.isFrontend && (
+                      <div>
+                        <label className="crm-label">Degree / Course</label>
+                        <input
+                          type="text"
+                          required
+                          value={profileData.degree || ''}
+                          onChange={e => setProfileData({ ...profileData, degree: e.target.value })}
+                          className="crm-input"
+                        />
+                      </div>
+                    )}
+
+                    {profileData.isFrontend && (
+                      <div>
+                        <label className="crm-label">City</label>
+                        <input
+                          type="text"
+                          value={profileData.city || ''}
+                          onChange={e => setProfileData({ ...profileData, city: e.target.value })}
+                          className="crm-input"
+                          placeholder="e.g. Bangalore"
+                        />
+                      </div>
+                    )}
 
                     <div>
-                      <label className="crm-label">{profileType === 'directory' ? 'Passed Out Year (Batch Year)' : 'Batch Year'}</label>
+                      <label className="crm-label">
+                        {profileData.isFrontend ? 'Batch Year' : (profileType === 'directory' ? 'Passed Out Year (Batch Year)' : 'Batch Year')}
+                      </label>
                       <input
                         type="text"
-                        required
+                        required={!profileData.isFrontend}
+                        disabled={profileData.isFrontend}
                         value={profileType === 'directory' ? (profileData.passedOutYear || '') : (profileData.batch || '')}
                         onChange={e => {
                           if (profileType === 'directory') {
@@ -248,31 +266,34 @@ export default function Settings() {
                             setProfileData({ ...profileData, batch: e.target.value });
                           }
                         }}
-                        className="crm-input"
+                        className={`crm-input ${profileData.isFrontend ? 'bg-slate-50 cursor-not-allowed' : ''}`}
                         placeholder="e.g. 2024"
                       />
                     </div>
 
                     {profileType === 'directory' && (
                       <div>
-                        <label className="crm-label">Institute Batch</label>
+                        <label className="crm-label">
+                          {profileData.isFrontend ? 'Batch' : 'Institute Batch'}
+                        </label>
                         <input
                           type="text"
+                          disabled={profileData.isFrontend}
                           value={profileData.batch || ''}
                           onChange={e => setProfileData({ ...profileData, batch: e.target.value })}
-                          className="crm-input"
-                          placeholder="e.g. Section A"
+                          className={`crm-input ${profileData.isFrontend ? 'bg-slate-50 cursor-not-allowed' : ''}`}
+                          placeholder={profileData.isFrontend ? 'e.g. Morning Batch' : 'e.g. Section A'}
                         />
                       </div>
                     )}
 
-                    {profileData.grade && (
+                    {(profileData.grade || profileData.isFrontend) && (
                       <div>
                         <label className="crm-label">Student Grade</label>
                         <input
                           type="text"
                           disabled
-                          value={`Grade ${profileData.grade}`}
+                          value={profileData.grade ? `Grade ${profileData.grade}` : 'No Grade Assigned'}
                           className="crm-input bg-slate-50 cursor-not-allowed"
                         />
                       </div>
@@ -287,13 +308,13 @@ export default function Settings() {
                           <label className="crm-label">Status</label>
                           <input
                             type="text"
-                            value={profileData.currentStatus || 'Job Seeker'}
+                            value={profileData.currentStatus || 'Need to filled'}
                             readOnly
                             className="crm-input bg-slate-50 cursor-not-allowed"
                           />
                         </div>
 
-                        {profileData.currentStatus?.toLowerCase() === 'placed' && (
+                        {!profileData.isFrontend && profileData.currentStatus?.toLowerCase() === 'placed' && (
                           <>
                             <div>
                               <label className="crm-label">Company Name</label>
@@ -331,7 +352,7 @@ export default function Settings() {
                           </>
                         )}
 
-                        {['inactive - not responded', 'not picking the call', 'not reachable'].includes(profileData.currentStatus?.toLowerCase()) && (
+                        {!profileData.isFrontend && ['inactive - not responded', 'not picking the call', 'not reachable'].includes(profileData.currentStatus?.toLowerCase()) && (
                           <div className="md:col-span-2">
                             <label className="crm-label">Status Reason (Remarks)</label>
                             <textarea

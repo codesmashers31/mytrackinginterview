@@ -147,7 +147,6 @@ export default function StudentList() {
       Status: s.currentStatus,
       'Status Reason': s.statusReason || '',
       Others: s.others || '',
-      Skills: s.skills || '',
       Company: s.companyName,
       'Package (LPA)': s.packageLpa,
       Mode: s.jobGetMode
@@ -445,7 +444,6 @@ export default function StudentList() {
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Degree</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Batch Year</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Institute Batch</th>
-                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Skills</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Grade</th>
                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Status</th>
                      <th className="px-3 py-2 text-right text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Actions</th>
@@ -454,7 +452,7 @@ export default function StudentList() {
                  <tbody className="bg-white">
                    {loading ? (
                      <tr>
-                       <td colSpan="10" className="px-4 py-8 md:py-10 text-center">
+                       <td colSpan="9" className="px-4 py-8 md:py-10 text-center">
                           <div className="animate-spin h-8 w-8 border-4 border-[#4338ca] border-t-transparent flex items-center justify-center rounded-full mx-auto mb-4"></div>
                        </td>
                      </tr>
@@ -484,11 +482,6 @@ export default function StudentList() {
                        </td>
                        <td className="px-3 py-2.5">
                           <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">{student.batch || '-'}</div>
-                       </td>
-                       <td className="px-3 py-2.5">
-                          <div className="text-[11px] md:text-[12px] font-medium text-slate-600 max-w-[150px] truncate" title={student.skills}>
-                            {student.skills || '-'}
-                          </div>
                        </td>
                        <td className="px-3 py-2.5">
                           <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">
@@ -530,7 +523,7 @@ export default function StudentList() {
                      </tr>
                    )) : (
                      <tr>
-                       <td colSpan="10" className="px-4 py-8 md:py-10 text-center text-slate-400 font-medium text-[12px]">
+                       <td colSpan="9" className="px-4 py-8 md:py-10 text-center text-slate-400 font-medium text-[12px]">
                           No records matched search parameters
                        </td>
                      </tr>
@@ -627,7 +620,6 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
     currentStatus: student?.currentStatus || 'Job Seeker',
     statusReason: student?.statusReason || '',
     others: student?.others || '',
-    skills: student?.skills || '',
     companyName: student?.companyName || '',
     packageLpa: student?.packageLpa || '',
     jobGetMode: student?.jobGetMode || ''
@@ -770,15 +762,6 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
                         </div>
                       )}
 
-                      <div className="md:col-span-2">
-                         <label className="crm-label">Skills</label>
-                         <input
-                            value={formData.skills}
-                            onChange={e => setFormData({...formData, skills: e.target.value})}
-                            className="crm-input"
-                            placeholder="Enter candidate skills (e.g. React, Node.js, Python)"
-                         />
-                      </div>
 
                       <div className="md:col-span-2">
                          <label className="crm-label">Other Notes</label>
@@ -863,9 +846,6 @@ function StudentDetailModal({ onClose, student }) {
                 <DetailRow label="Batch Year" val={batchYear || 'Not Added'} />
                 <DetailRow label="Institute Batch" val={student.batch || 'Not Added'} />
                 <DetailRow label="Grade" val={student.grade || 'Unassigned'} />
-                {student.skills && (
-                  <DetailRow label="Skills" val={student.skills} />
-                )}
                 {student.statusReason && (
                   <DetailRow label="Status Reason" val={student.statusReason} />
                 )}

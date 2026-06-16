@@ -6,6 +6,7 @@ const splRegistrationSchema = new mongoose.Schema({
   mobile: { type: String, default: '' },
   degree: { type: String, default: '' },
   batch: { type: String, default: '' },
+  stack: { type: String, default: '' },
   willingCompanyProcess: { type: Boolean, default: false },
   willing30Days: { type: String, default: '' },
   acceptOffer: { type: String, default: '' },

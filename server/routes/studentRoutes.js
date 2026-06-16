@@ -1,5 +1,6 @@
 import express from 'express';
 import Student from '../models/Student.js';
+import User from '../models/User.js';
 import multer from 'multer';
 import xlsx from 'xlsx';
 import fs from 'fs';
@@ -23,6 +24,9 @@ router.get('/', authMiddleware, async (req, res) => {
             query.$or = [
                 { name: { $regex: search, $options: 'i' } },
                 { mobile: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { batch: { $regex: search, $options: 'i' } },
+                { passedOutYear: { $regex: search, $options: 'i' } },
                 { skills: { $regex: search, $options: 'i' } },
                 { city: { $regex: search, $options: 'i' } }
             ];
@@ -94,9 +98,21 @@ router.post('/', async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
     try {
         const student = await Student.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
+        if (student) {
+            const user = await User.findOne({ studentId: student._id });
+            if (user) {
+                user.name = student.name;
+                if (student.isFrontend) {
+                    user.email = student.email ? student.email.trim().toLowerCase() : student.mobile.trim();
+                } else {
+                    user.email = student.mobile.trim();
+                }
+                await user.save();
+            }
+        }
         res.json(student);
     } catch (error) {
-        res.status(400).json({ message: 'Update failed' });
+        res.status(400).json({ message: 'Update failed', error: error.message });
     }
 });
 

@@ -27,6 +27,8 @@ import PlacementDashboard from './pages/PlacementDashboard';
 import PlacementEligibility from './pages/PlacementEligibility';
 import PlacementSplClasses from './pages/PlacementSplClasses';
 import ResumeBuilder from './pages/ResumeBuilder';
+import AdminMockBoard from './pages/AdminMockBoard';
+import StudentMockScheduler from './pages/StudentMockScheduler';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
 import { isAuthenticated } from './utils/auth';
@@ -78,6 +80,8 @@ function App() {
         <Route path="/student/daily-activity" element={<RoleRoute roles={[ 'student' ]}><StudentDailyActivity /></RoleRoute>} />
         <Route path="/student/resume-builder" element={<RoleRoute roles={[ 'student' ]}><ResumeBuilder /></RoleRoute>} />
         <Route path="/admin/daily-activities" element={<RoleRoute roles={[ 'admin' ]}><AdminDailyActivities /></RoleRoute>} />
+        <Route path="/admin/mock-interviews" element={<RoleRoute roles={[ 'admin' ]}><AdminMockBoard /></RoleRoute>} />
+        <Route path="/student/mock-interviews" element={<RoleRoute roles={[ 'student' ]}><StudentMockScheduler /></RoleRoute>} />
       </Routes>
     </BrowserRouter>
   );

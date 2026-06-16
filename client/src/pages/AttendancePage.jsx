@@ -32,7 +32,7 @@ export default function AttendancePage() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentAttendance, setStudentAttendance] = useState([]);
 
-  // Fetch all SPL students
+  // Fetch shortlisted SPL students
   const fetchStudents = async () => {
     try {
       const res = await fetch(buildApiUrl('/spl-registration'), {
@@ -40,7 +40,8 @@ export default function AttendancePage() {
       });
       if (!res.ok) throw new Error('Failed to load students');
       const data = await res.json();
-      setStudents(data);
+      const shortlisted = data.filter(student => student.status === 'Shortlisted');
+      setStudents(shortlisted);
     } catch (err) {
       toast.error('Could not load students');
     }

@@ -24,6 +24,30 @@ export default function Settings() {
   const [profileType, setProfileType] = useState(''); // 'directory' or 'spl'
   const [profileId, setProfileId] = useState('');
 
+  const STANDARD_STACKS = [
+    'MERN Stack',
+    'Java Full Stack',
+    'Python Full Stack',
+    'Frontend Development',
+    'QA / Testing',
+    'Data Science / AI'
+  ];
+
+  const splStackValue = profileData?.stack || '';
+  const isStandardStack = splStackValue && STANDARD_STACKS.includes(splStackValue);
+  const selectedSelectStack = splStackValue ? (isStandardStack ? splStackValue : 'Other') : '';
+  const customStackText = splStackValue === 'Other' ? '' : (isStandardStack ? '' : splStackValue);
+
+  const handleStackDropdownChange = (e) => {
+    const val = e.target.value;
+    setProfileData(prev => ({ ...prev, stack: val }));
+  };
+
+  const handleCustomStackChange = (e) => {
+    const val = e.target.value;
+    setProfileData(prev => ({ ...prev, stack: val }));
+  };
+
   const fetchProfile = async () => {
     if (userRole !== 'student') return;
     try {
@@ -296,6 +320,37 @@ export default function Settings() {
                           value={profileData.grade ? `Grade ${profileData.grade}` : 'No Grade Assigned'}
                           className="crm-input bg-slate-50 cursor-not-allowed"
                         />
+                      </div>
+                    )}
+
+                    {profileType === 'spl' && (
+                      <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-5 pt-3 border-t border-slate-100">
+                        <div>
+                          <label className="crm-label">Primary Tech Stack</label>
+                          <select
+                            value={selectedSelectStack}
+                            onChange={handleStackDropdownChange}
+                            className="crm-input"
+                          >
+                            <option value="">Select Stack</option>
+                            {STANDARD_STACKS.map(stackOpt => (
+                              <option key={stackOpt} value={stackOpt}>{stackOpt}</option>
+                            ))}
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        {selectedSelectStack === 'Other' && (
+                          <div>
+                            <label className="crm-label">Custom Tech Stack</label>
+                            <input
+                              type="text"
+                              value={customStackText}
+                              onChange={handleCustomStackChange}
+                              className="crm-input"
+                              placeholder="e.g. .NET Full Stack"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

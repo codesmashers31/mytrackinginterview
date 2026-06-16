@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Calendar, Clock, CheckCircle2, AlertCircle, Trash2, Award, Star, ListFilter, HelpCircle
+  Calendar, Clock, CheckCircle2, AlertCircle, Trash2, Award, Star, ListFilter, HelpCircle, ClipboardList
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AppShell, SectionTabs, SurfaceCard } from '../components/AppShell';

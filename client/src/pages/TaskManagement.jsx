@@ -15,6 +15,7 @@ export default function TaskManagement() {
   const [gradeFilter, setGradeFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [batchFilter, setBatchFilter] = useState('');
+  const [stackFilter, setStackFilter] = useState('');
   const [prevTypeFilter, setPrevTypeFilter] = useState('');
   const [formData, setFormData] = useState({
     studentIds: [],
@@ -31,10 +32,12 @@ export default function TaskManagement() {
     const matchesGrade = gradeFilter ? student.grade === gradeFilter : true;
     const matchesType = typeFilter ? student.type === typeFilter : true;
     const matchesBatch = batchFilter ? student.batch === batchFilter : true;
-    return matchesSearch && matchesGrade && matchesType && matchesBatch;
+    const matchesStack = stackFilter ? student.stack === stackFilter : true;
+    return matchesSearch && matchesGrade && matchesType && matchesBatch && matchesStack;
   });
 
   const uniqueBatches = Array.from(new Set(students.map(s => s.batch).filter(Boolean))).sort();
+  const uniqueStacks = Array.from(new Set(students.map(s => s.stack).filter(Boolean))).sort();
 
   const fetchStudents = async () => {
     setIsLoadingStudents(true);
@@ -160,6 +163,16 @@ export default function TaskManagement() {
                     <option value="Directory Student">Directory</option>
                   </select>
                   <select
+                    value={stackFilter}
+                    onChange={(e) => setStackFilter(e.target.value)}
+                    className="crm-input h-9 py-1 px-3 text-sm flex-1 sm:flex-none w-full sm:w-32"
+                  >
+                    <option value="">All Stacks</option>
+                    {uniqueStacks.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                  <select
                     value={batchFilter}
                     onChange={(e) => setBatchFilter(e.target.value)}
                     className="crm-input h-9 py-1 px-3 text-sm flex-1 sm:flex-none w-full sm:w-32"
@@ -262,6 +275,11 @@ export default function TaskManagement() {
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
+                        {student.stack && (
+                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                            {student.stack}
+                          </span>
+                        )}
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-medium ${
                           student.type === 'SPL Class Student' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-slate-50 text-slate-700 border border-slate-100'
                         }`}>

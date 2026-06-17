@@ -177,16 +177,22 @@ router.get('/task-students', authMiddleware, requireRole('admin'), async (req, r
     const splList = await SplRegistration.find({ email: { $in: splEmails } }).lean();
     const splMap = new Map(splList.map(r => [r.email.trim().toLowerCase(), r]));
 
-    // 3. Assemble results in memory using O(1) map lookups
-    const result = users.map(user => {
+    // 3. Assemble results in memory using O(1) map lookups, filtering out placed students
+    const result = [];
+    for (const user of users) {
       let type = 'Directory Student';
       let batch = '';
       let grade = '';
       let mobile = '';
+      let stack = '';
+      let isPlaced = false;
       
       if (user.studentId) {
         const student = studentMap.get(user.studentId.toString());
         if (student) {
+          if (student.currentStatus && student.currentStatus.toLowerCase() === 'placed') {
+            isPlaced = true;
+          }
           batch = student.batch ? student.batch.trim() : (student.passedOutYear || '');
           grade = student.grade || '';
           mobile = student.mobile || '';
@@ -195,14 +201,22 @@ router.get('/task-students', authMiddleware, requireRole('admin'), async (req, r
       } else {
         const splRegistration = splMap.get(user.email.trim().toLowerCase());
         if (splRegistration) {
+          if (splRegistration.status && splRegistration.status.toLowerCase() === 'placed') {
+            isPlaced = true;
+          }
           batch = splRegistration.batch ? splRegistration.batch.trim() : '';
           grade = splRegistration.grade || '';
           mobile = splRegistration.mobile || '';
           type = 'SPL Class Student';
+          stack = splRegistration.stack || '';
         }
       }
       
-      return {
+      if (isPlaced) {
+        continue;
+      }
+      
+      result.push({
         _id: user._id,
         studentId: user.studentId,
         name: user.name,
@@ -210,9 +224,10 @@ router.get('/task-students', authMiddleware, requireRole('admin'), async (req, r
         mobile,
         batch,
         grade,
+        stack,
         type
-      };
-    });
+      });
+    }
     
     res.json(result);
   } catch (error) {

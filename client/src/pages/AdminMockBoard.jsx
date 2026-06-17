@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Trash2, Calendar, ClipboardList, Clock, Search, X, Edit, CheckCircle2, AlertCircle, Award
 } from 'lucide-react';
@@ -8,6 +9,8 @@ import { authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
 
 export default function AdminMockBoard() {
+  const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState('daily'); // 'daily', 'availability', 'all'
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [bookings, setBookings] = useState([]);
@@ -37,6 +40,26 @@ export default function AdminMockBoard() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [allBookings, setAllBookings] = useState([]);
   const [loadingAll, setLoadingAll] = useState(false);
+
+  // Edit Booking modal state
+  const [selectedBookingForEdit, setSelectedBookingForEdit] = useState(null);
+  const [isEditBookingOpen, setIsEditBookingOpen] = useState(false);
+  const [editBookingForm, setEditBookingForm] = useState({
+    date: '',
+    startTime: '',
+    duration: 30,
+    status: 'Scheduled'
+  });
+
+  // Edit Availability modal state
+  const [selectedAvailForEdit, setSelectedAvailForEdit] = useState(null);
+  const [isEditAvailOpen, setIsEditAvailOpen] = useState(false);
+  const [editAvailForm, setEditAvailForm] = useState({
+    date: '',
+    startTime: '',
+    endTime: ''
+  });
+
 
   // Fetch daily bookings & availabilities
   const fetchDailyData = async () => {
@@ -85,6 +108,12 @@ export default function AdminMockBoard() {
       fetchAllBookings();
     }
   }, [selectedDate, activeTab]);
+
+  // Sync selectedDate to newAvail.date so the form updates when main date changes
+  useEffect(() => {
+    setNewAvail(prev => ({ ...prev, date: selectedDate }));
+  }, [selectedDate]);
+
 
   // Handle adding availability
   const handleAddAvailability = async (e) => {
@@ -160,6 +189,93 @@ export default function AdminMockBoard() {
     }
   };
 
+  // Handle deleting booking
+  const handleDeleteBooking = async (id) => {
+    if (!confirm('Are you sure you want to delete this scheduled interview booking? This action cannot be undone.')) return;
+    try {
+      const res = await fetch(buildApiUrl(`/mock-interviews/bookings/${id}`), {
+        method: 'DELETE',
+        headers: authHeaders()
+      });
+      if (res.ok) {
+        toast.success('Interview booking deleted');
+        fetchDailyData();
+      } else {
+        toast.error('Deletion failed');
+      }
+    } catch (err) {
+      toast.error('Network error');
+    }
+  };
+
+  // Open edit booking modal
+  const handleOpenEditBooking = (booking) => {
+    setSelectedBookingForEdit(booking);
+    setEditBookingForm({
+      date: booking.date,
+      startTime: booking.startTime,
+      duration: booking.duration,
+      status: booking.status
+    });
+    setIsEditBookingOpen(true);
+  };
+
+  // Handle edit booking submit
+  const handleEditBookingSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(buildApiUrl(`/mock-interviews/bookings/${selectedBookingForEdit._id}`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify(editBookingForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Booking updated successfully');
+        setIsEditBookingOpen(false);
+        fetchDailyData();
+      } else {
+        toast.error(data.message || 'Failed to update booking');
+      }
+    } catch (err) {
+      toast.error('Network error');
+    }
+  };
+
+  // Open edit availability modal
+  const handleOpenEditAvail = (avail) => {
+    setSelectedAvailForEdit(avail);
+    setEditAvailForm({
+      date: avail.date,
+      startTime: avail.startTime,
+      endTime: avail.endTime
+    });
+    setIsEditAvailOpen(true);
+  };
+
+  // Handle edit availability submit
+  const handleEditAvailSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(buildApiUrl(`/mock-interviews/availability/${selectedAvailForEdit._id}`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify(editAvailForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Availability block updated');
+        setIsEditAvailOpen(false);
+        fetchDailyData();
+      } else {
+        toast.error(data.message || 'Failed to update availability');
+      }
+    } catch (err) {
+      toast.error('Network error');
+    }
+  };
+
+
   // Filtered all bookings
   const filteredAllBookings = allBookings.filter(b => {
     const matchesSearch = b.studentName.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -175,7 +291,7 @@ export default function AdminMockBoard() {
     >
       <SectionTabs
         items={[
-          { label: 'Overview', onClick: () => {} }, // Left empty or standard navigation
+          { label: 'Overview', onClick: () => navigate('/dashboard') },
           { label: 'Mock Board', active: true }
         ]}
       />
@@ -302,17 +418,34 @@ export default function AdminMockBoard() {
                               )}
                             </td>
                             <td className="px-5 py-3 text-right">
-                              {booking.status !== 'Cancelled' ? (
+                              <div className="flex items-center justify-end gap-1.5">
+                                {booking.status !== 'Cancelled' ? (
+                                  <button
+                                    onClick={() => handleOpenFeedback(booking)}
+                                    className="px-2.5 py-1 text-[11px] font-bold text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-lg transition-all"
+                                  >
+                                    {booking.status === 'Completed' ? 'Modify Feedback' : 'Give Feedback'}
+                                  </button>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 font-medium mr-1.5">Cancelled</span>
+                                )}
                                 <button
-                                  onClick={() => handleOpenFeedback(booking)}
-                                  className="px-2.5 py-1 text-[11px] font-bold text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-lg transition-all"
+                                  onClick={() => handleOpenEditBooking(booking)}
+                                  className="p-1.5 text-slate-500 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 border border-slate-200/60 rounded-lg transition-colors"
+                                  title="Edit Booking"
                                 >
-                                  {booking.status === 'Completed' ? 'Modify Feedback' : 'Give Feedback'}
+                                  <Edit size={13} />
                                 </button>
-                              ) : (
-                                <span className="text-[11px] text-slate-400 font-medium">Cancelled</span>
-                              )}
+                                <button
+                                  onClick={() => handleDeleteBooking(booking._id)}
+                                  className="p-1.5 text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                                  title="Delete Booking"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
                             </td>
+
                           </tr>
                         ))
                       )}
@@ -372,7 +505,10 @@ export default function AdminMockBoard() {
                     type="date"
                     required
                     value={newAvail.date}
-                    onChange={e => setNewAvail({ ...newAvail, date: e.target.value })}
+                    onChange={e => {
+                      setNewAvail({ ...newAvail, date: e.target.value });
+                      setSelectedDate(e.target.value);
+                    }}
                     className="crm-input"
                   />
                 </div>
@@ -434,13 +570,23 @@ export default function AdminMockBoard() {
                         </div>
                         <div className="text-[10px] text-slate-400 font-medium">Added by {avail.addedBy}</div>
                       </div>
-                      <button
-                        onClick={() => handleDeleteAvailability(avail._id)}
-                        className="p-1.5 text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
-                        title="Delete slot"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleOpenEditAvail(avail)}
+                          className="p-1.5 text-slate-500 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 border border-slate-200/60 rounded-lg transition-colors"
+                          title="Edit slot"
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAvailability(avail._id)}
+                          className="p-1.5 text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                          title="Delete slot"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+
                     </div>
                   ))
                 )}
@@ -663,6 +809,172 @@ export default function AdminMockBoard() {
           </div>
         </div>
       )}
+
+      {/* Edit Booking Modal */}
+      {isEditBookingOpen && selectedBookingForEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
+              <h3 className="text-[#1e293b] font-extrabold text-base md:text-lg">
+                Edit Scheduled Interview
+              </h3>
+              <button 
+                onClick={() => setIsEditBookingOpen(false)} 
+                className="p-1.5 bg-slate-100 rounded-full text-slate-500 hover:text-slate-800 transition-all"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditBookingSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/50 flex justify-between text-xs">
+                <div>
+                  <p className="font-bold text-slate-800">{selectedBookingForEdit.studentName}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{selectedBookingForEdit.studentEmail}</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="crm-label">Date</label>
+                <input
+                  type="date"
+                  required
+                  value={editBookingForm.date}
+                  onChange={e => setEditBookingForm({ ...editBookingForm, date: e.target.value })}
+                  className="crm-input"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="crm-label">Start Time</label>
+                  <input
+                    type="time"
+                    required
+                    value={editBookingForm.startTime}
+                    onChange={e => setEditBookingForm({ ...editBookingForm, startTime: e.target.value })}
+                    className="crm-input"
+                  />
+                </div>
+                <div>
+                  <label className="crm-label">Duration (Minutes)</label>
+                  <select
+                    value={editBookingForm.duration}
+                    onChange={e => setEditBookingForm({ ...editBookingForm, duration: Number(e.target.value) })}
+                    className="crm-input cursor-pointer"
+                  >
+                    <option value={15}>15 Minutes</option>
+                    <option value={30}>30 Minutes</option>
+                    <option value={45}>45 Minutes</option>
+                    <option value={60}>60 Minutes</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="crm-label">Status</label>
+                <select
+                  value={editBookingForm.status}
+                  onChange={e => setEditBookingForm({ ...editBookingForm, status: e.target.value })}
+                  className="crm-input cursor-pointer"
+                >
+                  <option value="Scheduled">Scheduled</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsEditBookingOpen(false)}
+                  className="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition-colors text-xs font-bold"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Availability Modal */}
+      {isEditAvailOpen && selectedAvailForEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
+              <h3 className="text-[#1e293b] font-extrabold text-base md:text-lg">
+                Edit Availability Block
+              </h3>
+              <button 
+                onClick={() => setIsEditAvailOpen(false)} 
+                className="p-1.5 bg-slate-100 rounded-full text-slate-500 hover:text-slate-800 transition-all"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditAvailSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
+              <div>
+                <label className="crm-label">Date</label>
+                <input
+                  type="date"
+                  required
+                  value={editAvailForm.date}
+                  onChange={e => setEditAvailForm({ ...editAvailForm, date: e.target.value })}
+                  className="crm-input"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="crm-label">Start Time</label>
+                  <input
+                    type="time"
+                    required
+                    value={editAvailForm.startTime}
+                    onChange={e => setEditAvailForm({ ...editAvailForm, startTime: e.target.value })}
+                    className="crm-input"
+                  />
+                </div>
+                <div>
+                  <label className="crm-label">End Time</label>
+                  <input
+                    type="time"
+                    required
+                    value={editAvailForm.endTime}
+                    onChange={e => setEditAvailForm({ ...editAvailForm, endTime: e.target.value })}
+                    className="crm-input"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsEditAvailOpen(false)}
+                  className="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition-colors text-xs font-bold"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </AppShell>
   );
 }

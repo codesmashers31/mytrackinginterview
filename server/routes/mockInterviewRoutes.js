@@ -77,6 +77,38 @@ router.delete('/availability/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Update an availability block
+router.put('/availability/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    }
+    const { date, startTime, endTime } = req.body;
+    if (!date || !startTime || !endTime) {
+      return res.status(400).json({ message: 'Date, start time, and end time are required' });
+    }
+
+    if (timeToMins(startTime) >= timeToMins(endTime)) {
+      return res.status(400).json({ message: 'Start time must be before end time' });
+    }
+
+    const availability = await MockAvailability.findById(req.params.id);
+    if (!availability) {
+      return res.status(404).json({ message: 'Availability block not found' });
+    }
+
+    availability.date = date;
+    availability.startTime = startTime;
+    availability.endTime = endTime;
+    await availability.save();
+
+    res.json(availability);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating availability', error: error.message });
+  }
+});
+
+
 
 // --- BOOKING ENDPOINTS (ADMIN & STUDENT) ---
 
@@ -144,6 +176,54 @@ router.put('/bookings/:id/status', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Error updating booking status', error: error.message });
   }
 });
+
+// Admin: Update general booking details (date, startTime, duration, status)
+router.put('/bookings/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    }
+    const { date, startTime, duration, status } = req.body;
+    const booking = await MockInterview.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    if (date) booking.date = date;
+    if (startTime) booking.startTime = startTime;
+    if (duration !== undefined) {
+      booking.duration = Number(duration);
+    }
+    if (startTime || duration !== undefined) {
+      const startMin = timeToMins(booking.startTime);
+      const endMin = startMin + booking.duration;
+      booking.endTime = minsToTime(endMin);
+    }
+    if (status) booking.status = status;
+
+    await booking.save();
+    res.json(booking);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating booking', error: error.message });
+  }
+});
+
+// Admin: Delete a booking completely
+router.delete('/bookings/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    }
+    const booking = await MockInterview.findByIdAndDelete(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+    res.json({ message: 'Booking deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting booking', error: error.message });
+  }
+});
+
 
 
 // Student: Get dynamically generated available slots for booking on a specific date

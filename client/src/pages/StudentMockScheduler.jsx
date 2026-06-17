@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, Clock, CheckCircle2, AlertCircle, Trash2, Award, Star, ListFilter, HelpCircle, ClipboardList
 } from 'lucide-react';
@@ -8,6 +9,8 @@ import { authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
 
 export default function StudentMockScheduler() {
+  const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState('book'); // 'book', 'my-bookings'
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [duration, setDuration] = useState(30); // 30 or 60 minutes
@@ -125,7 +128,7 @@ export default function StudentMockScheduler() {
     >
       <SectionTabs
         items={[
-          { label: 'Overview', onClick: () => {} },
+          { label: 'Overview', onClick: () => navigate('/student/dashboard') },
           { label: 'Mock Scheduler', active: true }
         ]}
       />

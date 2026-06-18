@@ -84,10 +84,8 @@ export default function Login() {
         <div className="mx-auto w-full max-w-md">
           <div className="crm-surface p-6 md:p-8">
             <div className="mb-8">
-              <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-[linear-gradient(135deg,#2563eb,#4f46e5)] text-white shadow-[0_20px_50px_rgba(59,130,246,0.22)]">
-                <ArrowRight size={22} />
-              </div>
-              <h2 className="mt-6 text-3xl font-semibold tracking-tight text-slate-950">Sign in to PlaceTrack</h2>
+              <img src="/logo.png" alt="PlaceTrack Logo" className="h-18 w-18 object-contain mb-4" />
+              <h2 className="text-3xl font-semibold tracking-tight text-slate-950">Sign in to PlaceTrack</h2>
               <p className="mt-2 text-sm text-slate-500">
                 Use your registered email or mobile number to access your account.
               </p>

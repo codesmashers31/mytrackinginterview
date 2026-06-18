@@ -18,6 +18,7 @@ import emailRoutes from './routes/emailRoutes.js';
 import dailyActivityRoutes from './routes/dailyActivityRoutes.js';
 import mockInterviewRoutes from './routes/mockInterviewRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import leaveRoutes from './routes/leaveRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 
 
@@ -45,6 +46,7 @@ app.use('/api/admin', emailRoutes);
 app.use('/api/daily-activities', dailyActivityRoutes);
 app.use('/api/mock-interviews', mockInterviewRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/leaves', leaveRoutes);
 app.use(errorHandler);
 
 // Database Connection

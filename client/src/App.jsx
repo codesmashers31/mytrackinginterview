@@ -29,6 +29,8 @@ import PlacementSplClasses from './pages/PlacementSplClasses';
 import ResumeBuilder from './pages/ResumeBuilder';
 import AdminMockBoard from './pages/AdminMockBoard';
 import StudentMockScheduler from './pages/StudentMockScheduler';
+import StudentLeaves from './pages/StudentLeaves';
+import LeaveManagement from './pages/LeaveManagement';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
 import { isAuthenticated } from './utils/auth';
@@ -57,14 +59,15 @@ function App() {
           }
         />
         <Route path="/dashboard" element={<RoleRoute roles={[ 'admin' ]}><Dashboard /></RoleRoute>} />
-        <Route path="/students" element={<RoleRoute roles={[ 'admin' ]}><StudentList /></RoleRoute>} />
+        <Route path="/students" element={<RoleRoute roles={[ 'admin', 'coordinator' ]}><StudentList /></RoleRoute>} />
         <Route path="/admin/frontend-students" element={<RoleRoute roles={[ 'admin' ]}><FrontendStudentList /></RoleRoute>} />
         <Route path="/eligibility" element={<RoleRoute roles={[ 'admin' ]}><EligibilityPage /></RoleRoute>} />
         <Route path="/admin/placements" element={<RoleRoute roles={[ 'admin' ]}><PlacementManagement /></RoleRoute>} />
+        <Route path="/admin/coordinators" element={<RoleRoute roles={[ 'admin', 'coordinator' ]}><CoordinatorManagement /></RoleRoute>} />
         <Route path="/coordinator/dashboard" element={<RoleRoute roles={[ 'coordinator' ]}><CoordinatorDashboard /></RoleRoute>} />
         <Route path="/coordinator/eligibility" element={<RoleRoute roles={[ 'coordinator' ]}><CoordinatorEligibility /></RoleRoute>} />
         <Route path="/coordinator/spl-classes" element={<RoleRoute roles={[ 'coordinator' ]}><CoordinatorSplClasses /></RoleRoute>} />
-        <Route path="/settings" element={<RoleRoute roles={[ 'admin', 'student', 'placement' ]}><Settings /></RoleRoute>} />
+        <Route path="/settings" element={<RoleRoute roles={[ 'admin', 'student', 'placement', 'coordinator' ]}><Settings /></RoleRoute>} />
         <Route path="/spl-registration" element={<SplClassForm />} />
         <Route path="/spl-registration/success" element={<SplSuccess />} />
         <Route path="/spl-registrations" element={<RoleRoute roles={[ 'admin' ]}><SplRegistrations /></RoleRoute>} />
@@ -78,8 +81,10 @@ function App() {
         <Route path="/student/tasks" element={<RoleRoute roles={[ 'student' ]}><StudentTasks /></RoleRoute>} />
         <Route path="/student/attendance" element={<RoleRoute roles={[ 'student' ]}><StudentAttendance /></RoleRoute>} />
         <Route path="/student/daily-activity" element={<RoleRoute roles={[ 'student' ]}><StudentDailyActivity /></RoleRoute>} />
+        <Route path="/student/leaves" element={<RoleRoute roles={[ 'student' ]}><StudentLeaves /></RoleRoute>} />
         <Route path="/student/resume-builder" element={<RoleRoute roles={[ 'student' ]}><ResumeBuilder /></RoleRoute>} />
         <Route path="/admin/daily-activities" element={<RoleRoute roles={[ 'admin' ]}><AdminDailyActivities /></RoleRoute>} />
+        <Route path="/admin/leaves" element={<RoleRoute roles={[ 'admin', 'coordinator' ]}><LeaveManagement /></RoleRoute>} />
         <Route path="/admin/mock-interviews" element={<RoleRoute roles={[ 'admin' ]}><AdminMockBoard /></RoleRoute>} />
         <Route path="/student/mock-interviews" element={<RoleRoute roles={[ 'student' ]}><StudentMockScheduler /></RoleRoute>} />
       </Routes>

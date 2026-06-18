@@ -32,6 +32,7 @@ const buildNavigationGroups = (role, onLogout) => {
           { to: '/student/tasks', label: 'My Tasks', icon: ClipboardList },
           { to: '/student/daily-activity', label: 'Daily Activity', icon: Clock },
           { to: '/student/attendance', label: 'My Attendance', icon: Calendar },
+          { to: '/student/leaves', label: 'Leaves & Permissions', icon: FileText },
           { to: '/student/resume-builder', label: 'Resume Builder', icon: FileText },
           { to: '/student/mock-interviews', label: 'Mock Interviews', icon: CheckCircle2 },
           { to: '/settings', label: 'Settings', icon: SettingsIcon },
@@ -57,6 +58,7 @@ const buildNavigationGroups = (role, onLogout) => {
           { to: '/coordinator/eligibility', label: 'Eligibility', icon: CheckCircle2 },
           { to: '/admin/coordinators', label: 'Coordinators', icon: Users },
           { to: '/coordinator/spl-classes', label: 'SPL Classes', icon: Users },
+          { to: '/admin/leaves', label: 'Leave Requests', icon: Calendar },
           { to: '/settings', label: 'Settings', icon: SettingsIcon },
         ],
       },
@@ -98,6 +100,7 @@ const buildNavigationGroups = (role, onLogout) => {
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { to: '/spl-registrations', label: 'SPL Registrations', icon: Users },
         { to: '/attendance', label: 'Attendance', icon: Calendar },
+        { to: '/admin/leaves', label: 'Leave Requests', icon: Calendar },
         { to: '/admin/daily-activities', label: 'Daily Logs', icon: Clock },
         { to: '/students', label: 'Students', icon: Users },
         { to: '/admin/frontend-students', label: 'Frontend Students', icon: Users },
@@ -316,9 +319,7 @@ export function AppShell({
         >
           <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-slate-200 px-5 bg-white">
             <Link to="/dashboard" className={`flex items-center gap-3 ${sidebarCollapsed ? 'justify-center w-full' : ''}`}>
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#1d4ed8,#4f46e5)] text-white shadow-[0_12px_30px_rgba(59,130,246,0.22)]">
-                <LayoutDashboard size={20} />
-              </div>
+              <img src="/logo.png" alt="PlaceTrack Logo" className="h-11 w-11 object-contain shrink-0" />
               {!sidebarCollapsed && (
                 <div className="overflow-hidden">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">

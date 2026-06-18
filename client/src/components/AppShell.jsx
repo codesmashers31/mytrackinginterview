@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -17,7 +17,9 @@ import {
   BriefcaseBusiness,
   FileText
 } from 'lucide-react';
-import { logout } from '../utils/auth';
+import { logout, authHeaders } from '../utils/auth';
+import { buildApiUrl } from '../utils/api';
+import toast from 'react-hot-toast';
 
 const buildNavigationGroups = (role, onLogout) => {
   // Student navigation
@@ -135,8 +137,147 @@ export function AppShell({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-
   const role = localStorage.getItem('userRole') || 'admin';
+
+  // Notifications State & Actions
+  const [notifications, setNotifications] = useState([]);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch(buildApiUrl('/notifications'), {
+        headers: authHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    try {
+      const res = await fetch(buildApiUrl('/notifications/mark-all-read'), {
+        method: 'PUT',
+        headers: authHeaders()
+      });
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      }
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+    }
+  };
+
+  const markNotificationRead = async (id) => {
+    try {
+      const res = await fetch(buildApiUrl(`/notifications/${id}/read`), {
+        method: 'PUT',
+        headers: authHeaders()
+      });
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
+      }
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  };
+
+  // Fetch notifications and setup reminders
+  useEffect(() => {
+    fetchNotifications();
+    const notificationInterval = setInterval(fetchNotifications, 15000);
+
+    let checkoutTimeoutId = null;
+
+    const setupReminders = async () => {
+      if (role !== 'student') return;
+
+      try {
+        const res = await fetch(buildApiUrl('/attendance/today'), {
+          headers: authHeaders()
+        });
+        if (res.ok) {
+          const attendance = await res.json();
+
+          if (!attendance) {
+            // Student has not checked in today
+            const now = new Date();
+            const day = now.getDay();
+            if (day >= 1 && day <= 5) { // Weekdays
+              const hour = now.getHours();
+              const minute = now.getMinutes();
+              const minsSinceMidnight = hour * 60 + minute;
+              const checkInTargetMins = 9 * 60; // 9:00 AM
+
+              // Show reminder if it is between 8:00 AM and 9:15 AM
+              if (minsSinceMidnight >= 8 * 60 && minsSinceMidnight <= 9 * 60 + 15) {
+                const diffMins = checkInTargetMins - minsSinceMidnight;
+                if (diffMins > 0 && diffMins <= 10) {
+                  toast.error(`⏰ Check-in Reminder: You have only ${diffMins} minutes left to check in before 9:00 AM!`, {
+                    duration: 15000
+                  });
+                } else if (diffMins > 0) {
+                  toast(`⏰ Check-in Reminder: Please check in soon! Standard check-in is before 9:00 AM.`, {
+                    duration: 10000
+                  });
+                } else {
+                  toast.error(`⏰ Check-in Reminder: You are late for check-in today! Please check in immediately.`, {
+                    duration: 15000
+                  });
+                }
+              }
+            }
+          } else if (attendance.checkInTime && !attendance.checkOutTime) {
+            // Student checked in but not checked out yet
+            const checkInDate = new Date(attendance.checkInTime);
+            const expectedCheckout = new Date(checkInDate.getTime() + 9 * 60 * 60 * 1000); // 9 hours later
+            const warningTime = new Date(expectedCheckout.getTime() - 10 * 60 * 1000); // 10 minutes before
+            const now = new Date();
+
+            const msToWarning = warningTime.getTime() - now.getTime();
+            const msToCheckout = expectedCheckout.getTime() - now.getTime();
+
+            if (checkoutTimeoutId) clearTimeout(checkoutTimeoutId);
+
+            if (msToWarning > 0) {
+              checkoutTimeoutId = setTimeout(() => {
+                toast.success("⏰ Checkout Reminder: 10 minutes left until your checkout time! Don't forget to check out.", {
+                  duration: 15000,
+                  icon: '⏰'
+                });
+              }, msToWarning);
+            } else if (msToCheckout > 0) {
+              const minsLeft = Math.ceil(msToCheckout / (60 * 1000));
+              toast.success(`⏰ Checkout Reminder: Only ${minsLeft} minutes left before your checkout time! Don't forget to check out.`, {
+                duration: 15000,
+                icon: '⏰'
+              });
+            } else {
+              toast.error("⏰ Overtime Alert: You have exceeded your 9-hour shift. Please check out now!", {
+                duration: 15000,
+                icon: '⏰'
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to setup reminders:', err);
+      }
+    };
+
+    setupReminders();
+    // Re-run reminders check every 5 minutes
+    const reminderInterval = setInterval(setupReminders, 5 * 60 * 1000);
+
+    return () => {
+      clearInterval(notificationInterval);
+      clearInterval(reminderInterval);
+      if (checkoutTimeoutId) clearTimeout(checkoutTimeoutId);
+    };
+  }, [role]);
+
   const profile = useMemo(() => {
     const name = localStorage.getItem('userName') || 'Administrator';
     const email = localStorage.getItem('userEmail') || 'admin@placetrack.com';
@@ -336,7 +477,9 @@ export function AppShell({
                     className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
                   >
                     <Bell size={18} />
-                    <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                    {notifications.some(n => !n.isRead) && (
+                      <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white animate-pulse" />
+                    )}
                   </button>
                   
                   {notificationsOpen && (
@@ -344,28 +487,34 @@ export function AppShell({
                       <div className="flex justify-between items-center mb-3 pb-2 border-b">
                         <span className="font-bold text-sm text-slate-800">Notifications</span>
                         <button 
-                          onClick={() => setNotificationsOpen(false)} 
+                          onClick={markAllNotificationsRead} 
                           className="text-xs text-blue-600 hover:underline"
                         >
                           Mark all read
                         </button>
                       </div>
                       <div className="space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
-                        <div className="p-2.5 hover:bg-slate-50 rounded-xl transition cursor-pointer text-left">
-                          <p className="text-xs font-semibold text-slate-800">New Resume Uploaded</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">A student recently imported their resume.</p>
-                          <p className="text-[9px] text-slate-400 mt-1">2 mins ago</p>
-                        </div>
-                        <div className="p-2.5 hover:bg-slate-50 rounded-xl transition cursor-pointer text-left">
-                          <p className="text-xs font-semibold text-slate-800">Attendance Completed</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">Daily attendance sheet is updated.</p>
-                          <p className="text-[9px] text-slate-400 mt-1">1 hour ago</p>
-                        </div>
-                        <div className="p-2.5 hover:bg-slate-50 rounded-xl transition cursor-pointer text-left">
-                          <p className="text-xs font-semibold text-slate-800">System Backup Success</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">Database auto-sync completed successfully.</p>
-                          <p className="text-[9px] text-slate-400 mt-1">Yesterday</p>
-                        </div>
+                        {notifications.length === 0 ? (
+                          <div className="text-center py-6 text-xs text-slate-400 font-medium">
+                            No notifications yet
+                          </div>
+                        ) : (
+                          notifications.map(n => (
+                            <div 
+                              key={n._id}
+                              onClick={() => markNotificationRead(n._id)}
+                              className={`p-2.5 hover:bg-slate-50 rounded-xl transition cursor-pointer text-left border-l-4 ${
+                                n.isRead ? 'border-transparent opacity-75' : 'border-blue-600 bg-blue-50/10'
+                              }`}
+                            >
+                              <p className={`text-xs font-bold ${n.isRead ? 'text-slate-700' : 'text-slate-900'}`}>{n.title}</p>
+                              <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">{n.message}</p>
+                              <p className="text-[9px] text-slate-400 mt-1">
+                                {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(n.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
                   )}

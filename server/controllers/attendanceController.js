@@ -1,6 +1,8 @@
 import Attendance from '../models/Attendance.js';
 import SplRegistration from '../models/SplRegistration.js';
 import User from '../models/User.js';
+import { createNotification, notifyAdmins } from '../utils/notifications.js';
+
 
 const parseUTCDate = (dateString) => {
   const [year, month, day] = dateString.split('-').map(Number);
@@ -411,6 +413,20 @@ export const studentCheckIn = async (req, res) => {
       await attendance.save();
     }
 
+    // Send in-app notifications
+    const checkInTimeString = new Date(attendance.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    await createNotification(
+      userId,
+      'Check-in Successful',
+      `You checked in successfully at ${checkInTimeString}. Remember to check out at the end of your shift.`,
+      'attendance'
+    );
+    await notifyAdmins(
+      'Student Checked In',
+      `${studentName} has checked in today at ${checkInTimeString}.`,
+      'attendance'
+    );
+
     res.status(201).json(attendance);
   } catch (err) {
     console.error('Check-in error:', err);
@@ -459,6 +475,21 @@ export const studentCheckOut = async (req, res) => {
     }
 
     await attendance.save();
+
+    // Send in-app notifications
+    const checkOutTimeString = new Date(attendance.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    await createNotification(
+      userId,
+      'Check-out Successful',
+      `You checked out successfully at ${checkOutTimeString}. Total Hours: ${attendance.totalHours} hrs.`,
+      'attendance'
+    );
+    await notifyAdmins(
+      'Student Checked Out',
+      `${user.name} has checked out today at ${checkOutTimeString}. Total Hours: ${attendance.totalHours} hrs.`,
+      'attendance'
+    );
+
     res.json(attendance);
   } catch (err) {
     console.error('Check-out error:', err);

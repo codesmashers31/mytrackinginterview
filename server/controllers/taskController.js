@@ -1,5 +1,7 @@
 import Task from '../models/Task.js';
 import User from '../models/User.js';
+import { createNotification, notifyAdmins } from '../utils/notifications.js';
+
 
 const calculateOverallStatus = (questions) => {
   if (!Array.isArray(questions) || questions.length === 0) return 'Pending';
@@ -50,6 +52,15 @@ export const createTask = async (req, res) => {
     });
 
     await task.save();
+
+    // Send in-app notification
+    await createNotification(
+      task.studentId,
+      'New Task Assigned',
+      `You have been assigned a new task: "${task.title}".`,
+      'task'
+    );
+
     res.status(201).json(task);
   } catch (error) {
     res.status(500).json({ message: 'Task creation failed', error: error.message });
@@ -139,6 +150,23 @@ export const updateTask = async (req, res) => {
     updates.updatedAt = new Date();
 
     const updatedTask = await Task.findByIdAndUpdate(req.params.id, updates, { returnDocument: 'after' });
+
+    // Send in-app notifications
+    if (req.user.role === 'admin') {
+      await createNotification(
+        updatedTask.studentId,
+        'Task Updated',
+        `Your task "${updatedTask.title}" has been updated by an instructor. Status: ${updatedTask.overallStatus}.`,
+        'task'
+      );
+    } else if (req.user.role === 'student') {
+      await notifyAdmins(
+        'Task Progress Updated',
+        `Student ${updatedTask.studentName} updated their task "${updatedTask.title}". Status: ${updatedTask.overallStatus}.`,
+        'task'
+      );
+    }
+
     res.json(updatedTask);
   } catch (error) {
     res.status(500).json({ message: 'Task update failed', error: error.message });

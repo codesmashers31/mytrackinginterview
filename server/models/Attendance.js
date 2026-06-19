@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const attendanceSchema = new mongoose.Schema({
   studentId: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: 'SplRegistration',
+    ref: 'Student',
     required: true 
   },
   studentName: { type: String, required: true },

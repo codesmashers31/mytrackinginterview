@@ -15,28 +15,35 @@ import {
   Users,
   X,
   BriefcaseBusiness,
-  FileText
+  FileText,
+  Gamepad2,
+  Trophy
 } from 'lucide-react';
 import { logout, authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
 import toast from 'react-hot-toast';
 
-const buildNavigationGroups = (role, onLogout) => {
+const buildNavigationGroups = (role, studentType, onLogout) => {
   // Student navigation
   if (role === 'student') {
+    const workspaceItems = [
+      { to: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { to: '/student/tasks', label: 'Tasks & Mocks', icon: ClipboardList },
+      { to: '/student/daily-activity', label: 'Daily Activity', icon: Clock },
+      { to: '/student/attendance', label: 'Attendance & Leaves', icon: Calendar },
+      { to: '/student/resume-builder', label: 'Resume Builder', icon: FileText },
+    ];
+
+    if (studentType === 'Frontend') {
+      workspaceItems.push({ to: '/student/teams', label: 'Team Activity', icon: Gamepad2 });
+    }
+
+    workspaceItems.push({ to: '/settings', label: 'Settings', icon: SettingsIcon });
+
     return [
       {
         title: 'Workspace',
-        items: [
-          { to: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-          { to: '/student/tasks', label: 'My Tasks', icon: ClipboardList },
-          { to: '/student/daily-activity', label: 'Daily Activity', icon: Clock },
-          { to: '/student/attendance', label: 'My Attendance', icon: Calendar },
-          { to: '/student/leaves', label: 'Leaves & Permissions', icon: FileText },
-          { to: '/student/resume-builder', label: 'Resume Builder', icon: FileText },
-          { to: '/student/mock-interviews', label: 'Mock Interviews', icon: CheckCircle2 },
-          { to: '/settings', label: 'Settings', icon: SettingsIcon },
-        ],
+        items: workspaceItems,
       },
       {
         title: 'Account',
@@ -54,11 +61,11 @@ const buildNavigationGroups = (role, onLogout) => {
         title: 'Workspace',
         items: [
           { to: '/coordinator/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-          { to: '/students', label: 'Students', icon: Users },
+          { to: '/students', label: 'Student Directory', icon: Users },
           { to: '/coordinator/eligibility', label: 'Eligibility', icon: CheckCircle2 },
           { to: '/admin/coordinators', label: 'Coordinators', icon: Users },
           { to: '/coordinator/spl-classes', label: 'SPL Classes', icon: Users },
-          { to: '/admin/leaves', label: 'Leave Requests', icon: Calendar },
+          { to: '/attendance', label: 'Attendance & Leaves', icon: Calendar },
           { to: '/settings', label: 'Settings', icon: SettingsIcon },
         ],
       },
@@ -98,16 +105,11 @@ const buildNavigationGroups = (role, onLogout) => {
       title: 'Workspace',
       items: [
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { to: '/spl-registrations', label: 'SPL Registrations', icon: Users },
-        { to: '/attendance', label: 'Attendance', icon: Calendar },
-        { to: '/admin/leaves', label: 'Leave Requests', icon: Calendar },
+        { to: '/students', label: 'Student Directory', icon: Users },
+        { to: '/attendance', label: 'Attendance & Leaves', icon: Calendar },
+        { to: '/tasks', label: 'Tasks & Mock Board', icon: ClipboardList },
+        { to: '/admin/teams', label: 'Team Activity Hub', icon: Gamepad2 },
         { to: '/admin/daily-activities', label: 'Daily Logs', icon: Clock },
-        { to: '/students', label: 'Students', icon: Users },
-        { to: '/admin/frontend-students', label: 'Frontend Students', icon: Users },
-        { to: '/eligibility', label: 'Eligibility', icon: CheckCircle2 },
-        { to: '/tasks', label: 'Task Assignment', icon: ClipboardList },
-        { to: '/tasks/list', label: 'Assigned Tasks', icon: CheckCircle2 },
-        { to: '/admin/mock-interviews', label: 'Mock Board', icon: ClipboardList },
       ],
     },
     {
@@ -298,7 +300,8 @@ export function AppShell({
     logout();
   };
 
-  const navigationGroups = useMemo(() => buildNavigationGroups(role, handleLogout), [role]);
+  const studentType = localStorage.getItem('userStudentType') || '';
+  const navigationGroups = useMemo(() => buildNavigationGroups(role, studentType, handleLogout), [role, studentType]);
 
   return (
     <div className="h-screen overflow-hidden bg-[var(--app-bg)] text-slate-800">

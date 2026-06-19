@@ -8,7 +8,7 @@ import { AppShell, SectionTabs, SurfaceCard } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
 
-export default function StudentMockScheduler() {
+export default function StudentMockScheduler({ isEmbedded = false }) {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('book'); // 'book', 'my-bookings'
@@ -121,17 +121,16 @@ export default function StudentMockScheduler() {
     }
   };
 
-  return (
-    <AppShell
-      title="Mock Interviews"
-      subtitle="Schedule your mock interviews with instructors and view performance feedbacks."
-    >
-      <SectionTabs
-        items={[
-          { label: 'Overview', onClick: () => navigate('/student/dashboard') },
-          { label: 'Mock Scheduler', active: true }
-        ]}
-      />
+  const content = (
+    <>
+      {!isEmbedded && (
+        <SectionTabs
+          items={[
+            { label: 'Overview', onClick: () => navigate('/student/dashboard') },
+            { label: 'Mock Scheduler', active: true }
+          ]}
+        />
+      )}
 
       {/* Tabs Row */}
       <div className="mb-6 flex border-b border-slate-200">
@@ -380,6 +379,17 @@ export default function StudentMockScheduler() {
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (isEmbedded) return content;
+
+  return (
+    <AppShell
+      title="Mock Interviews"
+      subtitle="Schedule your mock interviews with instructors and view performance feedbacks."
+    >
+      {content}
     </AppShell>
   );
 }

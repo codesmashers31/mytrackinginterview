@@ -5,11 +5,16 @@ const studentSchema = new mongoose.Schema({
     mobile: { type: String, required: true },
     email: { type: String, default: '' },
     degree: { type: String, default: '' },
+    studentType: { 
+        type: String, 
+        enum: ['Regular', 'Frontend', 'SPL'], 
+        default: 'Regular' 
+    },
     isFrontend: { type: Boolean, default: false },
     city: { type: String, default: '' },
     passedOutYear: { type: String, default: 'Need to filled' },
     batch: { type: String, default: '' },
-    grade: { type: String, enum: ['A', 'B', 'C', ''], default: '' },
+    grade: { type: String, default: '' },
     currentStatus: { 
         type: String, 
         default: 'Need to filled'
@@ -20,7 +25,22 @@ const studentSchema = new mongoose.Schema({
     companyName: { type: String, default: '' },
     packageLpa: { type: String, default: '' },
     jobGetMode: { type: String, default: '' },
+    
+    // SPL class specific fields
+    stack: { type: String, default: '' },
+    willingCompanyProcess: { type: Boolean, default: false },
+    willing30Days: { type: String, default: '' },
+    acceptOffer: { type: String, default: '' },
+    fullEffort: { type: String, default: '' },
+    issues: { type: String, default: '' },
+    needMost: { type: String, default: '' },
+
     resumeData: { type: Object, default: {} }
 }, { timestamps: true });
+
+// Indexing for faster lookups
+studentSchema.index({ email: 1 });
+studentSchema.index({ mobile: 1 });
+studentSchema.index({ studentType: 1 });
 
 export default mongoose.model('Student', studentSchema);

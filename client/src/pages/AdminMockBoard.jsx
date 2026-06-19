@@ -8,7 +8,7 @@ import { AppShell, SectionTabs, SurfaceCard } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
 
-export default function AdminMockBoard() {
+export default function AdminMockBoard({ isEmbedded = false }) {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('daily'); // 'daily', 'availability', 'all'
@@ -284,17 +284,16 @@ export default function AdminMockBoard() {
     return matchesSearch && matchesStatus;
   });
 
-  return (
-    <AppShell
-      title="Mock Interview Board"
-      subtitle="Configure interviewer availabilities, monitor scheduled slots, and record candidate feedbacks."
-    >
-      <SectionTabs
-        items={[
-          { label: 'Overview', onClick: () => navigate('/dashboard') },
-          { label: 'Mock Board', active: true }
-        ]}
-      />
+  const content = (
+    <>
+      {!isEmbedded && (
+        <SectionTabs
+          items={[
+            { label: 'Overview', onClick: () => navigate('/dashboard') },
+            { label: 'Mock Board', active: true }
+          ]}
+        />
+      )}
 
       {/* Tabs Row */}
       <div className="mb-6 flex border-b border-slate-200">
@@ -975,6 +974,17 @@ export default function AdminMockBoard() {
         </div>
       )}
 
+    </>
+  );
+
+  if (isEmbedded) return content;
+
+  return (
+    <AppShell
+      title="Mock Interview Board"
+      subtitle="Configure interviewer availabilities, monitor scheduled slots, and record candidate feedbacks."
+    >
+      {content}
     </AppShell>
   );
 }

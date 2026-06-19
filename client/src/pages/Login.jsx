@@ -29,6 +29,11 @@ export default function Login() {
         localStorage.setItem('userName', data.user.name);
         localStorage.setItem('userEmail', data.user.email);
         localStorage.setItem('userRole', data.user.role);
+        if (data.user.studentType) {
+          localStorage.setItem('userStudentType', data.user.studentType);
+        } else {
+          localStorage.removeItem('userStudentType');
+        }
         toast.success(`Welcome back, ${data.user.name.split(' ')[0]}`);
         if (data.user.role === 'student') {
           navigate('/student/tasks');

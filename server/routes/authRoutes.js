@@ -1,7 +1,6 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import SplRegistration from '../models/SplRegistration.js';
 import Student from '../models/Student.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import requireRole from '../middleware/roleMiddleware.js';
@@ -21,62 +20,45 @@ const upload = multer({
 
 const signJwt = (payload) => jwt.sign(payload, process.env.JWT_SECRET || 'secret', { expiresIn: '1d' });
 
-const ensureStudentAccountsFromSpl = async () => {
-  const registrations = await SplRegistration.find();
-  const students = [];
+const ensureAllStudentAccounts = async () => {
+  try {
+    const students = await Student.find();
+    for (const student of students) {
+      if (!student.mobile && !student.email) continue;
+      
+      let user = await User.findOne({ studentId: student._id });
+      if (!user) {
+        const email = student.email ? student.email.trim().toLowerCase() : '';
+        const mobile = student.mobile ? student.mobile.trim() : '';
 
-  for (const reg of registrations) {
-    if (!reg.email) continue;
-    const email = reg.email.trim().toLowerCase();
-    let user = await User.findOne({ email });
+        user = await User.findOne({
+          $or: [
+            ...(email ? [{ email }] : []),
+            ...(mobile ? [{ email: mobile }] : [])
+          ]
+        });
 
-    if (!user) {
-      const password = reg.mobile && reg.mobile.trim() ? reg.mobile.trim() : email;
-      user = new User({
-        name: reg.name || email,
-        email,
-        password,
-        role: 'student'
-      });
-      await user.save();
+        if (user) {
+          user.studentId = student._id;
+          await user.save();
+        } else {
+          const userEmail = student.studentType === 'SPL' && email ? email : mobile;
+          const password = mobile || email;
+          if (userEmail) {
+            user = new User({
+              name: student.name || 'Student',
+              email: userEmail,
+              password,
+              role: 'student',
+              studentId: student._id
+            });
+            await user.save();
+          }
+        }
+      }
     }
-
-    students.push({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      mobile: reg.mobile || '',
-      grade: reg.grade || '',
-      status: reg.status || '',
-      registrationId: reg._id
-    });
-  }
-
-  return students;
-};
-
-const ensureStudentAccountsFromDirectory = async () => {
-  const directoryStudents = await Student.find();
-
-  for (const student of directoryStudents) {
-    if (!student.mobile) continue;
-    const mobile = student.mobile.trim();
-    if (!mobile) continue;
-
-    let user = await User.findOne({ email: mobile });
-    if (!user) {
-      user = new User({
-        name: student.name || 'Student',
-        email: mobile,
-        password: mobile, // mobile as password
-        role: 'student',
-        studentId: student._id
-      });
-      await user.save();
-    } else if (!user.studentId) {
-      user.studentId = student._id;
-      await user.save();
-    }
+  } catch (err) {
+    console.error('Failed to sync student accounts:', err);
   }
 };
 
@@ -84,80 +66,48 @@ const ensureStudentAccount = async (emailOrMobile) => {
   if (!emailOrMobile) return;
   const normalized = emailOrMobile.trim().toLowerCase();
 
-  // 1. Check if user already exists
-  let user = await User.findOne({ email: normalized });
-  if (user) return;
+  let user = await User.findOne({ 
+    $or: [{ email: normalized }, { email: emailOrMobile.trim() }] 
+  });
+  if (user && user.studentId) return;
 
-  // 2. Check if there is a Frontend student record matching this email or mobile
-  const frontendStudent = await Student.findOne({
-    isFrontend: true,
+  const student = await Student.findOne({
     $or: [
-      { email: normalized },
+      ...(normalized ? [{ email: normalized }] : []),
       { mobile: emailOrMobile.trim() }
     ]
   });
 
-  if (frontendStudent) {
-    const email = frontendStudent.email ? frontendStudent.email.trim().toLowerCase() : frontendStudent.mobile.trim();
-    user = await User.findOne({ email });
-    if (!user) {
-      const password = frontendStudent.mobile.trim();
-      user = new User({
-        name: frontendStudent.name || 'Student',
-        email,
-        password, // mobile as password
-        role: 'student',
-        studentId: frontendStudent._id
-      });
-      await user.save();
-    }
-    return;
-  }
-
-  // 3. Check if there is an SPL registration matching this email or mobile
-  const reg = await SplRegistration.findOne({
-    $or: [
-      { email: normalized },
-      { mobile: emailOrMobile.trim() }
-    ]
-  });
-
-  if (reg) {
-    const regEmail = reg.email.trim().toLowerCase();
-    user = await User.findOne({ email: regEmail });
-    if (!user) {
-      const password = reg.mobile && reg.mobile.trim() ? reg.mobile.trim() : regEmail;
-      user = new User({
-        name: reg.name || regEmail,
-        email: regEmail,
-        password,
-        role: 'student'
-      });
-      await user.save();
-    }
-    return;
-  }
-
-  // 4. Check if there is a Student directory record matching this mobile (regular student)
-  const student = await Student.findOne({ mobile: emailOrMobile.trim(), isFrontend: { $ne: true } });
   if (student) {
-    const mobile = student.mobile.trim();
-    user = new User({
-      name: student.name || 'Student',
-      email: mobile,
-      password: mobile, // mobile as password
-      role: 'student',
-      studentId: student._id
-    });
-    await user.save();
-    return;
+    if (user) {
+      user.studentId = student._id;
+      await user.save();
+    } else {
+      const email = student.email ? student.email.trim().toLowerCase() : '';
+      const mobile = student.mobile ? student.mobile.trim() : '';
+      const userEmail = student.studentType === 'SPL' && email ? email : mobile;
+      const password = mobile || email;
+
+      if (userEmail) {
+        user = new User({
+          name: student.name || 'Student',
+          email: userEmail,
+          password,
+          role: 'student',
+          studentId: student._id
+        });
+        await user.save();
+      }
+    }
   }
 };
 
 router.get('/spl-students', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
-    const students = await ensureStudentAccountsFromSpl();
-    res.json(students);
+    const students = await Student.find({ studentType: 'SPL' });
+    await ensureAllStudentAccounts();
+    const users = await User.find({ role: 'student', studentId: { $in: students.map(s => s._id) } });
+    res.json(users);
   } catch (error) {
     res.status(500).json({ message: 'Failed to load SPL student accounts', error: error.message });
   }
@@ -172,60 +122,26 @@ router.get('/task-students', authMiddleware, requireRole('admin'), async (req, r
     const studentsList = await Student.find({ _id: { $in: studentIds } }).lean();
     const studentMap = new Map(studentsList.map(s => [s._id.toString(), s]));
 
-    // 2. Gather emails of users without studentId for bulk SplRegistration query
-    const splEmails = users.filter(u => !u.studentId).map(u => u.email.trim().toLowerCase());
-    const splList = await SplRegistration.find({ email: { $in: splEmails } }).lean();
-    const splMap = new Map(splList.map(r => [r.email.trim().toLowerCase(), r]));
-
-    // 3. Assemble results in memory using O(1) map lookups, filtering out placed students
+    // 2. Assemble results in memory using O(1) map lookups, filtering out placed students
     const result = [];
     for (const user of users) {
-      let type = 'Directory Student';
-      let batch = '';
-      let grade = '';
-      let mobile = '';
-      let stack = '';
-      let isPlaced = false;
-      
-      if (user.studentId) {
-        const student = studentMap.get(user.studentId.toString());
-        if (student) {
-          if (student.currentStatus && student.currentStatus.toLowerCase() === 'placed') {
-            isPlaced = true;
-          }
-          batch = student.batch ? student.batch.trim() : (student.passedOutYear || '');
-          grade = student.grade || '';
-          mobile = student.mobile || '';
-          type = 'Directory Student';
-        }
-      } else {
-        const splRegistration = splMap.get(user.email.trim().toLowerCase());
-        if (splRegistration) {
-          if (splRegistration.status && splRegistration.status.toLowerCase() === 'placed') {
-            isPlaced = true;
-          }
-          batch = splRegistration.batch ? splRegistration.batch.trim() : '';
-          grade = splRegistration.grade || '';
-          mobile = splRegistration.mobile || '';
-          type = 'SPL Class Student';
-          stack = splRegistration.stack || '';
-        }
-      }
-      
-      if (isPlaced) {
-        continue;
-      }
-      
+      if (!user.studentId) continue;
+      const student = studentMap.get(user.studentId.toString());
+      if (!student) continue;
+
+      const isPlaced = student.currentStatus && student.currentStatus.toLowerCase() === 'placed';
+      if (isPlaced) continue;
+
       result.push({
         _id: user._id,
         studentId: user.studentId,
-        name: user.name,
-        email: user.email,
-        mobile,
-        batch,
-        grade,
-        stack,
-        type
+        name: student.name,
+        email: student.email || user.email,
+        mobile: student.mobile || '',
+        batch: student.batch ? student.batch.trim() : (student.passedOutYear || ''),
+        grade: student.grade || '',
+        stack: student.stack || '',
+        type: student.studentType === 'SPL' ? 'SPL Class Student' : 'Directory Student'
       });
     }
     
@@ -349,17 +265,53 @@ router.delete('/users/:id', authMiddleware, requireRole('admin'), async (req, re
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
-    if (email) {
-      await ensureStudentAccount(email);
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Username and password are required' });
     }
 
-    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    const inputVal = email.trim().toLowerCase();
+    
+    // First sync the student account if we can find them
+    await ensureStudentAccount(email);
+
+    // Try to find student first by email or mobile
+    const student = await Student.findOne({
+      $or: [
+        { email: inputVal },
+        { mobile: email.trim() }
+      ]
+    });
+
+    let user = null;
+    if (student) {
+      user = await User.findOne({ studentId: student._id });
+    } else {
+      user = await User.findOne({ email: inputVal });
+    }
+
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: 'Access Denied: Invalid Credentials' });
     }
 
+    let studentType = '';
+    if (user.role === 'student' && user.studentId) {
+      const studentRec = await Student.findById(user.studentId);
+      if (studentRec) {
+        studentType = studentRec.studentType || 'Regular';
+      }
+    }
+
     const token = signJwt({ id: user._id, email: user.email, role: user.role, name: user.name });
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+    res.json({ 
+      token, 
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        email: user.email, 
+        role: user.role, 
+        studentType 
+      } 
+    });
   } catch (error) {
     res.status(500).json({ message: 'Auth server error', error: error.message });
   }
@@ -371,30 +323,34 @@ router.get('/me', authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
     
     let grade = '';
-    let splRegistrationId = null;
     let studentProfile = null;
 
     if (user.role === 'student') {
+      let student = null;
       if (user.studentId) {
-        const student = await Student.findById(user.studentId);
-        if (student) {
-          grade = student.grade || '';
-          studentProfile = student.toObject();
-        }
+        student = await Student.findById(user.studentId);
       } else {
-        const splRegistration = await SplRegistration.findOne({ email: user.email.trim().toLowerCase() });
-        if (splRegistration) {
-          grade = splRegistration.grade || '';
-          splRegistrationId = splRegistration._id;
-          studentProfile = splRegistration.toObject();
+        student = await Student.findOne({
+          $or: [
+            { email: user.email.trim().toLowerCase() },
+            { mobile: user.email.trim() }
+          ]
+        });
+        if (student) {
+          user.studentId = student._id;
+          await user.save();
         }
+      }
+
+      if (student) {
+        grade = student.grade || '';
+        studentProfile = student.toObject();
       }
     }
 
     res.json({
       ...user.toObject(),
       grade,
-      splRegistrationId,
       studentProfile
     });
   } catch (error) {
@@ -402,7 +358,7 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
-// Get user resume data from Student (directory) or SPL Registration
+// Get user resume data from Student (directory)
 router.get('/my-resume', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -410,25 +366,28 @@ router.get('/my-resume', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Only students have a resume' });
     }
 
+    let student = null;
     if (user.studentId) {
-      const student = await Student.findById(user.studentId);
-      if (!student) {
-        return res.status(404).json({ message: 'Student record not found' });
-      }
-      res.json(student.resumeData || {});
+      student = await Student.findById(user.studentId);
     } else {
-      const splRegistration = await SplRegistration.findOne({ email: user.email.trim().toLowerCase() });
-      if (!splRegistration) {
-        return res.status(404).json({ message: 'SPL Registration not found for this user' });
-      }
-      res.json(splRegistration.resumeData || {});
+      student = await Student.findOne({
+        $or: [
+          { email: user.email.trim().toLowerCase() },
+          { mobile: user.email.trim() }
+        ]
+      });
     }
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student record not found' });
+    }
+    res.json(student.resumeData || {});
   } catch (error) {
     res.status(500).json({ message: 'Server error fetching resume', error: error.message });
   }
 });
 
-// Update user resume data on Student (directory) or SPL Registration
+// Update user resume data on Student (directory)
 router.put('/my-resume', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -436,25 +395,25 @@ router.put('/my-resume', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Only students can update resumes' });
     }
 
+    let student = null;
     if (user.studentId) {
-      const student = await Student.findByIdAndUpdate(
-        user.studentId,
-        { resumeData: req.body },
-        { returnDocument: 'after' }
-      );
-      if (!student) {
-        return res.status(404).json({ message: 'Student record not found' });
-      }
-      res.json({ message: 'Resume saved successfully', resumeData: student.resumeData });
+      student = await Student.findById(user.studentId);
     } else {
-      const splRegistration = await SplRegistration.findOne({ email: user.email.trim().toLowerCase() });
-      if (!splRegistration) {
-        return res.status(404).json({ message: 'SPL Registration not found for this user' });
-      }
-      splRegistration.resumeData = req.body;
-      await splRegistration.save();
-      res.json({ message: 'Resume saved successfully', resumeData: splRegistration.resumeData });
+      student = await Student.findOne({
+        $or: [
+          { email: user.email.trim().toLowerCase() },
+          { mobile: user.email.trim() }
+        ]
+      });
     }
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student record not found' });
+    }
+
+    student.resumeData = req.body;
+    await student.save();
+    res.json({ message: 'Resume saved successfully', resumeData: student.resumeData });
   } catch (error) {
     res.status(500).json({ message: 'Server error saving resume', error: error.message });
   }
@@ -642,5 +601,8 @@ router.post('/change-password', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Password update failed', error: error.message });
   }
 });
+
+// Sync student accounts on startup
+ensureAllStudentAccounts();
 
 export default router;

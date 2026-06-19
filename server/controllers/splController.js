@@ -1,4 +1,4 @@
-import SplRegistration from '../models/SplRegistration.js';
+import Student from '../models/Student.js';
 import User from '../models/User.js';
 import Task from '../models/Task.js';
 import DailyActivity from '../models/DailyActivity.js';
@@ -12,7 +12,7 @@ export const createRegistration = async (req, res) => {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    const existing = await SplRegistration.findOne({ email });
+    const existing = await Student.findOne({ email });
     if (existing) {
       return res.status(409).json({ message: 'This email is already registered' });
     }
@@ -20,11 +20,13 @@ export const createRegistration = async (req, res) => {
     const payload = {
       ...req.body,
       email,
+      studentType: 'SPL',
+      isFrontend: false,
       ip: req.ip || req.headers['x-forwarded-for'] || '',
       userAgent: req.headers['user-agent'] || ''
     };
 
-    const reg = new SplRegistration(payload);
+    const reg = new Student(payload);
     await reg.save();
 
     if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
@@ -45,7 +47,7 @@ export const createRegistration = async (req, res) => {
 
 export const listRegistrations = async (req, res) => {
   try {
-    const regs = await SplRegistration.find().sort({ createdAt: -1 });
+    const regs = await Student.find({ studentType: 'SPL' }).sort({ createdAt: -1 });
     res.json(regs);
   } catch (err) {
     res.status(500).json({ message: 'Failed to list registrations' });
@@ -56,7 +58,11 @@ export const updateRegistration = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
-    const reg = await SplRegistration.findByIdAndUpdate(id, updates, { returnDocument: 'after' });
+    const reg = await Student.findOneAndUpdate(
+      { _id: id, studentType: 'SPL' }, 
+      updates, 
+      { returnDocument: 'after' }
+    );
     if (!reg) return res.status(404).json({ message: 'Registration not found' });
     res.json(reg);
   } catch (err) {
@@ -67,10 +73,10 @@ export const updateRegistration = async (req, res) => {
 export const deleteRegistration = async (req, res) => {
   try {
     const { id } = req.params;
-    const reg = await SplRegistration.findById(id);
+    const reg = await Student.findOne({ _id: id, studentType: 'SPL' });
     if (!reg) return res.status(404).json({ message: 'Registration not found' });
 
-    // 1. Delete all Attendance linked to this SPL Registration
+    // 1. Delete all Attendance linked to this Student ID
     await Attendance.deleteMany({ studentId: reg._id });
 
     // 2. Find associated User account via email
@@ -86,8 +92,8 @@ export const deleteRegistration = async (req, res) => {
       }
     }
 
-    // 6. Delete the SPL Registration itself
-    await SplRegistration.findByIdAndDelete(id);
+    // 6. Delete the Student record
+    await Student.findByIdAndDelete(id);
 
     res.json({ message: 'Registration deleted successfully' });
   } catch (err) {

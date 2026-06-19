@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { AppShell, SurfaceCard } from '../components/AppShell';
+import { AppShell, SurfaceCard, SectionTabs } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
 import { Plus, ClipboardList, Trash2 } from 'lucide-react';
+import TaskList from './TaskList';
+import AdminMockBoard from './AdminMockBoard';
 
 export default function TaskManagement() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.selectedStudentIds ? 'assign' : 'list');
   const [students, setStudents] = useState([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,12 +125,41 @@ export default function TaskManagement() {
 
   return (
     <AppShell
-      title="Task Assignment"
-      subtitle="Assign new tasks to registered SPL students."
-      searchPlaceholder="Search students"
+      title="Tasks & Mock Board"
+      subtitle="Manage task assignments, track progress, and coordinate mock interviews."
     >
-      <div className="max-w-4xl mx-auto">
-        <SurfaceCard className="p-8">
+      <SectionTabs
+        items={[
+          {
+            label: 'Active Assignments',
+            active: activeTab === 'list',
+            onClick: () => setActiveTab('list')
+          },
+          {
+            label: 'Assign New Task',
+            active: activeTab === 'assign',
+            onClick: () => setActiveTab('assign')
+          },
+          {
+            label: 'Mock Interview Board',
+            active: activeTab === 'mock',
+            onClick: () => setActiveTab('mock')
+          }
+        ]}
+      />
+
+      <div className="mt-6">
+        {activeTab === 'list' && (
+          <TaskList isEmbedded={true} onSwitchTab={setActiveTab} />
+        )}
+
+        {activeTab === 'mock' && (
+          <AdminMockBoard isEmbedded={true} />
+        )}
+
+        {activeTab === 'assign' && (
+          <div className="max-w-4xl mx-auto">
+            <SurfaceCard className="p-8">
           <div className="mb-8 flex items-center gap-3">
             <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
               <ClipboardList size={26} />
@@ -391,7 +423,9 @@ export default function TaskManagement() {
               </button>
             </div>
           </form>
-        </SurfaceCard>
+            </SurfaceCard>
+          </div>
+        )}
       </div>
     </AppShell>
   );

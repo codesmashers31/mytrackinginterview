@@ -1,6 +1,6 @@
 import LeaveRequest from '../models/LeaveRequest.js';
 import Attendance from '../models/Attendance.js';
-import SplRegistration from '../models/SplRegistration.js';
+import Student from '../models/Student.js';
 import User from '../models/User.js';
 import { createNotification, notifyAdmins } from '../utils/notifications.js';
 
@@ -136,8 +136,8 @@ export const reviewLeaveRequest = async (req, res) => {
       let current = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
       const finalEnd = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
 
-      // Resolve student profile in SplRegistration to fetch the correct studentId
-      const student = await SplRegistration.findOne({ email: leaveRequest.studentEmail.toLowerCase() });
+      // Resolve student profile in Student to fetch the correct studentId
+      const student = await Student.findOne({ email: leaveRequest.studentEmail.toLowerCase() });
       const splStudentId = student ? student._id : leaveRequest.studentId;
 
       while (current <= finalEnd) {

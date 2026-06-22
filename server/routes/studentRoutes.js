@@ -8,6 +8,12 @@ import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
+const getSplIdentifiers = async () => {
+    const spls = await Student.find({ studentType: 'SPL' }, 'email mobile').lean();
+    const splEmails = spls.map(s => s.email ? s.email.trim().toLowerCase() : '').filter(Boolean);
+    const splMobiles = spls.map(s => s.mobile ? s.mobile.trim() : '').filter(Boolean);
+    return { splEmails, splMobiles };
+};
 
 router.get('/', authMiddleware, async (req, res) => {
     try {
@@ -20,20 +26,16 @@ router.get('/', authMiddleware, async (req, res) => {
             query.isFrontend = true;
         } else if (isFrontend === 'false') {
             query.isFrontend = { $ne: true };
+            query.studentType = { $ne: 'SPL' };
+            const { splEmails, splMobiles } = await getSplIdentifiers();
+            if (splEmails.length > 0) query.email = { $nin: splEmails };
+            if (splMobiles.length > 0) query.mobile = { $nin: splMobiles };
         } else if (all !== 'true') {
             query.isFrontend = { $ne: true };
-            
-            // Exclude SPL students from the regular directory list
-            const spls = await SplRegistration.find({}, 'email mobile').lean();
-            const splEmails = spls.map(s => s.email ? s.email.trim().toLowerCase() : '').filter(Boolean);
-            const splMobiles = spls.map(s => s.mobile ? s.mobile.trim() : '').filter(Boolean);
-            
-            if (splEmails.length > 0) {
-                query.email = { $nin: splEmails };
-            }
-            if (splMobiles.length > 0) {
-                query.mobile = { $nin: splMobiles };
-            }
+            query.studentType = { $ne: 'SPL' };
+            const { splEmails, splMobiles } = await getSplIdentifiers();
+            if (splEmails.length > 0) query.email = { $nin: splEmails };
+            if (splMobiles.length > 0) query.mobile = { $nin: splMobiles };
         }
         
         if (search) {
@@ -62,11 +64,8 @@ router.get('/', authMiddleware, async (req, res) => {
 // GET dashboard stats (protected)
 router.get('/stats', authMiddleware, async (req, res) => {
     try {
-        const spls = await SplRegistration.find({}, 'email mobile').lean();
-        const splEmails = spls.map(s => s.email ? s.email.trim().toLowerCase() : '').filter(Boolean);
-        const splMobiles = spls.map(s => s.mobile ? s.mobile.trim() : '').filter(Boolean);
-
-        const regularQuery = { isFrontend: { $ne: true } };
+        const { splEmails, splMobiles } = await getSplIdentifiers();
+        const regularQuery = { isFrontend: { $ne: true }, studentType: { $ne: 'SPL' } };
         
         if (splEmails.length > 0) {
             regularQuery.email = { $nin: splEmails };
@@ -185,15 +184,13 @@ router.post('/bulk-delete', authMiddleware, async (req, res) => {
     }
 });
 
-import SplRegistration from '../models/SplRegistration.js';
-
 // POST Eligibility Checker (protected)
 router.post('/eligible', authMiddleware, async (req, res) => {
     try {
         const { degrees, years, statuses, page = 1, limit = 10, fetchAll = false } = req.body;
         
-        let studentQuery = {};
-        let splQuery = {};
+        let studentQuery = { studentType: { $ne: 'SPL' } };
+        let splQuery = { studentType: 'SPL' };
 
         if (degrees && degrees.length > 0) {
             const regexes = degrees.map(d => new RegExp(`^${d}$`, 'i'));
@@ -214,7 +211,7 @@ router.post('/eligible', authMiddleware, async (req, res) => {
         }
 
         const students = await Student.find(studentQuery).lean();
-        const spls = await SplRegistration.find(splQuery).lean();
+        const spls = await Student.find(splQuery).lean();
 
         // Deduplicate using mobile and email
         const uniqueMobiles = new Set(students.map(s => s.mobile).filter(Boolean));

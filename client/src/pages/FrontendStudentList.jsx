@@ -12,6 +12,7 @@ import { buildApiUrl } from '../utils/api';
 export default function FrontendStudentList() {
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -53,6 +54,22 @@ export default function FrontendStudentList() {
       setLoading(false);
     }
   };
+
+  const fetchTeams = async () => {
+    try {
+      const res = await fetch(buildApiUrl('/teams'), { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setTeams(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeams();
+  }, []);
 
   useEffect(() => {
     fetchStudents();
@@ -318,6 +335,7 @@ export default function FrontendStudentList() {
                 <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Candidate Info</th>
                 <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Contact</th>
                 <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Batch details</th>
+                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Team</th>
                 <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Location</th>
                 <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Actions</th>
               </tr>
@@ -326,7 +344,7 @@ export default function FrontendStudentList() {
             <tbody className="divide-y divide-slate-100 bg-white">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="px-5 py-12 text-center">
+                  <td colSpan="8" className="px-5 py-12 text-center">
                     <div className="flex items-center justify-center gap-2 text-slate-500">
                       <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
                       <span className="text-sm font-semibold">Retrieving Frontend candidates...</span>
@@ -335,7 +353,7 @@ export default function FrontendStudentList() {
                 </tr>
               ) : currentItems.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-5 py-12 text-center text-sm font-semibold text-slate-500">
+                  <td colSpan="8" className="px-5 py-12 text-center text-sm font-semibold text-slate-500">
                     No frontend student records found matching the active filters.
                   </td>
                 </tr>
@@ -364,6 +382,11 @@ export default function FrontendStudentList() {
                         <p className="font-semibold text-slate-800">{student.batch || 'No batch'}</p>
                         <p className="text-xs text-slate-400">Class of {student.passedOutYear || 'N/A'}</p>
                       </div>
+                    </td>
+                    <td className="px-5 py-3 text-sm">
+                      <span className="font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full text-xs">
+                        {teams.find(t => t.members.some(m => m._id === student._id || m === student._id))?.name || '-'}
+                      </span>
                     </td>
                     <td className="px-5 py-3 text-sm font-semibold text-slate-600">
                       {student.city || '-'}

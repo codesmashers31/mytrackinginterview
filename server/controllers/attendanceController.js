@@ -1,6 +1,8 @@
 import Attendance from '../models/Attendance.js';
-import SplRegistration from '../models/SplRegistration.js';
+import Student from '../models/Student.js';
 import User from '../models/User.js';
+import { createNotification, notifyAdmins } from '../utils/notifications.js';
+
 
 const parseUTCDate = (dateString) => {
   const [year, month, day] = dateString.split('-').map(Number);
@@ -20,7 +22,7 @@ export const markAttendance = async (req, res) => {
     }
 
     // Verify student exists
-    const student = await SplRegistration.findById(studentId);
+    const student = await Student.findById(studentId);
     if (!student) {
       return res.status(404).json({ message: 'Student not found' });
     }
@@ -83,7 +85,7 @@ export const markBulkAttendance = async (req, res) => {
       }
 
       try {
-        const student = await SplRegistration.findById(studentId);
+        const student = await Student.findById(studentId);
         if (!student) {
           results.push({
             studentId,
@@ -320,8 +322,8 @@ export const getUnmarkedStudents = async (req, res) => {
     const nextDate = new Date(targetDate);
     nextDate.setUTCDate(nextDate.getUTCDate() + 1);
 
-    // Get only shortlisted SPL students
-    const allStudents = await SplRegistration.find({ status: 'Shortlisted' });
+    // Get all active students (not inactive)
+    const allStudents = await Student.find({ currentStatus: { $not: /^inactive/i } });
 
     // Get marked attendance for this date
     const markedAttendance = await Attendance.find({
@@ -379,11 +381,14 @@ export const studentCheckIn = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Find SPL registration by email
-    let student = await SplRegistration.findOne({ email: user.email.toLowerCase() });
+    let student = null;
+    if (user.studentId) {
+      student = await Student.findById(user.studentId);
+    }
+    if (!student) {
+      student = await Student.findOne({ email: user.email.toLowerCase() });
+    }
 
-    // If no SPL registration, use user details directly as a fallback studentId reference
-    // We create a synthetic record using the userId so students without SPL can still check in
     const splStudentId = student ? student._id : userId;
     const studentName = student ? student.name : user.name;
     const studentEmail = student ? student.email : user.email;
@@ -410,6 +415,20 @@ export const studentCheckIn = async (req, res) => {
       });
       await attendance.save();
     }
+
+    // Send in-app notifications
+    const checkInTimeString = new Date(attendance.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    await createNotification(
+      userId,
+      'Check-in Successful',
+      `You checked in successfully at ${checkInTimeString}. Remember to check out at the end of your shift.`,
+      'attendance'
+    );
+    await notifyAdmins(
+      'Student Checked In',
+      `${studentName} has checked in today at ${checkInTimeString}.`,
+      'attendance'
+    );
 
     res.status(201).json(attendance);
   } catch (err) {
@@ -459,6 +478,21 @@ export const studentCheckOut = async (req, res) => {
     }
 
     await attendance.save();
+
+    // Send in-app notifications
+    const checkOutTimeString = new Date(attendance.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    await createNotification(
+      userId,
+      'Check-out Successful',
+      `You checked out successfully at ${checkOutTimeString}. Total Hours: ${attendance.totalHours} hrs.`,
+      'attendance'
+    );
+    await notifyAdmins(
+      'Student Checked Out',
+      `${user.name} has checked out today at ${checkOutTimeString}. Total Hours: ${attendance.totalHours} hrs.`,
+      'attendance'
+    );
+
     res.json(attendance);
   } catch (err) {
     console.error('Check-out error:', err);

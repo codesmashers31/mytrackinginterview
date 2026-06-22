@@ -22,9 +22,11 @@ function getValidBatchYear(year) {
 export default function StudentList() {
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [studentTypeFilter, setStudentTypeFilter] = useState('All');
   const [batchFilter, setBatchFilter] = useState('All');
   const [sortBy, setSortBy] = useState('batch-desc');
   
@@ -50,6 +52,11 @@ export default function StudentList() {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter !== 'All') params.append('status', statusFilter);
+      if (studentTypeFilter !== 'All') {
+        params.append('studentType', studentTypeFilter);
+      } else {
+        params.append('all', 'true');
+      }
 
       const res = await fetch(`${buildApiUrl('/students')}?${params.toString()}`, {
         headers: { ...authHeaders() },
@@ -67,9 +74,25 @@ export default function StudentList() {
     }
   };
 
+  const fetchTeams = async () => {
+    try {
+      const res = await fetch(buildApiUrl('/teams'), { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setTeams(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeams();
+  }, []);
+
   useEffect(() => {
     fetchStudents();
-  }, [statusFilter]);
+  }, [statusFilter, studentTypeFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -302,14 +325,39 @@ export default function StudentList() {
       searchValue={searchTerm}
       onSearchChange={setSearchTerm}
     >
-           <SectionTabs
-             items={[
-               { label: 'Overview', onClick: () => navigate('/dashboard') },
-               { label: 'Students', active: true },
-               { label: 'Frontend Students', onClick: () => navigate('/admin/frontend-students') },
-               { label: 'Eligibility', onClick: () => navigate('/eligibility') },
-             ]}
-           />
+            <SectionTabs
+              items={[
+                { label: 'Overview', onClick: () => navigate('/dashboard') },
+                { label: 'Student Directory', active: true },
+                { label: 'Eligibility', onClick: () => navigate('/eligibility') },
+              ]}
+            />
+
+            {/* Student Type Sub-tabs */}
+            <div className="flex bg-slate-100 p-1 rounded-xl w-fit mb-4 mt-4">
+              {[
+                { label: 'All Candidates', value: 'All' },
+                { label: 'Regular Track', value: 'Regular' },
+                { label: 'Frontend Track', value: 'Frontend' },
+                { label: 'SPL Class', value: 'SPL' }
+              ].map(tab => (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => {
+                    setStudentTypeFilter(tab.value);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                    studentTypeFilter === tab.value 
+                      ? 'bg-white text-blue-700 shadow-sm' 
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
            {/* Toolbar */}
            <div className="mb-3 flex flex-col gap-2">
@@ -439,20 +487,22 @@ export default function StudentList() {
                          className="w-4 h-4 text-[#4338ca] rounded border-slate-300 focus:ring-[#4338ca] cursor-pointer"
                        />
                      </th>
-                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Name</th>
-                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Mobile</th>
-                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Degree</th>
-                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Batch Year</th>
-                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Institute Batch</th>
-                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Grade</th>
-                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Status</th>
+                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Name</th>
+                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Mobile</th>
+                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Classification</th>
+                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Degree</th>
+                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Batch Year</th>
+                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Institute Batch</th>
+                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Team</th>
+                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Grade</th>
+                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Status</th>
                      <th className="px-3 py-2 text-right text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Actions</th>
                    </tr>
                  </thead>
                  <tbody className="bg-white">
                    {loading ? (
                      <tr>
-                       <td colSpan="9" className="px-4 py-8 md:py-10 text-center">
+                       <td colSpan="10" className="px-4 py-8 md:py-10 text-center">
                           <div className="animate-spin h-8 w-8 border-4 border-[#4338ca] border-t-transparent flex items-center justify-center rounded-full mx-auto mb-4"></div>
                        </td>
                      </tr>
@@ -466,35 +516,51 @@ export default function StudentList() {
                            className="w-4 h-4 text-[#4338ca] rounded border-slate-300 focus:ring-[#4338ca] cursor-pointer"
                          />
                        </td>
-                       <td className="px-3 py-2.5">
-                          <div className="text-[12px] md:text-[13px] font-bold text-[#1e293b] whitespace-nowrap">{student.name}</div>
-                       </td>
-                       <td className="px-3 py-2.5">
-                          <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">{student.mobile}</div>
-                       </td>
-                       <td className="px-3 py-2.5">
-                          <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">{student.degree}</div>
-                       </td>
-                       <td className="px-3 py-2.5">
-                          <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">
-                            {getValidBatchYear(student.passedOutYear) || 'Not Added'}
-                          </div>
-                       </td>
-                       <td className="px-3 py-2.5">
-                          <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">{student.batch || '-'}</div>
-                       </td>
-                       <td className="px-3 py-2.5">
-                          <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">
-                            {student.grade ? (
-                              <span className={`inline-flex items-center justify-center h-5 w-5 rounded text-[10px] font-bold ${student.grade === 'A' ? 'bg-emerald-100 text-emerald-700' : student.grade === 'B' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
-                                {student.grade}
-                              </span>
-                            ) : '-'}
-                          </div>
-                       </td>
-                       <td className="px-3 py-2.5">
-                          <StatusBadge status={student.currentStatus} />
-                       </td>
+                        <td className="px-3 py-2.5">
+                           <div className="text-[12px] md:text-[13px] font-bold text-[#1e293b] whitespace-nowrap">{student.name}</div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                           <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">{student.mobile}</div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
+                             student.studentType === 'Frontend' 
+                               ? 'bg-amber-100 text-amber-800' 
+                               : student.studentType === 'SPL' 
+                                 ? 'bg-purple-100 text-purple-800' 
+                                 : 'bg-blue-100 text-blue-800'
+                           }`}>
+                              {student.studentType || 'Regular'}
+                           </span>
+                        </td>
+                        <td className="px-3 py-2.5">
+                           <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">{student.degree}</div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                           <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">
+                             {getValidBatchYear(student.passedOutYear) || 'Not Added'}
+                           </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                           <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">{student.batch || '-'}</div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                           <div className="text-[11px] md:text-[12px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full inline-block whitespace-nowrap">
+                              {teams.find(t => t.members.some(m => m._id === student._id || m === student._id))?.name || '-'}
+                            </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                           <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">
+                             {student.grade ? (
+                               <span className={`inline-flex items-center justify-center h-5 w-5 rounded text-[10px] font-bold ${student.grade === 'A' ? 'bg-emerald-100 text-emerald-700' : student.grade === 'B' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                                 {student.grade}
+                               </span>
+                             ) : '-'}
+                           </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                           <StatusBadge status={student.currentStatus} />
+                        </td>
                        <td className="px-3 py-2.5 text-right">
                           <div className="flex justify-end space-x-2">
                             <button 
@@ -622,7 +688,15 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
     others: student?.others || '',
     companyName: student?.companyName || '',
     packageLpa: student?.packageLpa || '',
-    jobGetMode: student?.jobGetMode || ''
+    jobGetMode: student?.jobGetMode || '',
+    studentType: student?.studentType || 'Regular',
+    stack: student?.stack || '',
+    willingCompanyProcess: !!student?.willingCompanyProcess,
+    willing30Days: student?.willing30Days || '',
+    acceptOffer: student?.acceptOffer || '',
+    fullEffort: student?.fullEffort || '',
+    issues: student?.issues || '',
+    needMost: student?.needMost || ''
   });
 
   const statusOptions = [
@@ -724,9 +798,17 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
                    <label className="crm-label">Institute Batch</label>
                    <input value={formData.batch} onChange={e => setFormData({...formData, batch: e.target.value})} className="crm-input" placeholder="2024-A / Morning / Section A" />
                 </div>
-                <div className="md:col-span-2">
+                <div>
+                   <label className="crm-label">Student Classification</label>
+                   <select required value={formData.studentType} onChange={e => setFormData({...formData, studentType: e.target.value})} className="crm-input">
+                      <option value="Regular">Regular Track</option>
+                      <option value="Frontend">Frontend Track</option>
+                      <option value="SPL">SPL Class</option>
+                   </select>
+                </div>
+                <div>
                    <label className="crm-label">Student Grade</label>
-                   <select value={formData.grade} onChange={e => setFormData({...formData, grade: e.target.value})} className="crm-input w-full md:w-1/2">
+                   <select value={formData.grade} onChange={e => setFormData({...formData, grade: e.target.value})} className="crm-input">
                       <option value="">Unassigned</option>
                       <option value="A">Grade A</option>
                       <option value="B">Grade B</option>
@@ -799,6 +881,52 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
                       )}
                    </div>
                 </div>
+
+                {formData.studentType === 'SPL' && (
+                   <div className="md:col-span-2 pt-5 md:pt-6 border-t border-slate-100 mt-4">
+                      <h4 className="text-[13px] md:text-[14px] font-extrabold text-[#1e293b] mb-3 md:mb-4">SPL Candidate Telemetry</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                         <div>
+                            <label className="crm-label">Tech Stack</label>
+                            <select value={formData.stack} onChange={e => setFormData({...formData, stack: e.target.value})} className="crm-input">
+                               <option value="">Select Stack</option>
+                               <option value="MERN Stack">MERN Stack</option>
+                               <option value="Java Full Stack">Java Full Stack</option>
+                               <option value="Python Full Stack">Python Full Stack</option>
+                               <option value="Frontend Development">Frontend Development</option>
+                               <option value="QA / Testing">QA / Testing</option>
+                               <option value="Data Science / AI">Data Science / AI</option>
+                            </select>
+                         </div>
+                         <div className="flex items-center pt-6">
+                            <label className="flex items-center space-x-2.5 cursor-pointer">
+                               <input type="checkbox" checked={formData.willingCompanyProcess} onChange={e => setFormData({...formData, willingCompanyProcess: e.target.checked})} className="h-4.5 w-4.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" />
+                               <span className="text-xs font-bold text-slate-700">Willing to join company process?</span>
+                            </label>
+                         </div>
+                         <div>
+                            <label className="crm-label">Willingness for 30 Days Dedication</label>
+                            <input value={formData.willing30Days} onChange={e => setFormData({...formData, willing30Days: e.target.value})} className="crm-input" placeholder="e.g. Yes, fully committed" />
+                         </div>
+                         <div>
+                            <label className="crm-label">Will you accept offer if placed?</label>
+                            <input value={formData.acceptOffer} onChange={e => setFormData({...formData, acceptOffer: e.target.value})} className="crm-input" placeholder="e.g. Yes" />
+                         </div>
+                         <div>
+                            <label className="crm-label">Will you put full effort?</label>
+                            <input value={formData.fullEffort} onChange={e => setFormData({...formData, fullEffort: e.target.value})} className="crm-input" placeholder="e.g. Yes, 100%" />
+                         </div>
+                         <div>
+                            <label className="crm-label">Any current issues?</label>
+                            <input value={formData.issues} onChange={e => setFormData({...formData, issues: e.target.value})} className="crm-input" placeholder="e.g. None" />
+                         </div>
+                         <div className="md:col-span-2">
+                            <label className="crm-label">What do you need support in the most?</label>
+                            <textarea value={formData.needMost} onChange={e => setFormData({...formData, needMost: e.target.value})} className="crm-input min-h-[4rem] resize-none" placeholder="e.g. Coding mock practice" />
+                         </div>
+                      </div>
+                   </div>
+                 )}
              </div>
 
              <div className="mt-6 md:mt-8 flex flex-col-reverse sm:flex-row justify-end gap-2.5 md:gap-3">
@@ -859,6 +987,18 @@ function StudentDetailModal({ onClose, student }) {
                      <DetailRow label="Corporate Entity" val={student.companyName || 'Classified'} />
                      <DetailRow label="Value Compensation" val={student.packageLpa ? `${student.packageLpa} LPA` : 'Undisclosed'} />
                      {student.jobGetMode && <DetailRow label="Acquisition Vector" val={student.jobGetMode} />}
+                  </div>
+                )}
+                {student.studentType === 'SPL' && (
+                  <div className="pt-5 mt-5 border-t border-slate-100 space-y-3">
+                     <p className="text-[11px] md:text-[13px] font-extrabold text-[#4338ca] uppercase tracking-widest mb-3">SPL Telemetry</p>
+                     <DetailRow label="Technical Stack" val={student.stack || 'Not Specified'} />
+                     <DetailRow label="Company Process Willingness" val={student.willingCompanyProcess ? 'Yes' : 'No'} />
+                     <DetailRow label="Willing to join in 30 Days" val={student.willing30Days || 'Not Specified'} />
+                     <DetailRow label="Accept Offer" val={student.acceptOffer || 'Not Specified'} />
+                     <DetailRow label="Full Effort" val={student.fullEffort || 'Not Specified'} />
+                     <DetailRow label="Current Issues" val={student.issues || 'None'} />
+                     <DetailRow label="Support Needed Most" val={student.needMost || 'None'} />
                   </div>
                 )}
              </div>

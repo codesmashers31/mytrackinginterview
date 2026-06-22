@@ -11,12 +11,16 @@ const upload = multer({ dest: 'uploads/' });
 
 router.get('/', authMiddleware, async (req, res) => {
     try {
-        const { search, status, degree, year, isFrontend } = req.query;
+        const { search, status, degree, year, isFrontend, all, studentType } = req.query;
         let query = {};
         
-        if (isFrontend === 'true') {
+        if (studentType) {
+            query.studentType = studentType;
+        } else if (isFrontend === 'true') {
             query.isFrontend = true;
-        } else {
+        } else if (isFrontend === 'false') {
+            query.isFrontend = { $ne: true };
+        } else if (all !== 'true') {
             query.isFrontend = { $ne: true };
             
             // Exclude SPL students from the regular directory list
@@ -45,7 +49,7 @@ router.get('/', authMiddleware, async (req, res) => {
         }
         
         if (status && status !== 'All') query.currentStatus = { $regex: new RegExp(`^${status}$`, 'i') };
-        if (degree) query.degree = { $regex: new RegExp(`^${degree}$`, 'i') };
+        if (degree && degree !== 'All') query.degree = { $regex: new RegExp(`^${degree}$`, 'i') };
         if (year) query.passedOutYear = year;
 
         const students = await Student.find(query).sort({ createdAt: -1 });
@@ -107,10 +111,11 @@ router.get('/stats', authMiddleware, async (req, res) => {
     }
 });
 
-// POST new student (public - used by SPL registration form)
 router.post('/', async (req, res) => {
     try {
-        const student = new Student(req.body);
+        const payload = { ...req.body };
+        payload.isFrontend = payload.studentType === 'Frontend';
+        const student = new Student(payload);
         await student.save();
         res.status(201).json(student);
     } catch (error) {
@@ -118,15 +123,18 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PUT update student (protected)
 router.put('/:id', authMiddleware, async (req, res) => {
     try {
-        const student = await Student.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
+        const payload = { ...req.body };
+        if (payload.studentType) {
+            payload.isFrontend = payload.studentType === 'Frontend';
+        }
+        const student = await Student.findByIdAndUpdate(req.params.id, payload, { returnDocument: 'after' });
         if (student) {
             const user = await User.findOne({ studentId: student._id });
             if (user) {
                 user.name = student.name;
-                if (student.isFrontend) {
+                if (student.studentType === 'SPL') {
                     user.email = student.email ? student.email.trim().toLowerCase() : student.mobile.trim();
                 } else {
                     user.email = student.mobile.trim();

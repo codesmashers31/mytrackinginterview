@@ -8,7 +8,7 @@ import { Pencil, Trash2, ArrowLeft, Clock, AlertCircle, CheckCircle2, ChevronRig
 
 const STATUS_OPTIONS = ['Pending', 'In Progress', 'Review', 'Blocked', 'Completed'];
 
-export default function TaskList() {
+export default function TaskList({ isEmbedded = false, onSwitchTab }) {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -113,17 +113,10 @@ export default function TaskList() {
     }
   };
 
-  return (
-    <AppShell
-      title="Assigned Tasks"
-      subtitle="Review and update task assignments in a dedicated table view."
-      searchPlaceholder="Search tasks..."
-      searchValue={searchQuery}
-      onSearchChange={setSearchQuery}
-    >
-      <div className="space-y-6">
-        {!selectedTask ? (
-          <>
+  const content = (
+    <div className="space-y-6">
+      {!selectedTask ? (
+        <>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
               <div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -142,7 +135,7 @@ export default function TaskList() {
               <div>
                 <button
                   type="button"
-                  onClick={() => navigate('/tasks')}
+                  onClick={() => isEmbedded ? onSwitchTab?.('assign') : navigate('/tasks')}
                   className="crm-btn-primary px-6 py-2.5 rounded-xl shadow-md flex items-center gap-2 w-full sm:w-auto"
                 >
                   Assign New Task
@@ -430,7 +423,20 @@ export default function TaskList() {
             </div>
           </div>
         )}
-      </div>
+    </div>
+  );
+
+  if (isEmbedded) return content;
+
+  return (
+    <AppShell
+      title="Assigned Tasks"
+      subtitle="Review and update task assignments in a dedicated table view."
+      searchPlaceholder="Search tasks..."
+      searchValue={searchQuery}
+      onSearchChange={setSearchQuery}
+    >
+      {content}
     </AppShell>
   );
 }

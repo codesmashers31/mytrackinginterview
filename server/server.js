@@ -17,7 +17,11 @@ import User from './models/User.js';
 import emailRoutes from './routes/emailRoutes.js';
 import dailyActivityRoutes from './routes/dailyActivityRoutes.js';
 import mockInterviewRoutes from './routes/mockInterviewRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+import leaveRoutes from './routes/leaveRoutes.js';
+import teamRoutes from './routes/teamRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
+
 
 dotenv.config();
 
@@ -42,6 +46,9 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/admin', emailRoutes);
 app.use('/api/daily-activities', dailyActivityRoutes);
 app.use('/api/mock-interviews', mockInterviewRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/leaves', leaveRoutes);
+app.use('/api/teams', teamRoutes);
 app.use(errorHandler);
 
 // Database Connection

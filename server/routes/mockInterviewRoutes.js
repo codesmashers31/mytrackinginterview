@@ -2,6 +2,8 @@ import express from 'express';
 import MockAvailability from '../models/MockAvailability.js';
 import MockInterview from '../models/MockInterview.js';
 import authMiddleware from '../middleware/authMiddleware.js';
+import { createNotification, notifyAdmins } from '../utils/notifications.js';
+
 
 const router = express.Router();
 
@@ -77,6 +79,38 @@ router.delete('/availability/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Update an availability block
+router.put('/availability/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    }
+    const { date, startTime, endTime } = req.body;
+    if (!date || !startTime || !endTime) {
+      return res.status(400).json({ message: 'Date, start time, and end time are required' });
+    }
+
+    if (timeToMins(startTime) >= timeToMins(endTime)) {
+      return res.status(400).json({ message: 'Start time must be before end time' });
+    }
+
+    const availability = await MockAvailability.findById(req.params.id);
+    if (!availability) {
+      return res.status(404).json({ message: 'Availability block not found' });
+    }
+
+    availability.date = date;
+    availability.startTime = startTime;
+    availability.endTime = endTime;
+    await availability.save();
+
+    res.json(availability);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating availability', error: error.message });
+  }
+});
+
+
 
 // --- BOOKING ENDPOINTS (ADMIN & STUDENT) ---
 
@@ -118,6 +152,15 @@ router.put('/bookings/:id/feedback', authMiddleware, async (req, res) => {
     };
 
     await booking.save();
+
+    // Send in-app notification to student
+    await createNotification(
+      booking.studentId,
+      'Mock Interview Feedback Recorded',
+      `Your mock interview feedback for ${booking.date} is ready. Score: ${booking.feedback.score}/10, Status: ${booking.feedback.status}.`,
+      'mock'
+    );
+
     res.json(booking);
   } catch (error) {
     res.status(500).json({ message: 'Error updating feedback', error: error.message });
@@ -144,6 +187,72 @@ router.put('/bookings/:id/status', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Error updating booking status', error: error.message });
   }
 });
+
+// Admin: Update general booking details (date, startTime, duration, status)
+router.put('/bookings/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    }
+    const { date, startTime, duration, status } = req.body;
+    const booking = await MockInterview.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    if (date) booking.date = date;
+    if (startTime) booking.startTime = startTime;
+    if (duration !== undefined) {
+      booking.duration = Number(duration);
+    }
+    if (startTime || duration !== undefined) {
+      const startMin = timeToMins(booking.startTime);
+      const endMin = startMin + booking.duration;
+      booking.endTime = minsToTime(endMin);
+    }
+    if (status) booking.status = status;
+
+    await booking.save();
+
+    // Send in-app notification to student
+    await createNotification(
+      booking.studentId,
+      'Mock Interview Updated',
+      `Your mock interview details were updated by an instructor to ${booking.date} at ${booking.startTime} (${booking.duration} mins).`,
+      'mock'
+    );
+
+    res.json(booking);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating booking', error: error.message });
+  }
+});
+
+// Admin: Delete a booking completely
+router.delete('/bookings/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    }
+    const booking = await MockInterview.findByIdAndDelete(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Send in-app notification to student
+    await createNotification(
+      booking.studentId,
+      'Mock Interview Deleted',
+      `Your mock interview booking scheduled for ${booking.date} at ${booking.startTime} has been cancelled/deleted by the administrator.`,
+      'mock'
+    );
+
+    res.json({ message: 'Booking deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting booking', error: error.message });
+  }
+});
+
 
 
 // Student: Get dynamically generated available slots for booking on a specific date
@@ -275,6 +384,20 @@ router.post('/bookings', authMiddleware, async (req, res) => {
     });
 
     await booking.save();
+
+    // Send in-app notifications
+    await createNotification(
+      req.user.id,
+      'Mock Interview Scheduled',
+      `You scheduled a mock interview on ${date} at ${startTime} (${dur} mins).`,
+      'mock'
+    );
+    await notifyAdmins(
+      'New Mock Interview Booking',
+      `Student ${booking.studentName} booked a mock interview for ${date} at ${startTime}.`,
+      'mock'
+    );
+
     res.status(201).json(booking);
   } catch (error) {
     res.status(500).json({ message: 'Failed to create booking', error: error.message });
@@ -310,6 +433,20 @@ router.put('/bookings/:id/cancel', authMiddleware, async (req, res) => {
 
     booking.status = 'Cancelled';
     await booking.save();
+
+    // Send in-app notifications
+    await createNotification(
+      req.user.id,
+      'Mock Interview Cancelled',
+      `You cancelled your mock interview scheduled for ${booking.date} at ${booking.startTime}.`,
+      'mock'
+    );
+    await notifyAdmins(
+      'Mock Interview Cancelled by Student',
+      `Student ${booking.studentName} has cancelled their mock interview scheduled for ${booking.date} at ${booking.startTime}.`,
+      'mock'
+    );
+
     res.json(booking);
   } catch (error) {
     res.status(500).json({ message: 'Error cancelling booking', error: error.message });

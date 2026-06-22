@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, Clock, CheckCircle2, AlertCircle, Trash2, Award, Star, ListFilter, HelpCircle, ClipboardList
 } from 'lucide-react';
@@ -7,7 +8,9 @@ import { AppShell, SectionTabs, SurfaceCard } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
 
-export default function StudentMockScheduler() {
+export default function StudentMockScheduler({ isEmbedded = false }) {
+  const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState('book'); // 'book', 'my-bookings'
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [duration, setDuration] = useState(30); // 30 or 60 minutes
@@ -118,17 +121,16 @@ export default function StudentMockScheduler() {
     }
   };
 
-  return (
-    <AppShell
-      title="Mock Interviews"
-      subtitle="Schedule your mock interviews with instructors and view performance feedbacks."
-    >
-      <SectionTabs
-        items={[
-          { label: 'Overview', onClick: () => {} },
-          { label: 'Mock Scheduler', active: true }
-        ]}
-      />
+  const content = (
+    <>
+      {!isEmbedded && (
+        <SectionTabs
+          items={[
+            { label: 'Overview', onClick: () => navigate('/student/dashboard') },
+            { label: 'Mock Scheduler', active: true }
+          ]}
+        />
+      )}
 
       {/* Tabs Row */}
       <div className="mb-6 flex border-b border-slate-200">
@@ -377,6 +379,17 @@ export default function StudentMockScheduler() {
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (isEmbedded) return content;
+
+  return (
+    <AppShell
+      title="Mock Interviews"
+      subtitle="Schedule your mock interviews with instructors and view performance feedbacks."
+    >
+      {content}
     </AppShell>
   );
 }

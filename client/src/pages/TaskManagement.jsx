@@ -24,6 +24,8 @@ export default function TaskManagement() {
     dueDate: '',
     questions: ['']
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [cooldownTime, setCooldownTime] = useState(0);
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -80,8 +82,17 @@ export default function TaskManagement() {
     }
   }, [typeFilter, prevTypeFilter]);
 
+  useEffect(() => {
+    if (cooldownTime <= 0) return;
+    const timer = setInterval(() => {
+      setCooldownTime(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldownTime]);
+
   const handleCreateTask = async (event) => {
     event.preventDefault();
+    if (submitting || cooldownTime > 0) return;
 
     const validQuestions = formData.questions
       .map(q => q.trim())
@@ -92,6 +103,7 @@ export default function TaskManagement() {
       return toast.error('Please choose at least one student, a title, and at least one valid question');
     }
 
+    setSubmitting(true);
     try {
       const promises = formData.studentIds.map(studentId => 
         fetch(buildApiUrl('/tasks'), {
@@ -114,8 +126,11 @@ export default function TaskManagement() {
 
       toast.success(`Tasks assigned successfully to ${formData.studentIds.length} student(s)`);
       setFormData({ studentIds: [], title: '', description: '', dueDate: '', questions: [''] });
+      setCooldownTime(30);
     } catch (err) {
       toast.error('Could not assign some or all tasks');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -385,9 +400,26 @@ export default function TaskManagement() {
               </div>
             </div>
 
-            <div className="pt-4 mt-6 border-t border-slate-100">
-              <button type="submit" className="w-full sm:w-auto crm-btn-primary flex items-center justify-center gap-2 px-8 py-3 text-base font-medium">
-                <Plus size={20} /> Assign Task to Selected Students
+             <div className="pt-4 mt-6 border-t border-slate-100">
+              <button 
+                type="submit" 
+                disabled={submitting || cooldownTime > 0}
+                className={`w-full sm:w-auto crm-btn-primary flex items-center justify-center gap-2 px-8 py-3 text-base font-medium ${(submitting || cooldownTime > 0) ? 'opacity-50 cursor-not-allowed bg-slate-400' : ''}`}
+              >
+                {submitting ? (
+                  <>
+                    <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
+                    Assigning Tasks...
+                  </>
+                ) : cooldownTime > 0 ? (
+                  <>
+                    <Plus size={20} /> Assign Task to Selected Students (Wait {cooldownTime}s)
+                  </>
+                ) : (
+                  <>
+                    <Plus size={20} /> Assign Task to Selected Students
+                  </>
+                )}
               </button>
             </div>
           </form>

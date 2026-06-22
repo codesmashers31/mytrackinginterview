@@ -18,6 +18,18 @@ router.get('/', authMiddleware, async (req, res) => {
             query.isFrontend = true;
         } else {
             query.isFrontend = { $ne: true };
+            
+            // Exclude SPL students from the regular directory list
+            const spls = await SplRegistration.find({}, 'email mobile').lean();
+            const splEmails = spls.map(s => s.email ? s.email.trim().toLowerCase() : '').filter(Boolean);
+            const splMobiles = spls.map(s => s.mobile ? s.mobile.trim() : '').filter(Boolean);
+            
+            if (splEmails.length > 0) {
+                query.email = { $nin: splEmails };
+            }
+            if (splMobiles.length > 0) {
+                query.mobile = { $nin: splMobiles };
+            }
         }
         
         if (search) {
@@ -46,7 +58,19 @@ router.get('/', authMiddleware, async (req, res) => {
 // GET dashboard stats (protected)
 router.get('/stats', authMiddleware, async (req, res) => {
     try {
+        const spls = await SplRegistration.find({}, 'email mobile').lean();
+        const splEmails = spls.map(s => s.email ? s.email.trim().toLowerCase() : '').filter(Boolean);
+        const splMobiles = spls.map(s => s.mobile ? s.mobile.trim() : '').filter(Boolean);
+
         const regularQuery = { isFrontend: { $ne: true } };
+        
+        if (splEmails.length > 0) {
+            regularQuery.email = { $nin: splEmails };
+        }
+        if (splMobiles.length > 0) {
+            regularQuery.mobile = { $nin: splMobiles };
+        }
+
         const total = await Student.countDocuments(regularQuery);
         
         // Use case-insensitive matching for robust counting

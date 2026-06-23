@@ -27,19 +27,19 @@ const seed = async () => {
         console.log('Seed Terminal: Linked to MongoDB');
 
         // Seed Admin if missing
-        const adminExists = await Admin.findOne({ email: 'admin@placetrack.com' });
+        const adminExists = await Admin.findOne({ email: 'admin@placex.com' });
         if (!adminExists) {
             const admin = new Admin({
-                email: 'admin@placetrack.com',
+                email: 'admin@placex.com',
                 password: 'adminpassword123',
-                name: 'PlaceTrack Root'
+                name: 'PlaceX Root'
             });
             await admin.save();
-            console.log('Seed: Root Admin Created (Email: admin@placetrack.com, PW: adminpassword123)');
+            console.log('Seed: Root Admin Created (Email: admin@placex.com, PW: adminpassword123)');
         }
 
         // Seed Students
-        await Student.deleteMany({}); // Clear existing records for a fresh "PlaceTrack" start
+        await Student.deleteMany({}); // Clear existing records for a fresh "PlaceX" start
         await Student.insertMany(students);
         console.log(`Seed: ${students.length} nodes injected into ledger`);
 

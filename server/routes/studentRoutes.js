@@ -1,5 +1,6 @@
 import express from 'express';
 import Student from '../models/Student.js';
+import SplRegistration from '../models/SplRegistration.js';
 import User from '../models/User.js';
 import multer from 'multer';
 import xlsx from 'xlsx';
@@ -9,7 +10,7 @@ import authMiddleware from '../middleware/authMiddleware.js';
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
 const getSplIdentifiers = async () => {
-    const spls = await Student.find({ studentType: 'SPL' }, 'email mobile').lean();
+    const spls = await SplRegistration.find({}, 'email mobile').lean();
     const splEmails = spls.map(s => s.email ? s.email.trim().toLowerCase() : '').filter(Boolean);
     const splMobiles = spls.map(s => s.mobile ? s.mobile.trim() : '').filter(Boolean);
     return { splEmails, splMobiles };
@@ -17,25 +18,36 @@ const getSplIdentifiers = async () => {
 
 router.get('/', authMiddleware, async (req, res) => {
     try {
-        const { search, status, degree, year, isFrontend, all, studentType } = req.query;
-        let query = {};
+        const { search, status, degree, year, isFrontend, all, studentType, enrollment } = req.query;
         
-        if (studentType) {
-            query.studentType = studentType;
+        // 1. Build Student Query
+        let query = {};
+        if (enrollment) {
+            if (enrollment === 'Regular') {
+                query.enrollments = 'Regular';
+            } else if (enrollment === 'SPL') {
+                query.enrollments = 'SPL';
+            } else if (enrollment === 'Regular+SPL') {
+                query.enrollments = { $all: ['Regular', 'SPL'] };
+            }
+        } else if (studentType) {
+            if (studentType === 'Regular') {
+                query.enrollments = 'Regular';
+            } else if (studentType === 'SPL') {
+                query.enrollments = 'SPL';
+            } else if (studentType === 'Frontend') {
+                query.isFrontend = true;
+            } else {
+                query.studentType = studentType;
+            }
         } else if (isFrontend === 'true') {
             query.isFrontend = true;
         } else if (isFrontend === 'false') {
             query.isFrontend = { $ne: true };
-            query.studentType = { $ne: 'SPL' };
-            const { splEmails, splMobiles } = await getSplIdentifiers();
-            if (splEmails.length > 0) query.email = { $nin: splEmails };
-            if (splMobiles.length > 0) query.mobile = { $nin: splMobiles };
+            query.enrollments = 'Regular';
         } else if (all !== 'true') {
             query.isFrontend = { $ne: true };
-            query.studentType = { $ne: 'SPL' };
-            const { splEmails, splMobiles } = await getSplIdentifiers();
-            if (splEmails.length > 0) query.email = { $nin: splEmails };
-            if (splMobiles.length > 0) query.mobile = { $nin: splMobiles };
+            query.enrollments = 'Regular';
         }
         
         if (search) {
@@ -54,8 +66,46 @@ router.get('/', authMiddleware, async (req, res) => {
         if (degree && degree !== 'All') query.degree = { $regex: new RegExp(`^${degree}$`, 'i') };
         if (year) query.passedOutYear = year;
 
-        const students = await Student.find(query).sort({ createdAt: -1 });
-        res.json(students);
+        let students = await Student.find(query).lean();
+
+        // 2. Fetch and Map SplRegistration records if we are looking for SPL students
+        const includeSplRegs = !enrollment || enrollment === 'All' || enrollment === 'SPL';
+        const isRestrictingToRegularOnly = enrollment === 'Regular' || studentType === 'Regular' || isFrontend === 'false' || all !== 'true';
+
+        let splRegs = [];
+        if (includeSplRegs && !isRestrictingToRegularOnly && !isFrontend) {
+            let splQuery = {};
+            if (search) {
+                splQuery.$or = [
+                    { name: { $regex: search, $options: 'i' } },
+                    { mobile: { $regex: search, $options: 'i' } },
+                    { email: { $regex: search, $options: 'i' } },
+                    { batch: { $regex: search, $options: 'i' } }
+                ];
+            }
+            if (status && status !== 'All') {
+                splQuery.status = { $regex: new RegExp(`^${status}$`, 'i') };
+            }
+            if (degree && degree !== 'All') {
+                splQuery.degree = { $regex: new RegExp(`^${degree}$`, 'i') };
+            }
+            if (year) {
+                splQuery.batch = year;
+            }
+
+            const rawSplRegs = await SplRegistration.find(splQuery).lean();
+            splRegs = rawSplRegs.map(r => ({
+                ...r,
+                studentType: 'SPL',
+                enrollments: ['SPL'],
+                currentStatus: r.status,
+                passedOutYear: r.batch
+            }));
+        }
+
+        // 3. Combine and Sort
+        let combined = [...students, ...splRegs].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        res.json(combined);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching students', error: error.message });
     }
@@ -113,7 +163,31 @@ router.get('/stats', authMiddleware, async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const payload = { ...req.body };
-        payload.isFrontend = payload.studentType === 'Frontend';
+        if (payload.studentType) {
+            payload.isFrontend = payload.studentType === 'Frontend';
+        }
+        if (!payload.enrollments || payload.enrollments.length === 0) {
+            payload.enrollments = [payload.studentType === 'SPL' ? 'SPL' : 'Regular'];
+        }
+        if (payload.enrollments.includes('Regular')) {
+            payload.studentType = payload.isFrontend ? 'Frontend' : 'Regular';
+        } else {
+            payload.studentType = 'SPL';
+        }
+
+        const email = (payload.email || '').trim().toLowerCase();
+        const mobile = (payload.mobile || '').trim();
+        if (email || mobile) {
+            const orConditions = [];
+            if (email) orConditions.push({ email });
+            if (mobile) orConditions.push({ mobile });
+            
+            const existing = await Student.findOne({ $or: orConditions });
+            if (existing) {
+                return res.status(409).json({ message: 'A student with the same email or mobile already exists.' });
+            }
+        }
+
         const student = new Student(payload);
         await student.save();
         res.status(201).json(student);
@@ -124,24 +198,50 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', authMiddleware, async (req, res) => {
     try {
-        const currentStudent = await Student.findById(req.params.id);
+        const { id } = req.params;
+        const payload = { ...req.body };
+
+        // 1. Check if ID belongs to SplRegistration
+        const splRegExists = await SplRegistration.exists({ _id: id });
+        if (splRegExists) {
+            const reg = await SplRegistration.findByIdAndUpdate(id, payload, { returnDocument: 'after' });
+            if (reg) {
+                const targetEmail = (reg.email && reg.email.trim()) ? reg.email.trim().toLowerCase() : (reg.mobile ? reg.mobile.trim() : '');
+                if (targetEmail) {
+                    const user = await User.findOne({ studentId: reg._id });
+                    if (user) {
+                        user.name = reg.name;
+                        user.email = targetEmail;
+                        await user.save();
+                    }
+                }
+            }
+            return res.json(reg);
+        }
+
+        // 2. Otherwise update Student collection
+        const currentStudent = await Student.findById(id);
         if (!currentStudent) {
             return res.status(404).json({ message: 'Student not found' });
         }
 
-        const payload = { ...req.body };
         if (payload.studentType) {
             payload.isFrontend = payload.studentType === 'Frontend';
         }
+        
+        if (payload.enrollments) {
+            if (payload.enrollments.includes('Regular')) {
+                payload.studentType = payload.isFrontend ? 'Frontend' : 'Regular';
+            } else {
+                payload.studentType = 'SPL';
+            }
+        }
 
-        // Resolve target email based on payload changes
-        const type = payload.studentType !== undefined ? payload.studentType : currentStudent.studentType;
         const email = payload.email !== undefined ? payload.email : currentStudent.email;
         const mobile = payload.mobile !== undefined ? payload.mobile : currentStudent.mobile;
         
-        const targetEmail = type === 'SPL' && email ? email.trim().toLowerCase() : (mobile ? mobile.trim() : '');
+        const targetEmail = (email && email.trim()) ? email.trim().toLowerCase() : (mobile ? mobile.trim() : '');
 
-        // Find all student records belonging to the same person to exclude them from the conflict check
         const searchTerms = [];
         if (currentStudent.mobile) {
             searchTerms.push({ mobile: currentStudent.mobile.trim() });
@@ -169,25 +269,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
             }
         }
 
-        const student = await Student.findByIdAndUpdate(req.params.id, payload, { returnDocument: 'after' });
+        const student = await Student.findByIdAndUpdate(id, payload, { returnDocument: 'after' });
         if (student) {
-            // Keep other student records for the same person in sync
-            if (searchTerms.length > 0) {
-                const syncPayload = { ...payload };
-                delete syncPayload._id;
-                delete syncPayload.studentType;
-                delete syncPayload.isFrontend;
-                
-                await Student.updateMany(
-                    { 
-                        _id: { $ne: student._id },
-                        $or: searchTerms
-                    },
-                    { $set: syncPayload }
-                );
-            }
-
-            // Find all student records for this person (post-update) to find their User account
             const updatedSearchTerms = [];
             if (student.mobile) {
                 updatedSearchTerms.push({ mobile: student.mobile.trim() });
@@ -229,7 +312,14 @@ router.delete('/all', authMiddleware, async (req, res) => {
 // DELETE student (protected)
 router.delete('/:id', authMiddleware, async (req, res) => {
     try {
-        const student = await Student.findByIdAndDelete(req.params.id);
+        const { id } = req.params;
+        const splRegExists = await SplRegistration.exists({ _id: id });
+        if (splRegExists) {
+            await SplRegistration.findByIdAndDelete(id);
+            return res.json({ message: 'Deleted successfully' });
+        }
+
+        const student = await Student.findByIdAndDelete(id);
         if (!student) {
             return res.status(404).json({ message: 'Student not found' });
         }
@@ -243,6 +333,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 router.post('/bulk-delete', authMiddleware, async (req, res) => {
     try {
         const { ids } = req.body;
+        await SplRegistration.deleteMany({ _id: { $in: ids } });
         await Student.deleteMany({ _id: { $in: ids } });
         res.json({ message: 'Multiple records deleted' });
     } catch (error) {
@@ -256,7 +347,7 @@ router.post('/eligible', authMiddleware, async (req, res) => {
         const { degrees, years, statuses, page = 1, limit = 10, fetchAll = false } = req.body;
         
         let studentQuery = { studentType: { $ne: 'SPL' } };
-        let splQuery = { studentType: 'SPL' };
+        let splQuery = {};
 
         if (degrees && degrees.length > 0) {
             const regexes = degrees.map(d => new RegExp(`^${d}$`, 'i'));
@@ -266,7 +357,6 @@ router.post('/eligible', authMiddleware, async (req, res) => {
         if (statuses && statuses.length > 0) {
             const regexes = statuses.map(s => new RegExp(`^${s}$`, 'i'));
             studentQuery.currentStatus = { $in: regexes };
-            // For SPL students, we don't strictly filter by 'Job Seeker', they are automatically eligible.
         }
         
         // Exact year matching
@@ -277,7 +367,7 @@ router.post('/eligible', authMiddleware, async (req, res) => {
         }
 
         const students = await Student.find(studentQuery).lean();
-        const spls = await Student.find(splQuery).lean();
+        const spls = await SplRegistration.find(splQuery).lean();
 
         // Deduplicate using mobile and email
         const uniqueMobiles = new Set(students.map(s => s.mobile).filter(Boolean));

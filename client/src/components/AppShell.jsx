@@ -289,7 +289,7 @@ export function AppShell({
 
   const profile = useMemo(() => {
     const name = localStorage.getItem('userName') || 'Administrator';
-    const email = localStorage.getItem('userEmail') || 'admin@placetrack.com';
+    const email = localStorage.getItem('userEmail') || 'admin@placex.com';
     const initials = name
       .split(' ')
       .filter(Boolean)
@@ -326,13 +326,13 @@ export function AppShell({
         >
           <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-slate-200 px-5 bg-white">
             <Link to="/dashboard" className={`flex items-center gap-3 ${sidebarCollapsed ? 'justify-center w-full' : ''}`}>
-              <img src="/logo.png" alt="PlaceTrack Logo" className="h-11 w-11 object-contain shrink-0" />
+              <img src="/logo.png" alt="PlaceX Logo" className="h-11 w-11 object-contain shrink-0" />
               {!sidebarCollapsed && (
                 <div className="overflow-hidden">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
                     Placement OS
                   </p>
-                  <h1 className="text-lg font-semibold text-slate-900 truncate">PlaceTrack</h1>
+                  <h1 className="text-lg font-semibold text-slate-900 truncate">PlaceX</h1>
                 </div>
               )}
             </Link>

@@ -77,7 +77,7 @@ export const sendEmail = async ({ to, subject, text, html }) => {
 export const sendTestEmail = async (to) => {
   return sendEmail({
     to,
-    subject: 'Test email from PlaceTrack',
+    subject: 'Test email from PlaceX',
     text: 'This is a test email to validate SMTP settings and delivery speed.',
     html: '<p>This is a test email to validate SMTP settings and delivery speed.</p>',
   });

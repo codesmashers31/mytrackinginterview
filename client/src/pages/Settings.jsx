@@ -9,7 +9,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(false);
 
   const adminName = localStorage.getItem('userName') || 'Administrator';
-  const adminEmail = localStorage.getItem('userEmail') || 'admin@placetrack.com';
+  const adminEmail = localStorage.getItem('userEmail') || 'admin@placex.com';
   const userRole = localStorage.getItem('userRole') || 'admin';
 
   const [passwords, setPasswords] = useState({

@@ -10,6 +10,11 @@ const studentSchema = new mongoose.Schema({
         enum: ['Regular', 'Frontend', 'SPL'], 
         default: 'Regular' 
     },
+    enrollments: {
+        type: [String],
+        enum: ['Regular', 'SPL'],
+        default: ['Regular']
+    },
     isFrontend: { type: Boolean, default: false },
     city: { type: String, default: '' },
     passedOutYear: { type: String, default: 'Need to filled' },
@@ -34,6 +39,7 @@ const studentSchema = new mongoose.Schema({
     fullEffort: { type: String, default: '' },
     issues: { type: String, default: '' },
     needMost: { type: String, default: '' },
+    status: { type: String, default: 'New' },
 
     resumeData: { type: Object, default: {} }
 }, { timestamps: true });

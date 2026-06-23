@@ -89,8 +89,8 @@ export default function Login() {
         <div className="mx-auto w-full max-w-md">
           <div className="crm-surface p-6 md:p-8">
             <div className="mb-8">
-              <img src="/logo.png" alt="PlaceTrack Logo" className="h-18 w-18 object-contain mb-4" />
-              <h2 className="text-3xl font-semibold tracking-tight text-slate-950">Sign in to PlaceTrack</h2>
+              <img src="/logo.png" alt="PlaceX Logo" className="h-18 w-18 object-contain mb-4" />
+              <h2 className="text-3xl font-semibold tracking-tight text-slate-950">Sign in to PlaceX</h2>
               <p className="mt-2 text-sm text-slate-500">
                 Use your registered email or mobile number to access your account.
               </p>

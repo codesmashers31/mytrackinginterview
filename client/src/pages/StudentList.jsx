@@ -26,7 +26,7 @@ export default function StudentList() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [studentTypeFilter, setStudentTypeFilter] = useState('Regular');
+  const [enrollmentFilter, setEnrollmentFilter] = useState('All');
   const [batchFilter, setBatchFilter] = useState('All');
   const [sortBy, setSortBy] = useState('batch-desc');
   
@@ -52,7 +52,7 @@ export default function StudentList() {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter !== 'All') params.append('status', statusFilter);
-      params.append('studentType', 'Regular');
+      if (enrollmentFilter !== 'All') params.append('enrollment', enrollmentFilter);
 
       const res = await fetch(`${buildApiUrl('/students')}?${params.toString()}`, {
         headers: { ...authHeaders() },
@@ -88,7 +88,7 @@ export default function StudentList() {
 
   useEffect(() => {
     fetchStudents();
-  }, [statusFilter, studentTypeFilter]);
+  }, [statusFilter, enrollmentFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -331,7 +331,7 @@ export default function StudentList() {
 
            {/* Toolbar */}
            <div className="mb-3 flex flex-col gap-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full">
                  <select 
                    value={statusFilter} 
                    onChange={(e) => setStatusFilter(e.target.value)}
@@ -341,6 +341,19 @@ export default function StudentList() {
                     {availableStatuses.map(status => (
                       <option key={status} value={status}>{status}</option>
                     ))}
+                 </select>
+                 <select
+                   value={enrollmentFilter}
+                   onChange={(e) => {
+                     setEnrollmentFilter(e.target.value);
+                     setCurrentPage(1);
+                   }}
+                   className="w-full py-2 px-3 bg-white border border-slate-200 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4338ca] text-[12px] md:text-[13px] font-semibold text-[#1e293b] cursor-pointer transition-shadow"
+                 >
+                    <option value="All">All Students</option>
+                    <option value="Regular">Regular Students</option>
+                    <option value="SPL">SPL Students</option>
+                    <option value="Regular+SPL">Regular + SPL Students</option>
                  </select>
                  <select
                    value={batchFilter}
@@ -438,7 +451,7 @@ export default function StudentList() {
            {/* Master Table */}
            <SurfaceCard className="overflow-hidden">
              <div className="px-4 md:px-5 py-3 border-b border-slate-100 bg-white flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                <h3 className="text-sm md:text-base font-bold text-[#1e293b]">Regular Track Students</h3>
+                <h3 className="text-sm md:text-base font-bold text-[#1e293b]">Enrolled Candidates</h3>
                 <p className="text-[11px] md:text-xs font-medium text-slate-500">
                   Showing <span className="font-bold text-slate-700">{processedStudents.length}</span> student{processedStudents.length === 1 ? '' : 's'}
                   {batchFilter !== 'All' ? ` in ${batchFilter}` : ''}
@@ -493,15 +506,25 @@ export default function StudentList() {
                            <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">{student.mobile}</div>
                         </td>
                         <td className="px-3 py-2.5">
-                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
-                             student.studentType === 'Frontend' 
-                               ? 'bg-amber-100 text-amber-800' 
-                               : student.studentType === 'SPL' 
-                                 ? 'bg-purple-100 text-purple-800' 
-                                 : 'bg-blue-100 text-blue-800'
-                           }`}>
-                              {student.studentType || 'Regular'}
-                           </span>
+                            <div className="flex flex-wrap gap-1">
+                               {student.isFrontend && (
+                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                                   Frontend
+                                 </span>
+                               )}
+                               {(student.enrollments || []).map(enrollment => (
+                                 <span key={enrollment} className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
+                                   enrollment === 'SPL' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                                 }`}>
+                                    {enrollment}
+                                 </span>
+                               ))}
+                               {(!student.enrollments || student.enrollments.length === 0) && (
+                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
+                                    Regular
+                                 </span>
+                               )}
+                            </div>
                         </td>
                         <td className="px-3 py-2.5">
                            <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">{student.degree}</div>
@@ -660,6 +683,8 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
     packageLpa: student?.packageLpa || '',
     jobGetMode: student?.jobGetMode || '',
     studentType: student?.studentType || 'Regular',
+    enrollments: student?.enrollments || (student?.studentType === 'SPL' ? ['SPL'] : ['Regular']),
+    isFrontend: student?.isFrontend || student?.studentType === 'Frontend' || false,
     stack: student?.stack || '',
     willingCompanyProcess: !!student?.willingCompanyProcess,
     willing30Days: student?.willing30Days || '',
@@ -688,6 +713,10 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.enrollments || formData.enrollments.length === 0) {
+      toast.error('Please select at least one program enrollment (Regular or SPL)');
+      return;
+    }
     try {
       const url = editMode 
         ? buildApiUrl(`/students/${student._id}`)
@@ -779,6 +808,51 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
                    </select>
                 </div>
                 
+                <div className="md:col-span-2 pt-3 pb-2 border-t border-b border-slate-100 mt-2">
+                   <label className="crm-label mb-2">Program Enrollments</label>
+                   <div className="flex flex-wrap gap-4 md:gap-6">
+                      <label className="inline-flex items-center gap-2 text-[12px] md:text-[13px] font-bold text-slate-700 cursor-pointer">
+                         <input
+                            type="checkbox"
+                            checked={formData.enrollments.includes('Regular')}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? [...formData.enrollments, 'Regular']
+                                : formData.enrollments.filter(x => x !== 'Regular');
+                              setFormData({ ...formData, enrollments: next });
+                            }}
+                            className="w-4 h-4 text-[#4338ca] rounded border-slate-300 focus:ring-[#4338ca]"
+                         />
+                         Regular Program
+                      </label>
+                      <label className="inline-flex items-center gap-2 text-[12px] md:text-[13px] font-bold text-slate-700 cursor-pointer">
+                         <input
+                            type="checkbox"
+                            checked={formData.enrollments.includes('SPL')}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? [...formData.enrollments, 'SPL']
+                                : formData.enrollments.filter(x => x !== 'SPL');
+                              setFormData({ ...formData, enrollments: next });
+                            }}
+                            className="w-4 h-4 text-[#4338ca] rounded border-slate-300 focus:ring-[#4338ca]"
+                         />
+                         SPL Program (Special Placement)
+                      </label>
+                      <label className="inline-flex items-center gap-2 text-[12px] md:text-[13px] font-bold text-slate-700 cursor-pointer">
+                         <input
+                            type="checkbox"
+                            checked={formData.isFrontend}
+                            onChange={(e) => {
+                              setFormData({ ...formData, isFrontend: e.target.checked });
+                            }}
+                            className="w-4 h-4 text-[#4338ca] rounded border-slate-300 focus:ring-[#4338ca]"
+                         />
+                         Frontend Specialization Track
+                      </label>
+                   </div>
+                </div>
+                
                 <div className="md:col-span-2 pt-5 md:pt-6 border-t border-slate-100">
                    <h4 className="text-[13px] md:text-[14px] font-extrabold text-[#1e293b] mb-3 md:mb-4">Pipeline Metrics</h4>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
@@ -845,7 +919,7 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
                    </div>
                 </div>
 
-                {formData.studentType === 'SPL' && (
+                {formData.enrollments.includes('SPL') && (
                    <div className="md:col-span-2 pt-5 md:pt-6 border-t border-slate-100 mt-4">
                       <h4 className="text-[13px] md:text-[14px] font-extrabold text-[#1e293b] mb-3 md:mb-4">SPL Candidate Telemetry</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
@@ -952,7 +1026,7 @@ function StudentDetailModal({ onClose, student }) {
                      {student.jobGetMode && <DetailRow label="Acquisition Vector" val={student.jobGetMode} />}
                   </div>
                 )}
-                {student.studentType === 'SPL' && (
+                 {(student.enrollments?.includes('SPL') || student.studentType === 'SPL') && (
                   <div className="pt-5 mt-5 border-t border-slate-100 space-y-3">
                      <p className="text-[11px] md:text-[13px] font-extrabold text-[#4338ca] uppercase tracking-widest mb-3">SPL Telemetry</p>
                      <DetailRow label="Technical Stack" val={student.stack || 'Not Specified'} />

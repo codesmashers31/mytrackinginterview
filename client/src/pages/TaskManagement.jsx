@@ -41,7 +41,13 @@ export default function TaskManagement() {
     return matchesSearch && matchesGrade && matchesType && matchesBatch && matchesStack;
   });
 
-  const uniqueBatches = Array.from(new Set(students.map(s => s.batch).filter(Boolean))).sort();
+  const uniqueBatches = Array.from(new Set(students.map(s => s.batch).filter(Boolean)))
+    .filter(b => /^(Batch\s*[1-9]\b|Frontend)$/i.test(b.trim()))
+    .sort((a, b) => {
+      if (a === 'Frontend') return 1;
+      if (b === 'Frontend') return -1;
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    });
   const uniqueStacks = Array.from(new Set(students.map(s => s.stack).filter(Boolean))).sort();
 
   const fetchStudents = async () => {

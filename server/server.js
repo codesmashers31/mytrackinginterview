@@ -21,6 +21,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import leaveRoutes from './routes/leaveRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
+import { runStudentMigration } from './utils/migration.js';
 
 
 dotenv.config();
@@ -54,18 +55,19 @@ app.use(errorHandler);
 // Database Connection
 mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
-    console.log('PlaceTrack Database Linked: MongoDB Connected');
+    console.log('PlaceX Database Linked: MongoDB Connected');
+    await runStudentMigration();
     try {
       const adminCount = await User.countDocuments({ role: 'admin' });
       if (adminCount === 0) {
         const defaultAdmin = new User({
-          email: process.env.DEFAULT_ADMIN_EMAIL || 'admin@placetrack.com',
+          email: process.env.DEFAULT_ADMIN_EMAIL || 'admin@placex.com',
           password: process.env.DEFAULT_ADMIN_PASSWORD || 'admin123',
           name: 'System Administrator',
           role: 'admin'
         });
         await defaultAdmin.save();
-        console.log('Default Administrator Created: admin@placetrack.com / admin123');
+        console.log('Default Administrator Created: admin@placex.com / admin123');
       }
     } catch (seedErr) {
       console.error('Failed to seed default admin:', seedErr);
@@ -74,5 +76,5 @@ mongoose.connect(process.env.MONGODB_URI)
   .catch((err) => console.log('Database Link Failure:', err));
 
 app.listen(PORT, () => {
-  console.log(`PlaceTrack Gateway active on port ${PORT}`);
+  console.log(`PlaceX Gateway active on port ${PORT}`);
 });

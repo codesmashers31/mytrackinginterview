@@ -145,9 +145,26 @@ export const getStudentAttendance = async (req, res) => {
     const { startDate, endDate } = req.query;
 
     let query = {};
-    const user = await User.findById(studentId).catch(() => null);
-    if (user) {
-      query.studentEmail = user.email.toLowerCase();
+    let student = await Student.findById(studentId).catch(() => null);
+    if (!student) {
+      const user = await User.findById(studentId).catch(() => null);
+      if (user) {
+        if (user.studentId) {
+          student = await Student.findById(user.studentId).catch(() => null);
+        }
+        if (!student) {
+          student = await Student.findOne({
+            $or: [
+              { email: user.email.toLowerCase() },
+              { mobile: user.email }
+            ]
+          });
+        }
+      }
+    }
+
+    if (student) {
+      query.studentId = student._id;
     } else {
       query.studentId = studentId;
     }
@@ -386,16 +403,25 @@ export const studentCheckIn = async (req, res) => {
       student = await Student.findById(user.studentId);
     }
     if (!student) {
-      student = await Student.findOne({ email: user.email.toLowerCase() });
+      student = await Student.findOne({
+        $or: [
+          { email: user.email.toLowerCase() },
+          { mobile: user.email }
+        ]
+      });
     }
 
-    const splStudentId = student ? student._id : userId;
-    const studentName = student ? student.name : user.name;
-    const studentEmail = student ? student.email : user.email;
+    if (!student) {
+      return res.status(404).json({ message: 'Student profile not found. Please contact administration.' });
+    }
+
+    const splStudentId = student._id;
+    const studentName = student.name;
+    const studentEmail = student.email || user.email;
 
     const today = parseUTCDate(new Date().toISOString().split('T')[0]);
 
-    let attendance = await Attendance.findOne({ studentEmail: studentEmail.toLowerCase(), date: today });
+    let attendance = await Attendance.findOne({ studentId: splStudentId, date: today });
     if (attendance) {
       if (attendance.checkInTime) {
         return res.status(400).json({ message: 'You have already checked in today.' });
@@ -449,10 +475,27 @@ export const studentCheckOut = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    let student = null;
+    if (user.studentId) {
+      student = await Student.findById(user.studentId);
+    }
+    if (!student) {
+      student = await Student.findOne({
+        $or: [
+          { email: user.email.toLowerCase() },
+          { mobile: user.email }
+        ]
+      });
+    }
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student profile not found.' });
+    }
+
     const today = parseUTCDate(new Date().toISOString().split('T')[0]);
 
-    // Look up by email to handle both SPL and non-SPL students
-    let attendance = await Attendance.findOne({ studentEmail: user.email.toLowerCase(), date: today });
+    // Look up by studentId instead of user email
+    let attendance = await Attendance.findOne({ studentId: student._id, date: today });
     if (!attendance) {
       return res.status(404).json({ message: 'No check-in record found for today. Please check in first.' });
     }
@@ -489,7 +532,7 @@ export const studentCheckOut = async (req, res) => {
     );
     await notifyAdmins(
       'Student Checked Out',
-      `${user.name} has checked out today at ${checkOutTimeString}. Total Hours: ${attendance.totalHours} hrs.`,
+      `${student.name} has checked out today at ${checkOutTimeString}. Total Hours: ${attendance.totalHours} hrs.`,
       'attendance'
     );
 
@@ -506,10 +549,27 @@ export const getTodayAttendance = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    let student = null;
+    if (user.studentId) {
+      student = await Student.findById(user.studentId);
+    }
+    if (!student) {
+      student = await Student.findOne({
+        $or: [
+          { email: user.email.toLowerCase() },
+          { mobile: user.email }
+        ]
+      });
+    }
+
+    if (!student) {
+      return res.json({ attendance: null });
+    }
+
     const today = parseUTCDate(new Date().toISOString().split('T')[0]);
 
-    // Search by email so it works for both SPL and non-SPL students
-    const attendance = await Attendance.findOne({ studentEmail: user.email.toLowerCase(), date: today });
+    // Search by studentId
+    const attendance = await Attendance.findOne({ studentId: student._id, date: today });
     res.json({ attendance: attendance || null });
   } catch (err) {
     console.error('getTodayAttendance error:', err);

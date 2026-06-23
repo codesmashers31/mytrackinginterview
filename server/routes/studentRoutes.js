@@ -124,23 +124,55 @@ router.get('/stats', authMiddleware, async (req, res) => {
             regularQuery.mobile = { $nin: splMobiles };
         }
 
-        const total = await Student.countDocuments(regularQuery);
-        
-        // Use case-insensitive matching for robust counting
-        const jobSeekers = await Student.countDocuments({ ...regularQuery, currentStatus: { $regex: /^job seeker$/i } });
-        const placed = await Student.countDocuments({ ...regularQuery, currentStatus: { $regex: /^placed$/i } });
-        const needToFilled = await Student.countDocuments({ ...regularQuery, currentStatus: { $regex: /^need to filled$/i } });
-        const inactiveUsers = await Student.countDocuments({ ...regularQuery, currentStatus: { $regex: /^inactive - not responded$/i } });
-        const interviewProcess = await Student.countDocuments({ ...regularQuery, currentStatus: { $regex: /^interview process$/i } });
-        
-        const recent = await Student.find(regularQuery).sort({ createdAt: -1 }).limit(5);
-
-        // Stats for Frontend track
         const frontendQuery = { isFrontend: true };
-        const frontendTotal = await Student.countDocuments(frontendQuery);
-        const frontendPlaced = await Student.countDocuments({ ...frontendQuery, currentStatus: { $regex: /^placed$/i } });
-        const frontendJobSeekers = await Student.countDocuments({ ...frontendQuery, currentStatus: { $regex: /^job seeker$/i } });
-        const recentFrontend = await Student.find(frontendQuery).sort({ createdAt: -1 }).limit(5);
+
+        // Run queries in parallel
+        const [
+            total,
+            regularGroups,
+            recent,
+            frontendTotal,
+            frontendGroups,
+            recentFrontend
+        ] = await Promise.all([
+            Student.countDocuments(regularQuery),
+            Student.aggregate([
+                { $match: regularQuery },
+                { $group: { _id: { $toLower: "$currentStatus" }, count: { $sum: 1 } } }
+            ]),
+            Student.find(regularQuery).sort({ createdAt: -1 }).limit(5).lean(),
+            Student.countDocuments(frontendQuery),
+            Student.aggregate([
+                { $match: frontendQuery },
+                { $group: { _id: { $toLower: "$currentStatus" }, count: { $sum: 1 } } }
+            ]),
+            Student.find(frontendQuery).sort({ createdAt: -1 }).limit(5).lean()
+        ]);
+
+        // Map status counts from regular aggregation
+        const regularCounts = {};
+        regularGroups.forEach(g => {
+            if (g._id) {
+                regularCounts[g._id.trim()] = g.count;
+            }
+        });
+
+        const jobSeekers = regularCounts['job seeker'] || 0;
+        const placed = regularCounts['placed'] || 0;
+        const needToFilled = regularCounts['need to filled'] || 0;
+        const inactiveUsers = regularCounts['inactive - not responded'] || 0;
+        const interviewProcess = regularCounts['interview process'] || 0;
+
+        // Map status counts from frontend aggregation
+        const frontendCounts = {};
+        frontendGroups.forEach(g => {
+            if (g._id) {
+                frontendCounts[g._id.trim()] = g.count;
+            }
+        });
+
+        const frontendPlaced = frontendCounts['placed'] || 0;
+        const frontendJobSeekers = frontendCounts['job seeker'] || 0;
 
         res.json({ 
             total, 
@@ -156,6 +188,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
             recentFrontend
         });
     } catch (error) {
+        console.error('Dashboard stats failure:', error);
         res.status(500).json({ message: 'Dashboard stats failure' });
     }
 });

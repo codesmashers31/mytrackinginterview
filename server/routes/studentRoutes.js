@@ -237,9 +237,6 @@ router.put('/:id', authMiddleware, async (req, res) => {
         // 1. Check if ID belongs to SplRegistration
         const splRegExists = await SplRegistration.exists({ _id: id });
         if (splRegExists) {
-            if (payload.passedOutYear !== undefined) {
-                payload.batch = payload.passedOutYear;
-            }
             const reg = await SplRegistration.findByIdAndUpdate(id, payload, { returnDocument: 'after' });
             if (reg) {
                 const targetEmail = (reg.email && reg.email.trim()) ? reg.email.trim().toLowerCase() : (reg.mobile ? reg.mobile.trim() : '');
@@ -251,6 +248,14 @@ router.put('/:id', authMiddleware, async (req, res) => {
                         await user.save();
                     }
                 }
+                const mappedReg = {
+                    ...reg.toObject(),
+                    studentType: 'SPL',
+                    enrollments: ['SPL'],
+                    currentStatus: reg.status,
+                    passedOutYear: reg.passedOutYear || reg.batch
+                };
+                return res.json(mappedReg);
             }
             return res.json(reg);
         }

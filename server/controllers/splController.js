@@ -132,11 +132,6 @@ export const updateRegistration = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
 
-    const isSpl = await SplRegistration.exists({ _id: id });
-    if (isSpl && updates.passedOutYear !== undefined) {
-      updates.batch = updates.passedOutYear;
-    }
-    
     // Try to find and update in SplRegistration
     let reg = await SplRegistration.findOneAndUpdate(
       { _id: id }, 
@@ -144,14 +139,23 @@ export const updateRegistration = async (req, res) => {
       { returnDocument: 'after' }
     );
     
-    if (!reg) {
-      // If not found in SplRegistration, update in Student
-      reg = await Student.findOneAndUpdate(
-        { _id: id },
-        updates,
-        { returnDocument: 'after' }
-      );
+    if (reg) {
+      const mapped = {
+        ...reg.toObject(),
+        studentType: 'SPL',
+        enrollments: ['SPL'],
+        currentStatus: reg.status,
+        passedOutYear: reg.passedOutYear || reg.batch
+      };
+      return res.json(mapped);
     }
+
+    // If not found in SplRegistration, update in Student
+    reg = await Student.findOneAndUpdate(
+      { _id: id },
+      updates,
+      { returnDocument: 'after' }
+    );
 
     if (!reg) return res.status(404).json({ message: 'Registration not found' });
     res.json(reg);

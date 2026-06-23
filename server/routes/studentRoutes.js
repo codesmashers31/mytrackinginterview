@@ -2,6 +2,8 @@ import express from 'express';
 import Student from '../models/Student.js';
 import SplRegistration from '../models/SplRegistration.js';
 import User from '../models/User.js';
+import Attendance from '../models/Attendance.js';
+import Task from '../models/Task.js';
 import multer from 'multer';
 import xlsx from 'xlsx';
 import fs from 'fs';
@@ -125,6 +127,10 @@ router.get('/stats', authMiddleware, async (req, res) => {
         }
 
         const frontendQuery = { isFrontend: true };
+        
+        // Calculate today's date boundary in UTC (matching attendance parseUTCDate)
+        const d = new Date();
+        const today = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
 
         // Run queries in parallel
         const [
@@ -133,20 +139,78 @@ router.get('/stats', authMiddleware, async (req, res) => {
             recent,
             frontendTotal,
             frontendGroups,
-            recentFrontend
+            recentFrontend,
+            
+            // Telemetry: Attendance Today
+            attendanceCheckedIn,
+            attendanceCheckedOut,
+            attendanceOnLeave,
+
+            // Telemetry: Tasks
+            tasksCompleted,
+            tasksPending,
+            tasksReview,
+
+            // SPL stats
+            splTotal,
+            splPlaced,
+            splWilling,
+            splNew,
+            splInProgress,
+            splRecent,
+
+            // Cohort breakdown
+            regularOnlyCount,
+            frontendTrackCount,
+            overlappingCount,
+
+            // Year aggregations
+            studentYearsAgg,
+            splYearsAgg
         ] = await Promise.all([
             Student.countDocuments(regularQuery),
             Student.aggregate([
                 { $match: regularQuery },
                 { $group: { _id: { $toLower: "$currentStatus" }, count: { $sum: 1 } } }
             ]),
-            Student.find(regularQuery).sort({ createdAt: -1 }).limit(5).lean(),
+            Student.find(regularQuery).sort({ updatedAt: -1 }).limit(5).lean(),
             Student.countDocuments(frontendQuery),
             Student.aggregate([
                 { $match: frontendQuery },
                 { $group: { _id: { $toLower: "$currentStatus" }, count: { $sum: 1 } } }
             ]),
-            Student.find(frontendQuery).sort({ createdAt: -1 }).limit(5).lean()
+            Student.find(frontendQuery).sort({ updatedAt: -1 }).limit(5).lean(),
+
+            // Attendance stats
+            Attendance.countDocuments({ date: today }),
+            Attendance.countDocuments({ date: today, checkOutTime: { $ne: null } }),
+            Attendance.countDocuments({ date: today, status: { $in: ['Leave', 'Absent'] } }),
+
+            // Task stats
+            Task.countDocuments({ overallStatus: 'Completed' }),
+            Task.countDocuments({ overallStatus: { $in: ['Pending', 'In Progress'] } }),
+            Task.countDocuments({ overallStatus: 'Review' }),
+
+            // SPL stats
+            SplRegistration.countDocuments(),
+            SplRegistration.countDocuments({ status: 'Placed' }),
+            SplRegistration.countDocuments({ willingCompanyProcess: true }),
+            SplRegistration.countDocuments({ status: 'New' }),
+            SplRegistration.countDocuments({ status: 'In Progress' }),
+            SplRegistration.find().sort({ updatedAt: -1 }).limit(5).lean(),
+
+            // Cohort distribution counts
+            Student.countDocuments({ enrollments: 'Regular', isFrontend: { $ne: true } }),
+            Student.countDocuments({ isFrontend: true }),
+            Student.countDocuments({ enrollments: { $all: ['Regular', 'SPL'] } }),
+
+            // Graduation cohorts aggregation
+            Student.aggregate([
+                { $group: { _id: "$passedOutYear", count: { $sum: 1 } } }
+            ]),
+            SplRegistration.aggregate([
+                { $group: { _id: "$batch", count: { $sum: 1 } } }
+            ])
         ]);
 
         // Map status counts from regular aggregation
@@ -174,6 +238,22 @@ router.get('/stats', authMiddleware, async (req, res) => {
         const frontendPlaced = frontendCounts['placed'] || 0;
         const frontendJobSeekers = frontendCounts['job seeker'] || 0;
 
+        // Process graduation cohorts year distribution map
+        const yearsMap = {};
+        studentYearsAgg.forEach(item => {
+            const yr = (item._id || 'Not Specified').trim();
+            if (!yearsMap[yr]) yearsMap[yr] = { year: yr, regular: 0, spl: 0 };
+            yearsMap[yr].regular += item.count;
+        });
+
+        splYearsAgg.forEach(item => {
+            const yr = (item._id || 'Not Specified').trim();
+            if (!yearsMap[yr]) yearsMap[yr] = { year: yr, regular: 0, spl: 0 };
+            yearsMap[yr].spl += item.count;
+        });
+
+        const passedOutYears = Object.values(yearsMap).sort((a, b) => a.year.localeCompare(b.year));
+
         res.json({ 
             total, 
             jobSeekers, 
@@ -185,7 +265,38 @@ router.get('/stats', authMiddleware, async (req, res) => {
             frontendTotal,
             frontendPlaced,
             frontendJobSeekers,
-            recentFrontend
+            recentFrontend,
+            
+            // New operational metrics
+            telemetry: {
+                attendance: {
+                    checkedIn: attendanceCheckedIn,
+                    checkedOut: attendanceCheckedOut,
+                    onLeave: attendanceOnLeave
+                },
+                tasks: {
+                    completed: tasksCompleted,
+                    pending: tasksPending,
+                    review: tasksReview
+                }
+            },
+            splStats: {
+                total: splTotal,
+                placed: splPlaced,
+                willing: splWilling,
+                splNew,
+                splInProgress,
+                recent: splRecent
+            },
+
+            // Full analytics reporting metrics
+            cohortDistribution: {
+                regularOnly: regularOnlyCount,
+                frontendTrack: frontendTrackCount,
+                overlapping: overlappingCount,
+                pureSpl: splTotal
+            },
+            passedOutYears
         });
     } catch (error) {
         console.error('Dashboard stats failure:', error);

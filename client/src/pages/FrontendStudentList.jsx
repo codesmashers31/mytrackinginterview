@@ -324,95 +324,99 @@ export default function FrontendStudentList() {
           <table className="min-w-full divide-y divide-slate-100">
             <thead className="bg-slate-50">
               <tr>
-                <th className="w-12 px-4 py-3 text-center">
+                <th className="w-10 px-2 py-2 text-center">
                   <input 
                     type="checkbox" 
                     checked={currentItems.length > 0 && currentItems.every(item => selectedStudentIds.includes(item._id))}
                     onChange={handleToggleSelectAllPage}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-4 w-4"
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-3.5 w-3.5"
                   />
                 </th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Candidate Info</th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Contact</th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Batch details</th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Team</th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Location</th>
-                <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Actions</th>
+                <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Candidate Info</th>
+                <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact</th>
+                <th className="hidden md:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Batch Details</th>
+                <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Team</th>
+                <th className="hidden md:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Location</th>
+                <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">Actions</th>
               </tr>
             </thead>
             
             <tbody className="divide-y divide-slate-100 bg-white">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="px-5 py-12 text-center">
+                  <td colSpan="7" className="px-3 py-10 text-center">
                     <div className="flex items-center justify-center gap-2 text-slate-500">
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                      <span className="text-sm font-semibold">Retrieving Frontend candidates...</span>
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                      <span className="text-xs font-semibold">Retrieving Frontend candidates...</span>
                     </div>
                   </td>
                 </tr>
               ) : currentItems.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-5 py-12 text-center text-sm font-semibold text-slate-500">
+                  <td colSpan="7" className="px-3 py-10 text-center text-xs font-semibold text-slate-500">
                     No frontend student records found matching the active filters.
                   </td>
                 </tr>
               ) : (
                 currentItems.map(student => (
-                  <tr key={student._id} className="transition-colors hover:bg-slate-50/50">
-                    <td className="px-4 py-3 text-center">
+                  <tr key={student._id} className="transition-colors hover:bg-slate-50/40">
+                    <td className="px-2 py-2 text-center">
                       <input 
                         type="checkbox"
                         checked={selectedStudentIds.includes(student._id)}
                         onChange={() => handleToggleSelect(student._id)}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-4 w-4"
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-3.5 w-3.5"
                       />
                     </td>
-                    <td className="px-5 py-3">
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">{student.name}</p>
-                        <p className="text-xs text-slate-500 truncate">{student.email || 'No email registered'}</p>
+                    <td className="px-3 py-2">
+                      <div className="min-w-0 max-w-[180px] md:max-w-xs">
+                        <p className="text-xs font-bold text-slate-800 truncate leading-tight">{student.name}</p>
+                        <p className="text-[10px] text-slate-450 truncate mt-0.5 leading-none">{student.email || 'No email'}</p>
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-sm font-semibold text-slate-600">
+                    <td className="hidden sm:table-cell px-3 py-2 text-xs font-semibold text-slate-600">
                       {student.mobile}
                     </td>
-                    <td className="px-5 py-3 text-sm text-slate-600">
+                    <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-650">
                       <div>
-                        <p className="font-semibold text-slate-800">{student.batch || 'No batch'}</p>
-                        <p className="text-xs text-slate-400">Class of {student.passedOutYear || 'N/A'}</p>
+                        <p className="font-semibold text-slate-805 leading-tight">{student.batch || 'No batch'}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 leading-none">Class of {student.passedOutYear || 'N/A'}</p>
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-sm">
-                      <span className="font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full text-xs">
-                        {teams.find(t => t.members.some(m => m._id === student._id || m === student._id))?.name || '-'}
-                      </span>
+                    <td className="hidden sm:table-cell px-3 py-2 text-xs">
+                      {teams.find(t => t.members.some(m => m._id === student._id || m === student._id)) ? (
+                        <span className="font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded text-[10px] border border-indigo-100/30">
+                          {teams.find(t => t.members.some(m => m._id === student._id || m === student._id))?.name}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-[10px] font-medium">-</span>
+                      )}
                     </td>
-                    <td className="px-5 py-3 text-sm font-semibold text-slate-600">
+                    <td className="hidden md:table-cell px-3 py-2 text-xs font-semibold text-slate-600">
                       {student.city || '-'}
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      <div className="inline-flex gap-1.5">
+                    <td className="px-3 py-2 text-right">
+                      <div className="inline-flex gap-1">
                         <button 
                           onClick={() => { setSelectedStudent(student); setIsViewOpen(true); }}
-                          className="p-1.5 text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                          className="p-1 text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border border-slate-205/30"
                           title="View Details"
                         >
-                          <Eye size={15} />
+                          <Eye size={13} />
                         </button>
                         <button 
                           onClick={() => { setSelectedStudent(student); setEditMode(true); setIsModalOpen(true); }}
-                          className="p-1.5 text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                          className="p-1 text-blue-600 hover:text-blue-800 bg-blue-50/50 hover:bg-blue-50 rounded-lg transition-colors border border-blue-205/20"
                           title="Modify Record"
                         >
-                          <Edit size={15} />
+                          <Edit size={13} />
                         </button>
                         <button 
                           onClick={() => { setSelectedStudent(student); setIsDeleteOpen(true); }}
-                          className="p-1.5 text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                          className="p-1 text-rose-650 hover:text-rose-800 bg-rose-50/30 hover:bg-rose-50 rounded-lg transition-colors border border-rose-205/20"
                           title="Delete Record"
                         >
-                          <Trash2 size={15} />
+                          <Trash2 size={13} />
                         </button>
                       </div>
                     </td>

@@ -320,85 +320,85 @@ export function AppShell({
         )}
 
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex h-screen w-full ${sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[272px]'} flex-col border-r border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)] transition-all duration-300 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shadow-none lg:h-full lg:w-auto overflow-y-auto ${
+          className={`fixed inset-y-0 left-0 z-50 flex h-screen ${sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[240px]'} flex-col border-r border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)] transition-all duration-300 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shadow-none lg:h-full overflow-y-auto ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-slate-200 px-5 bg-white">
-            <Link to="/dashboard" className={`flex items-center gap-3 ${sidebarCollapsed ? 'justify-center w-full' : ''}`}>
-              <img src="/logo.png" alt="PlaceX Logo" className="h-11 w-11 object-contain shrink-0" />
+          <div className="flex h-[60px] shrink-0 items-center justify-between border-b border-slate-200 px-4 bg-white">
+            <Link to="/dashboard" className={`flex items-center gap-2.5 ${sidebarCollapsed ? 'justify-center w-full' : ''}`}>
+              <img src="/logo.png" alt="PlaceX Logo" className="h-8 w-8 object-contain shrink-0" />
               {!sidebarCollapsed && (
                 <div className="overflow-hidden">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-slate-400">
                     Placement OS
                   </p>
-                  <h1 className="text-lg font-semibold text-slate-900 truncate">PlaceX</h1>
+                  <h1 className="text-base font-bold text-slate-900 truncate">PlaceX</h1>
                 </div>
               )}
             </Link>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => setSidebarCollapsed(prev => !prev)}
-                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                 aria-label={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'}
               >
-                {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronRight size={18} className="rotate-180" />}
+                {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronRight size={16} className="rotate-180" />}
               </button>
               <button
                 type="button"
                 onClick={() => setSidebarOpen(false)}
-                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 lg:hidden"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 lg:hidden"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
           </div>
 
-          <div className="flex-1 space-y-8 px-4 py-6 bg-white">
+          <div className="flex-1 space-y-6 px-3 py-4 bg-white">
             {navigationGroups.map(group => (
               <div key={group.title}>
                 {!sidebarCollapsed && (
-                  <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  <p className="px-2.5 text-[9px] font-bold uppercase tracking-[0.22em] text-slate-400">
                     {group.title}
                   </p>
                 )}
-                <nav className="mt-3 space-y-1.5">
+                <nav className="mt-2 space-y-1">
                   {group.items.map(item => {
                     const Icon = item.icon;
                     const active = item.to ? location.pathname === item.to : false;
 
                     const itemClassName = `group flex w-full items-center ${
-                      sidebarCollapsed ? 'justify-center' : 'justify-between hover:translate-x-1'
-                    } rounded-2xl px-3 py-3 transition-all duration-200 ${
+                      sidebarCollapsed ? 'justify-center' : 'justify-between hover:translate-x-0.5'
+                    } rounded-xl px-2 py-1.5 transition-all duration-200 ${
                       item.isLogout
-                        ? 'border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
+                        ? 'border border-rose-100 bg-rose-50/50 text-rose-700 hover:bg-rose-50'
                         : active
-                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50/80 text-blue-700 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.15),0_4px_12px_rgba(59,130,246,0.04)] font-semibold'
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50/50 text-blue-700 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.1),0_2px_8px_rgba(59,130,246,0.02)] font-semibold'
+                        : 'text-slate-600 hover:bg-slate-50/80 hover:text-slate-900'
                     }`;
 
-                    const iconWrapperClassName = `flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110 ${
+                    const iconWrapperClassName = `flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg transition-all duration-300 group-hover:scale-105 ${
                       item.isLogout
-                        ? 'bg-rose-100 text-rose-600'
+                        ? 'bg-rose-100/70 text-rose-600'
                         : active
                         ? 'bg-white text-[var(--primary)] shadow-sm'
-                        : 'bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-slate-800'
+                        : 'bg-slate-50 text-slate-500 group-hover:bg-white group-hover:text-slate-800'
                     }`;
 
                     const labelContent = (
                       <>
-                        <span className="flex flex-1 items-center gap-3 overflow-hidden">
+                        <span className="flex flex-1 items-center gap-2.5 overflow-hidden">
                           <span className={iconWrapperClassName}>
-                            <Icon size={18} />
+                            <Icon size={15} />
                           </span>
-                          {!sidebarCollapsed && <span className="truncate text-sm font-medium">{item.label}</span>}
+                          {!sidebarCollapsed && <span className="truncate text-xs font-semibold">{item.label}</span>}
                         </span>
                         {!sidebarCollapsed && (
                           <ChevronRight
-                            size={16}
-                            className={`shrink-0 ${active ? 'text-[var(--primary)] transition-transform group-hover:translate-x-0.5' : 'text-slate-300 transition-transform group-hover:translate-x-0.5'}`}
+                            size={14}
+                            className={`shrink-0 transition-transform ${active ? 'text-[var(--primary)] group-hover:translate-x-0.5' : 'text-slate-300 group-hover:translate-x-0.5'}`}
                           />
                         )}
                       </>
@@ -428,12 +428,12 @@ export function AppShell({
             ))}
           </div>
 
-          <div className="border-t border-slate-200 p-4 bg-white shrink-0">
+          <div className="border-t border-slate-100 p-3 bg-white shrink-0">
             {!sidebarCollapsed && (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs font-semibold text-slate-500">Logged in as</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900 truncate">{profile.name}</p>
-                <p className="text-xs text-slate-500 truncate">{profile.email}</p>
+              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-2.5">
+                <p className="text-[10px] font-bold text-slate-400 leading-none">Logged in as</p>
+                <p className="mt-1 text-xs font-bold text-slate-850 truncate leading-tight">{profile.name}</p>
+                <p className="text-[10px] text-slate-500 truncate leading-none mt-0.5">{profile.email}</p>
               </div>
             )}
           </div>
@@ -441,19 +441,19 @@ export function AppShell({
 
         <div className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden bg-slate-50 transition-all duration-300">
           <header className="shrink-0 border-b border-slate-200 bg-white">
-            <div className="flex h-[72px] items-center gap-3 px-4 md:px-6 lg:px-8">
+            <div className="flex h-[60px] items-center gap-3 px-4 md:px-6">
               <button
                 type="button"
                 onClick={() => setSidebarOpen(true)}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900 lg:hidden"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900 lg:hidden"
               >
-                <Menu size={18} />
+                <Menu size={16} />
               </button>
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-slate-900">{title}</p>
+                <p className="truncate text-sm font-bold text-slate-900">{title}</p>
                 {subtitle ? (
-                  <p className="truncate text-xs text-slate-500 md:text-sm">{subtitle}</p>
+                  <p className="truncate text-[11px] text-slate-500 font-medium">{subtitle}</p>
                 ) : null}
               </div>
 
@@ -461,15 +461,15 @@ export function AppShell({
                 <div className="hidden sm:block max-w-xs md:max-w-md flex-1">
                   <label className="relative block">
                     <Search
-                      size={16}
-                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                      size={14}
+                      className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
                     />
                     <input
                       type="text"
                       placeholder={searchPlaceholder}
                       value={searchValue}
                       onChange={(e) => onSearchChange(e.target.value)}
-                      className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm text-slate-700 outline-none transition focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary-soft)]"
+                      className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3.5 text-xs text-slate-700 outline-none transition focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary-soft)] font-medium"
                     />
                   </label>
                 </div>
@@ -482,11 +482,11 @@ export function AppShell({
                   <button
                     type="button"
                     onClick={() => setNotificationsOpen(!notificationsOpen)}
-                    className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
+                    className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
                   >
-                    <Bell size={18} />
+                    <Bell size={16} />
                     {notifications.some(n => !n.isRead) && (
-                      <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white animate-pulse" />
+                      <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white animate-pulse" />
                     )}
                   </button>
                   
@@ -528,13 +528,13 @@ export function AppShell({
                   )}
                 </div>
 
-                <div className="hidden items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm sm:flex">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#dbeafe,#e0e7ff)] text-sm font-semibold text-[var(--primary)]">
+                <div className="hidden items-center gap-2 px-2 py-1 sm:flex">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#dbeafe,#e0e7ff)] text-xs font-bold text-[var(--primary)]">
                     {profile.initials}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-900">{profile.name}</p>
-                    <p className="truncate text-xs text-slate-500">{profile.email}</p>
+                    <p className="truncate text-xs font-bold text-slate-900 leading-none">{profile.name}</p>
+                    <p className="truncate text-[10px] text-slate-500 leading-none mt-0.5">{profile.email}</p>
                   </div>
                 </div>
               </div>
@@ -584,27 +584,32 @@ export function SurfaceCard({ children, className = '' }) {
 
 export function MetricCard({ title, value, helper, tone = 'primary', icon }) {
   const toneClasses = {
-    primary: 'bg-blue-50 text-blue-600',
-    success: 'bg-emerald-50 text-emerald-600',
-    warning: 'bg-amber-50 text-amber-600',
-    danger: 'bg-rose-50 text-rose-600',
+    primary: 'bg-blue-50/60 text-blue-600 border border-blue-100/50',
+    success: 'bg-emerald-50/60 text-emerald-600 border border-emerald-100/50',
+    warning: 'bg-amber-50/60 text-amber-600 border border-amber-100/50',
+    danger: 'bg-rose-50/60 text-rose-600 border border-rose-100/50',
+    info: 'bg-violet-50/60 text-violet-600 border border-violet-100/50',
   };
 
   return (
-    <SurfaceCard className="p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-slate-500">{title}</p>
-          <h3 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{value}</h3>
-          {helper ? <p className="mt-2 text-sm text-slate-500">{helper}</p> : null}
+    <div className="rounded-[20px] border border-slate-200/80 bg-white p-4 md:p-5 shadow-[0_4px_20px_rgba(15,23,42,0.02)] transition-all hover:shadow-[0_8px_30px_rgba(15,23,42,0.06)] hover:translate-y-[-1px] flex flex-col justify-between min-h-[110px]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">{title}</p>
+          <p className="mt-2 text-2xl font-black text-slate-900 tracking-tight leading-none">{value}</p>
         </div>
         {icon ? (
-          <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${toneClasses[tone]}`}>
-            {icon}
+          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${toneClasses[tone] || toneClasses.primary}`}>
+            {React.cloneElement(icon, { size: 16 })}
           </div>
         ) : null}
       </div>
-    </SurfaceCard>
+      {helper ? (
+        <p className="mt-3 text-[10px] font-semibold text-slate-450 line-clamp-1 border-t border-slate-50 pt-2 shrink-0">
+          {helper}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -632,6 +637,7 @@ function Badge({ tone, label }) {
     warning: 'bg-amber-50 text-amber-700 ring-amber-100',
     info: 'bg-violet-50 text-violet-700 ring-violet-100',
     neutral: 'bg-slate-100 text-slate-700 ring-slate-200',
+    danger: 'bg-rose-50 text-rose-700 ring-rose-100',
   };
 
   return (

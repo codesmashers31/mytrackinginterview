@@ -460,133 +460,140 @@ export default function StudentList() {
              
              <div className="overflow-x-auto">
                <table className="w-full min-w-[720px] text-left">
-                 <thead className="bg-[#f8fafc] border-b border-slate-100">
-                   <tr>
-                     <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 bg-slate-50/50 w-10">
-                       <input
-                         type="checkbox"
-                         checked={currentItems.length > 0 && currentItems.every(student => selectedStudentIds.includes(student._id))}
-                         onChange={handleToggleSelectAllPage}
-                         className="w-4 h-4 text-[#4338ca] rounded border-slate-300 focus:ring-[#4338ca] cursor-pointer"
-                       />
-                     </th>
-                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Name</th>
-                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Mobile</th>
-                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Classification</th>
-                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Degree</th>
-                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Batch Year</th>
-                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Institute Batch</th>
-                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Team</th>
-                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Grade</th>
-                      <th className="px-3 py-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Status</th>
-                     <th className="px-3 py-2 text-right text-[10px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">Actions</th>
-                   </tr>
-                 </thead>
-                 <tbody className="bg-white">
-                   {loading ? (
-                     <tr>
-                       <td colSpan="10" className="px-4 py-8 md:py-10 text-center">
-                          <div className="animate-spin h-8 w-8 border-4 border-[#4338ca] border-t-transparent flex items-center justify-center rounded-full mx-auto mb-4"></div>
-                       </td>
-                     </tr>
-                   ) : currentItems.length > 0 ? currentItems.map(student => (
-                     <tr key={student._id} className="border-b border-slate-50 hover:bg-[#f8fafc] transition-colors group">
-                       <td className="px-3 py-2.5 w-10">
-                         <input
-                           type="checkbox"
-                           checked={selectedStudentIds.includes(student._id)}
-                           onChange={() => handleToggleSelect(student._id)}
-                           className="w-4 h-4 text-[#4338ca] rounded border-slate-300 focus:ring-[#4338ca] cursor-pointer"
-                         />
-                       </td>
-                        <td className="px-3 py-2.5">
-                           <div className="text-[12px] md:text-[13px] font-bold text-[#1e293b] whitespace-nowrap">{student.name}</div>
+                  <thead className="bg-slate-50 border-b border-slate-100">
+                    <tr>
+                      <th className="w-10 px-2 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={currentItems.length > 0 && currentItems.every(student => selectedStudentIds.includes(student._id))}
+                          onChange={handleToggleSelectAllPage}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-3.5 w-3.5"
+                        />
+                      </th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Candidate Info</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Classification</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Academic & Batch</th>
+                      <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Team</th>
+                      <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">Grade</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>
+                      <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {loading ? (
+                      <tr>
+                        <td colSpan="8" className="px-3 py-10 text-center">
+                          <div className="flex items-center justify-center gap-2 text-slate-500">
+                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                            <span className="text-xs font-semibold">Retrieving candidates...</span>
+                          </div>
                         </td>
-                        <td className="px-3 py-2.5">
-                           <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">{student.mobile}</div>
+                      </tr>
+                    ) : currentItems.length > 0 ? currentItems.map(student => (
+                      <tr key={student._id} className="transition-colors hover:bg-slate-50/40">
+                        <td className="px-2 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedStudentIds.includes(student._id)}
+                            onChange={() => handleToggleSelect(student._id)}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-3.5 w-3.5"
+                          />
                         </td>
-                        <td className="px-3 py-2.5">
-                            <div className="flex flex-wrap gap-1">
-                               {student.isFrontend && (
-                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
-                                   Frontend
-                                 </span>
-                               )}
-                               {(student.enrollments || []).map(enrollment => (
-                                 <span key={enrollment} className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
-                                   enrollment === 'SPL' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                                 }`}>
-                                    {enrollment}
-                                 </span>
-                               ))}
-                               {(!student.enrollments || student.enrollments.length === 0) && (
-                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
-                                    Regular
-                                 </span>
-                               )}
-                            </div>
+                        <td className="px-3 py-2">
+                          <div className="min-w-0 max-w-[180px] md:max-w-xs">
+                            <p className="text-xs font-bold text-slate-800 truncate leading-tight">{student.name}</p>
+                            <p className="text-[10px] text-slate-450 truncate mt-0.5 leading-none">{student.email || 'No email'}</p>
+                            <p className="text-[10px] text-slate-400 truncate mt-0.5 leading-none font-semibold">{student.mobile}</p>
+                          </div>
                         </td>
-                        <td className="px-3 py-2.5">
-                           <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">{student.degree}</div>
+                        <td className="px-3 py-2">
+                          <div className="flex flex-wrap gap-1">
+                            {student.isFrontend && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200/30">
+                                Frontend
+                              </span>
+                            )}
+                            {(student.enrollments || []).map(enrollment => (
+                              <span key={enrollment} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                enrollment === 'SPL' ? 'bg-purple-50 text-purple-700 border border-purple-200/30' : 'bg-blue-50 text-blue-700 border border-blue-200/30'
+                              }`}>
+                                {enrollment}
+                              </span>
+                            ))}
+                            {(!student.enrollments || student.enrollments.length === 0) && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200/30">
+                                Regular
+                              </span>
+                            )}
+                          </div>
                         </td>
-                        <td className="px-3 py-2.5">
-                           <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">
-                             {getValidBatchYear(student.passedOutYear) || 'Not Added'}
-                           </div>
+                        <td className="px-3 py-2 text-xs">
+                          <div>
+                            <p className="font-semibold text-slate-850 leading-tight">
+                              {student.degree || 'No Degree'}
+                              {getValidBatchYear(student.passedOutYear) && (
+                                <span className="text-slate-400 font-normal text-[10px] ml-1">
+                                  (Class of {getValidBatchYear(student.passedOutYear)})
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-[10px] text-slate-450 mt-0.5 leading-none">
+                              {student.batch ? `Batch: ${student.batch}` : 'No batch code'}
+                            </p>
+                          </div>
                         </td>
-                        <td className="px-3 py-2.5">
-                           <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">{student.batch || '-'}</div>
+                        <td className="hidden sm:table-cell px-3 py-2 text-xs">
+                          {teams.find(t => t.members.some(m => m._id === student._id || m === student._id)) ? (
+                            <span className="font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded text-[10px] border border-indigo-100/30">
+                              {teams.find(t => t.members.some(m => m._id === student._id || m === student._id))?.name}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-[10px] font-medium">-</span>
+                          )}
                         </td>
-                        <td className="px-3 py-2.5">
-                           <div className="text-[11px] md:text-[12px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full inline-block whitespace-nowrap">
-                              {teams.find(t => t.members.some(m => m._id === student._id || m === student._id))?.name || '-'}
-                            </div>
+                        <td className="px-3 py-2 text-center text-xs font-semibold">
+                          {student.grade ? (
+                            <span className={`inline-flex items-center justify-center h-5 w-5 rounded text-[10px] font-bold ${student.grade === 'A' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100/30' : student.grade === 'B' ? 'bg-blue-50 text-blue-700 border border-blue-100/30' : 'bg-amber-50 text-amber-700 border border-amber-100/30'}`}>
+                              {student.grade}
+                            </span>
+                          ) : '-'}
                         </td>
-                        <td className="px-3 py-2.5">
-                           <div className="text-[11px] md:text-[12px] font-medium text-slate-600 whitespace-nowrap">
-                             {student.grade ? (
-                               <span className={`inline-flex items-center justify-center h-5 w-5 rounded text-[10px] font-bold ${student.grade === 'A' ? 'bg-emerald-100 text-emerald-700' : student.grade === 'B' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
-                                 {student.grade}
-                               </span>
-                             ) : '-'}
-                           </div>
+                        <td className="px-3 py-2">
+                          <StatusBadge status={student.currentStatus} />
                         </td>
-                        <td className="px-3 py-2.5">
-                           <StatusBadge status={student.currentStatus} />
-                        </td>
-                       <td className="px-3 py-2.5 text-right">
-                          <div className="flex justify-end space-x-2">
-                            <button 
-                              onClick={() => { setSelectedStudent(student); setIsViewOpen(true); }} 
-                              className="p-1.5 rounded-lg bg-indigo-50 text-[#4338ca] hover:bg-[#4338ca] hover:text-white transition-all shadow-sm"
+                        <td className="px-3 py-2 text-right">
+                          <div className="inline-flex gap-1">
+                            <button
+                              onClick={() => { setSelectedStudent(student); setIsViewOpen(true); }}
+                              className="p-1 text-slate-500 hover:text-slate-800 bg-slate-55 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200/30"
                               title="View Details"
                             >
-                               <Eye size={14} />
+                              <Eye size={13} />
                             </button>
-                            <button 
-                              onClick={() => { setSelectedStudent(student); setEditMode(true); setIsModalOpen(true); }} 
-                              className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white transition-all shadow-sm"
+                            <button
+                              onClick={() => { setSelectedStudent(student); setEditMode(true); setIsModalOpen(true); }}
+                              className="p-1 text-blue-600 hover:text-blue-800 bg-blue-50/50 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200/20"
                               title="Edit Candidate"
                             >
-                               <Edit size={14} />
+                              <Edit size={13} />
                             </button>
-                            <button 
-                              onClick={() => { setSelectedStudent(student); setIsDeleteOpen(true); }} 
-                              className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                            <button
+                              onClick={() => { setSelectedStudent(student); setIsDeleteOpen(true); }}
+                              className="p-1 text-rose-650 hover:text-rose-800 bg-rose-50/30 hover:bg-rose-50 rounded-lg transition-colors border border-rose-200/20"
                               title="Delete Candidate"
                             >
-                               <Trash2 size={14} />
+                              <Trash2 size={13} />
                             </button>
                           </div>
-                       </td>
-                     </tr>
-                   )) : (
-                     <tr>
-                       <td colSpan="9" className="px-4 py-8 md:py-10 text-center text-slate-400 font-medium text-[12px]">
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan="8" className="px-4 py-8 md:py-10 text-center text-slate-450 font-medium text-xs">
                           No records matched search parameters
-                       </td>
-                     </tr>
-                   )}
+                        </td>
+                      </tr>
+                    )}
                  </tbody>
                </table>
              </div>

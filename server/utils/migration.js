@@ -246,13 +246,24 @@ export const runStudentMigration = async () => {
         };
 
         if (splReg) {
-          Object.assign(splReg, payload);
-          await splReg.save();
+          // If splReg already exists, only fill in fields that are currently empty/falsy, do NOT overwrite populated fields!
+          let saved = false;
+          for (const key of Object.keys(payload)) {
+            if (payload[key] && !splReg[key]) {
+              splReg[key] = payload[key];
+              saved = true;
+            }
+          }
+          if (saved) {
+            await splReg.save();
+            console.log(`[Migration] Backfilled missing fields for SplRegistration profile: "${splReg.name.trim()}"`);
+          }
         } else {
           splReg = new SplRegistration(payload);
           await splReg.save();
           console.log(`[Migration] Restored SplRegistration profile for: "${payload.name.trim()}"`);
         }
+
 
         // Clean up regular student record if it exists (since they are separate now)
         if (regularStudent) {

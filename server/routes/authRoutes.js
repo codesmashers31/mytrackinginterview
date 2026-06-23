@@ -491,7 +491,7 @@ router.get('/me', authMiddleware, async (req, res) => {
               studentType: 'SPL',
               enrollments: ['SPL'],
               currentStatus: splReg.status,
-              passedOutYear: splReg.batch
+              passedOutYear: splReg.passedOutYear || splReg.batch
             };
           }
         }
@@ -516,7 +516,7 @@ router.get('/me', authMiddleware, async (req, res) => {
               studentType: 'SPL',
               enrollments: ['SPL'],
               currentStatus: splReg.status,
-              passedOutYear: splReg.batch
+              passedOutYear: splReg.passedOutYear || splReg.batch
             };
             user.studentId = splReg._id;
             await user.save();

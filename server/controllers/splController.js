@@ -6,11 +6,6 @@ import DailyActivity from '../models/DailyActivity.js';
 import Attendance from '../models/Attendance.js';
 import { sendRegistrationConfirmation } from '../utils/mailer.js';
 
-const isRegularBatch1to9 = (batch) => {
-  if (!batch) return false;
-  return /Batch\s*[1-9]\b/i.test(batch.trim());
-};
-
 export const createRegistration = async (req, res) => {
   try {
     const email = (req.body.email || '').trim().toLowerCase();
@@ -38,8 +33,8 @@ export const createRegistration = async (req, res) => {
     let resultRecord = null;
     let isMerged = false;
 
-    // Check if student belongs to regular Batch 1 to Batch 9 (making them a duplicate merge candidate)
-    if (regularStudent && isRegularBatch1to9(regularStudent.batch)) {
+    // Check if student belongs to regular directory (making them a duplicate merge candidate)
+    if (regularStudent) {
       isMerged = true;
       // Upgrade regular student to SPL without duplicating records
       if (!regularStudent.enrollments.includes('SPL')) {
@@ -136,6 +131,11 @@ export const updateRegistration = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+
+    const isSpl = await SplRegistration.exists({ _id: id });
+    if (isSpl && updates.passedOutYear !== undefined) {
+      updates.batch = updates.passedOutYear;
+    }
     
     // Try to find and update in SplRegistration
     let reg = await SplRegistration.findOneAndUpdate(

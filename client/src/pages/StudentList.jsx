@@ -26,7 +26,7 @@ export default function StudentList() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [studentTypeFilter, setStudentTypeFilter] = useState('All');
+  const [studentTypeFilter, setStudentTypeFilter] = useState('Regular');
   const [batchFilter, setBatchFilter] = useState('All');
   const [sortBy, setSortBy] = useState('batch-desc');
   
@@ -52,11 +52,7 @@ export default function StudentList() {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter !== 'All') params.append('status', statusFilter);
-      if (studentTypeFilter !== 'All') {
-        params.append('studentType', studentTypeFilter);
-      } else {
-        params.append('all', 'true');
-      }
+      params.append('studentType', 'Regular');
 
       const res = await fetch(`${buildApiUrl('/students')}?${params.toString()}`, {
         headers: { ...authHeaders() },
@@ -319,8 +315,8 @@ export default function StudentList() {
 
   return (
     <AppShell
-      title="Student Directory"
-      subtitle="Manage candidate records, imports, exports, and placement status updates."
+      title="Regular Students"
+      subtitle="Manage Regular Track candidate records, imports, exports, and status updates."
       searchPlaceholder="Search students, mobile number, company, or institute batch"
       searchValue={searchTerm}
       onSearchChange={setSearchTerm}
@@ -328,36 +324,10 @@ export default function StudentList() {
             <SectionTabs
               items={[
                 { label: 'Overview', onClick: () => navigate('/dashboard') },
-                { label: 'Student Directory', active: true },
+                { label: 'Regular Students', active: true },
                 { label: 'Eligibility', onClick: () => navigate('/eligibility') },
               ]}
             />
-
-            {/* Student Type Sub-tabs */}
-            <div className="flex bg-slate-100 p-1 rounded-xl w-fit mb-4 mt-4">
-              {[
-                { label: 'All Candidates', value: 'All' },
-                { label: 'Regular Track', value: 'Regular' },
-                { label: 'Frontend Track', value: 'Frontend' },
-                { label: 'SPL Class', value: 'SPL' }
-              ].map(tab => (
-                <button
-                  key={tab.value}
-                  type="button"
-                  onClick={() => {
-                    setStudentTypeFilter(tab.value);
-                    setCurrentPage(1);
-                  }}
-                  className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors ${
-                    studentTypeFilter === tab.value 
-                      ? 'bg-white text-blue-700 shadow-sm' 
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
 
            {/* Toolbar */}
            <div className="mb-3 flex flex-col gap-2">
@@ -468,9 +438,9 @@ export default function StudentList() {
            {/* Master Table */}
            <SurfaceCard className="overflow-hidden">
              <div className="px-4 md:px-5 py-3 border-b border-slate-100 bg-white flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                <h3 className="text-sm md:text-base font-bold text-[#1e293b]">All Candidates</h3>
+                <h3 className="text-sm md:text-base font-bold text-[#1e293b]">Regular Track Students</h3>
                 <p className="text-[11px] md:text-xs font-medium text-slate-500">
-                  Showing <span className="font-bold text-slate-700">{processedStudents.length}</span> candidate{processedStudents.length === 1 ? '' : 's'}
+                  Showing <span className="font-bold text-slate-700">{processedStudents.length}</span> student{processedStudents.length === 1 ? '' : 's'}
                   {batchFilter !== 'All' ? ` in ${batchFilter}` : ''}
                 </p>
              </div>
@@ -798,14 +768,7 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
                    <label className="crm-label">Institute Batch</label>
                    <input value={formData.batch} onChange={e => setFormData({...formData, batch: e.target.value})} className="crm-input" placeholder="2024-A / Morning / Section A" />
                 </div>
-                <div>
-                   <label className="crm-label">Student Classification</label>
-                   <select required value={formData.studentType} onChange={e => setFormData({...formData, studentType: e.target.value})} className="crm-input">
-                      <option value="Regular">Regular Track</option>
-                      <option value="Frontend">Frontend Track</option>
-                      <option value="SPL">SPL Class</option>
-                   </select>
-                </div>
+                {/* Student classification defaults to Regular */}
                 <div>
                    <label className="crm-label">Student Grade</label>
                    <select value={formData.grade} onChange={e => setFormData({...formData, grade: e.target.value})} className="crm-input">

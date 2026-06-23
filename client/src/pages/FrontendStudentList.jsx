@@ -493,6 +493,7 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
     passedOutYear: student?.passedOutYear || '',
     city: student?.city || '',
     currentStatus: student?.currentStatus || 'Job Seeker',
+    studentType: 'Frontend',
     isFrontend: true
   });
 

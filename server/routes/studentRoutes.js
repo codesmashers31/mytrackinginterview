@@ -124,19 +124,85 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', authMiddleware, async (req, res) => {
     try {
+        const currentStudent = await Student.findById(req.params.id);
+        if (!currentStudent) {
+            return res.status(404).json({ message: 'Student not found' });
+        }
+
         const payload = { ...req.body };
         if (payload.studentType) {
             payload.isFrontend = payload.studentType === 'Frontend';
         }
+
+        // Resolve target email based on payload changes
+        const type = payload.studentType !== undefined ? payload.studentType : currentStudent.studentType;
+        const email = payload.email !== undefined ? payload.email : currentStudent.email;
+        const mobile = payload.mobile !== undefined ? payload.mobile : currentStudent.mobile;
+        
+        const targetEmail = type === 'SPL' && email ? email.trim().toLowerCase() : (mobile ? mobile.trim() : '');
+
+        // Find all student records belonging to the same person to exclude them from the conflict check
+        const searchTerms = [];
+        if (currentStudent.mobile) {
+            searchTerms.push({ mobile: currentStudent.mobile.trim() });
+        }
+        if (currentStudent.email) {
+            searchTerms.push({ email: currentStudent.email.trim().toLowerCase() });
+        }
+        if (payload.mobile) {
+            searchTerms.push({ mobile: payload.mobile.trim() });
+        }
+        if (payload.email) {
+            searchTerms.push({ email: payload.email.trim().toLowerCase() });
+        }
+
+        const samePersonStudents = searchTerms.length > 0 ? await Student.find({ $or: searchTerms }) : [];
+        const samePersonStudentIds = samePersonStudents.map(s => s._id);
+
+        if (targetEmail) {
+            const conflictingUser = await User.findOne({
+                email: targetEmail,
+                studentId: { $nin: samePersonStudentIds }
+            });
+            if (conflictingUser) {
+                return res.status(409).json({ message: 'The mobile number or email is already registered to another user account' });
+            }
+        }
+
         const student = await Student.findByIdAndUpdate(req.params.id, payload, { returnDocument: 'after' });
         if (student) {
-            const user = await User.findOne({ studentId: student._id });
+            // Keep other student records for the same person in sync
+            if (searchTerms.length > 0) {
+                const syncPayload = { ...payload };
+                delete syncPayload._id;
+                delete syncPayload.studentType;
+                delete syncPayload.isFrontend;
+                
+                await Student.updateMany(
+                    { 
+                        _id: { $ne: student._id },
+                        $or: searchTerms
+                    },
+                    { $set: syncPayload }
+                );
+            }
+
+            // Find all student records for this person (post-update) to find their User account
+            const updatedSearchTerms = [];
+            if (student.mobile) {
+                updatedSearchTerms.push({ mobile: student.mobile.trim() });
+            }
+            if (student.email) {
+                updatedSearchTerms.push({ email: student.email.trim().toLowerCase() });
+            }
+            const allStudentsForPerson = await Student.find({ $or: updatedSearchTerms });
+            const studentIds = allStudentsForPerson.map(s => s._id);
+
+            const user = await User.findOne({ studentId: { $in: studentIds } });
             if (user) {
                 user.name = student.name;
-                if (student.studentType === 'SPL') {
-                    user.email = student.email ? student.email.trim().toLowerCase() : student.mobile.trim();
-                } else {
-                    user.email = student.mobile.trim();
+                if (targetEmail) {
+                    user.email = targetEmail;
                 }
                 await user.save();
             }
@@ -287,7 +353,8 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
             packageLpa: String(row.Package || row.packageLpa || ''),
             jobGetMode: row.Mode || row.jobGetMode || '',
             city: row.City || row.city || row.Town || row.town || '',
-            isFrontend: isFrontend
+            isFrontend: isFrontend,
+            studentType: isFrontend ? 'Frontend' : 'Regular'
         }));
 
         await Student.insertMany(students);

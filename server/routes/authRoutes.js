@@ -20,39 +20,107 @@ const upload = multer({
 
 const signJwt = (payload) => jwt.sign(payload, process.env.JWT_SECRET || 'secret', { expiresIn: '1d' });
 
+const getPrimaryStudent = async (student) => {
+  if (!student) return null;
+  if (student.studentType !== 'SPL') {
+    return student;
+  }
+  const matchQuery = [];
+  if (student.mobile) {
+    matchQuery.push({ mobile: student.mobile.trim() });
+  }
+  if (student.email) {
+    matchQuery.push({ email: student.email.trim().toLowerCase() });
+  }
+  if (matchQuery.length > 0) {
+    const primary = await Student.findOne({
+      $or: matchQuery,
+      studentType: { $ne: 'SPL' }
+    });
+    if (primary) {
+      return primary;
+    }
+  }
+  return student;
+};
+
 const ensureAllStudentAccounts = async () => {
   try {
     const students = await Student.find();
+    const processedPrimaryIds = new Set();
+
     for (const student of students) {
       if (!student.mobile && !student.email) continue;
       
-      let user = await User.findOne({ studentId: student._id });
-      if (!user) {
-        const email = student.email ? student.email.trim().toLowerCase() : '';
-        const mobile = student.mobile ? student.mobile.trim() : '';
+      const primaryStudent = await getPrimaryStudent(student);
+      if (!primaryStudent) continue;
 
-        user = await User.findOne({
-          $or: [
-            ...(email ? [{ email }] : []),
-            ...(mobile ? [{ email: mobile }] : [])
-          ]
-        });
+      const primaryIdStr = primaryStudent._id.toString();
+      if (processedPrimaryIds.has(primaryIdStr)) {
+        continue;
+      }
+      processedPrimaryIds.add(primaryIdStr);
 
-        if (user) {
-          user.studentId = student._id;
-          await user.save();
-        } else {
-          const userEmail = student.studentType === 'SPL' && email ? email : mobile;
-          const password = mobile || email;
-          if (userEmail) {
-            user = new User({
-              name: student.name || 'Student',
-              email: userEmail,
-              password,
-              role: 'student',
-              studentId: student._id
-            });
+      const email = primaryStudent.email ? primaryStudent.email.trim().toLowerCase() : '';
+      const mobile = primaryStudent.mobile ? primaryStudent.mobile.trim() : '';
+      const expectedUserEmail = primaryStudent.studentType === 'SPL' && email ? email : mobile;
+
+      if (!expectedUserEmail) continue;
+
+      const studentQuery = [];
+      if (primaryStudent.mobile) {
+        studentQuery.push({ mobile: primaryStudent.mobile.trim() });
+      }
+      if (primaryStudent.email) {
+        studentQuery.push({ email: primaryStudent.email.trim().toLowerCase() });
+      }
+      const allStudentsForPerson = await Student.find({ $or: studentQuery });
+      const studentIds = allStudentsForPerson.map(s => s._id);
+
+      let user = await User.findOne({
+        $or: [
+          { studentId: { $in: studentIds } },
+          { email: expectedUserEmail }
+        ]
+      });
+
+      if (user) {
+        let modified = false;
+        if (!user.studentId || user.studentId.toString() !== primaryStudent._id.toString()) {
+          user.studentId = primaryStudent._id;
+          modified = true;
+        }
+        if (user.email !== expectedUserEmail) {
+          user.email = expectedUserEmail;
+          modified = true;
+        }
+        if (modified) {
+          try {
             await user.save();
+          } catch (saveErr) {
+            if (saveErr.code === 11000) {
+              console.warn(`Skipping duplicate user account sync for student: ${primaryStudent.name} (${expectedUserEmail}) due to duplicate key.`);
+            } else {
+              throw saveErr;
+            }
+          }
+        }
+      } else {
+        const password = mobile || email;
+        try {
+          user = new User({
+            name: primaryStudent.name || 'Student',
+            email: expectedUserEmail,
+            password,
+            role: 'student',
+            studentId: primaryStudent._id
+          });
+          await user.save();
+        } catch (saveErr) {
+          if (saveErr.code === 11000) {
+            console.warn(`Skipping new user account creation for student: ${primaryStudent.name} (${expectedUserEmail}) due to duplicate key.`);
+          } else {
+            throw saveErr;
           }
         }
       }
@@ -66,11 +134,6 @@ const ensureStudentAccount = async (emailOrMobile) => {
   if (!emailOrMobile) return;
   const normalized = emailOrMobile.trim().toLowerCase();
 
-  let user = await User.findOne({ 
-    $or: [{ email: normalized }, { email: emailOrMobile.trim() }] 
-  });
-  if (user && user.studentId) return;
-
   const student = await Student.findOne({
     $or: [
       ...(normalized ? [{ email: normalized }] : []),
@@ -79,24 +142,70 @@ const ensureStudentAccount = async (emailOrMobile) => {
   });
 
   if (student) {
-    if (user) {
-      user.studentId = student._id;
-      await user.save();
-    } else {
-      const email = student.email ? student.email.trim().toLowerCase() : '';
-      const mobile = student.mobile ? student.mobile.trim() : '';
-      const userEmail = student.studentType === 'SPL' && email ? email : mobile;
-      const password = mobile || email;
+    const primaryStudent = await getPrimaryStudent(student);
+    if (!primaryStudent) return;
 
-      if (userEmail) {
-        user = new User({
-          name: student.name || 'Student',
-          email: userEmail,
-          password,
-          role: 'student',
-          studentId: student._id
-        });
-        await user.save();
+    const email = primaryStudent.email ? primaryStudent.email.trim().toLowerCase() : '';
+    const mobile = primaryStudent.mobile ? primaryStudent.mobile.trim() : '';
+    const expectedUserEmail = primaryStudent.studentType === 'SPL' && email ? email : mobile;
+
+    if (expectedUserEmail) {
+      const studentQuery = [];
+      if (primaryStudent.mobile) {
+        studentQuery.push({ mobile: primaryStudent.mobile.trim() });
+      }
+      if (primaryStudent.email) {
+        studentQuery.push({ email: primaryStudent.email.trim().toLowerCase() });
+      }
+      const allStudentsForPerson = await Student.find({ $or: studentQuery });
+      const studentIds = allStudentsForPerson.map(s => s._id);
+
+      let user = await User.findOne({
+        $or: [
+          { studentId: { $in: studentIds } },
+          { email: expectedUserEmail }
+        ]
+      });
+
+      if (user) {
+        let modified = false;
+        if (!user.studentId || user.studentId.toString() !== primaryStudent._id.toString()) {
+          user.studentId = primaryStudent._id;
+          modified = true;
+        }
+        if (user.email !== expectedUserEmail) {
+          user.email = expectedUserEmail;
+          modified = true;
+        }
+        if (modified) {
+          try {
+            await user.save();
+          } catch (saveErr) {
+            if (saveErr.code === 11000) {
+              console.warn(`Skipping duplicate user account sync for student: ${primaryStudent.name} (${expectedUserEmail}) due to duplicate key.`);
+            } else {
+              throw saveErr;
+            }
+          }
+        }
+      } else {
+        const password = mobile || email;
+        try {
+          user = new User({
+            name: primaryStudent.name || 'Student',
+            email: expectedUserEmail,
+            password,
+            role: 'student',
+            studentId: primaryStudent._id
+          });
+          await user.save();
+        } catch (saveErr) {
+          if (saveErr.code === 11000) {
+            console.warn(`Skipping new user account creation for student: ${primaryStudent.name} (${expectedUserEmail}) due to duplicate key.`);
+          } else {
+            throw saveErr;
+          }
+        }
       }
     }
   }
@@ -284,7 +393,24 @@ router.post('/login', async (req, res) => {
 
     let user = null;
     if (student) {
-      user = await User.findOne({ studentId: student._id });
+      const studentQuery = [];
+      if (student.mobile) {
+        studentQuery.push({ mobile: student.mobile.trim() });
+      }
+      if (student.email) {
+        studentQuery.push({ email: student.email.trim().toLowerCase() });
+      }
+      const allStudentsForPerson = await Student.find({ $or: studentQuery });
+      const studentIds = allStudentsForPerson.map(s => s._id);
+
+      user = await User.findOne({
+        $or: [
+          { studentId: { $in: studentIds } },
+          { email: inputVal },
+          ...(student.mobile ? [{ email: student.mobile.trim() }] : []),
+          ...(student.email ? [{ email: student.email.trim().toLowerCase() }] : [])
+        ]
+      });
     } else {
       user = await User.findOne({ email: inputVal });
     }
@@ -297,7 +423,23 @@ router.post('/login', async (req, res) => {
     if (user.role === 'student' && user.studentId) {
       const studentRec = await Student.findById(user.studentId);
       if (studentRec) {
-        studentType = studentRec.studentType || 'Regular';
+        const searchTerms = [];
+        if (studentRec.mobile) searchTerms.push({ mobile: studentRec.mobile.trim() });
+        if (studentRec.email) searchTerms.push({ email: studentRec.email.trim().toLowerCase() });
+        
+        if (searchTerms.length > 0) {
+          const allRecs = await Student.find({ $or: searchTerms });
+          const types = allRecs.map(r => r.studentType);
+          if (types.includes('Frontend')) {
+            studentType = 'Frontend';
+          } else if (types.includes('Regular')) {
+            studentType = 'Regular';
+          } else {
+            studentType = studentRec.studentType || 'Regular';
+          }
+        } else {
+          studentType = studentRec.studentType || 'Regular';
+        }
       }
     }
 

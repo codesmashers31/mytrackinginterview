@@ -224,18 +224,15 @@ export default function Settings() {
                       />
                     </div>
 
-                    {(profileType === 'spl' || profileData.isFrontend) && (
-                      <div>
-                        <label className="crm-label">Email Address</label>
-                        <input
-                          type="email"
-                          required
-                          value={profileData.email || ''}
-                          onChange={e => setProfileData({ ...profileData, email: e.target.value })}
-                          className="crm-input"
-                        />
-                      </div>
-                    )}
+                    <div>
+                      <label className="crm-label">Email Address</label>
+                      <input
+                        type="email"
+                        value={profileData.email || ''}
+                        onChange={e => setProfileData({ ...profileData, email: e.target.value })}
+                        className="crm-input"
+                      />
+                    </div>
 
                     <div>
                       <label className="crm-label">Mobile Number</label>
@@ -248,31 +245,26 @@ export default function Settings() {
                       />
                     </div>
 
-                    {!profileData.isFrontend && (
-                      <div>
-                        <label className="crm-label">Degree / Course</label>
-                        <input
-                          type="text"
-                          required
-                          value={profileData.degree || ''}
-                          onChange={e => setProfileData({ ...profileData, degree: e.target.value })}
-                          className="crm-input"
-                        />
-                      </div>
-                    )}
+                    <div>
+                      <label className="crm-label">Degree / Course</label>
+                      <input
+                        type="text"
+                        value={profileData.degree || ''}
+                        onChange={e => setProfileData({ ...profileData, degree: e.target.value })}
+                        className="crm-input"
+                      />
+                    </div>
 
-                    {profileData.isFrontend && (
-                      <div>
-                        <label className="crm-label">City</label>
-                        <input
-                          type="text"
-                          value={profileData.city || ''}
-                          onChange={e => setProfileData({ ...profileData, city: e.target.value })}
-                          className="crm-input"
-                          placeholder="e.g. Bangalore"
-                        />
-                      </div>
-                    )}
+                    <div>
+                      <label className="crm-label">City</label>
+                      <input
+                        type="text"
+                        value={profileData.city || ''}
+                        onChange={e => setProfileData({ ...profileData, city: e.target.value })}
+                        className="crm-input"
+                        placeholder="e.g. Bangalore"
+                      />
+                    </div>
 
                     <div>
                       <label className="crm-label">
@@ -280,8 +272,6 @@ export default function Settings() {
                       </label>
                       <input
                         type="text"
-                        required={!profileData.isFrontend}
-                        disabled={profileData.isFrontend}
                         value={profileType === 'directory' ? (profileData.passedOutYear || '') : (profileData.batch || '')}
                         onChange={e => {
                           if (profileType === 'directory') {
@@ -290,7 +280,7 @@ export default function Settings() {
                             setProfileData({ ...profileData, batch: e.target.value });
                           }
                         }}
-                        className={`crm-input ${profileData.isFrontend ? 'bg-slate-50 cursor-not-allowed' : ''}`}
+                        className="crm-input"
                         placeholder="e.g. 2024"
                       />
                     </div>
@@ -302,10 +292,9 @@ export default function Settings() {
                         </label>
                         <input
                           type="text"
-                          disabled={profileData.isFrontend}
                           value={profileData.batch || ''}
                           onChange={e => setProfileData({ ...profileData, batch: e.target.value })}
-                          className={`crm-input ${profileData.isFrontend ? 'bg-slate-50 cursor-not-allowed' : ''}`}
+                          className="crm-input"
                           placeholder={profileData.isFrontend ? 'e.g. Morning Batch' : 'e.g. Section A'}
                         />
                       </div>
@@ -323,36 +312,34 @@ export default function Settings() {
                       </div>
                     )}
 
-                    {profileType === 'spl' && (
-                      <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-5 pt-3 border-t border-slate-100">
-                        <div>
-                          <label className="crm-label">Primary Tech Stack</label>
-                          <select
-                            value={selectedSelectStack}
-                            onChange={handleStackDropdownChange}
-                            className="crm-input"
-                          >
-                            <option value="">Select Stack</option>
-                            {STANDARD_STACKS.map(stackOpt => (
-                              <option key={stackOpt} value={stackOpt}>{stackOpt}</option>
-                            ))}
-                            <option value="Other">Other</option>
-                          </select>
-                        </div>
-                        {selectedSelectStack === 'Other' && (
-                          <div>
-                            <label className="crm-label">Custom Tech Stack</label>
-                            <input
-                              type="text"
-                              value={customStackText}
-                              onChange={handleCustomStackChange}
-                              className="crm-input"
-                              placeholder="e.g. .NET Full Stack"
-                            />
-                          </div>
-                        )}
+                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-5 pt-3 border-t border-slate-100">
+                      <div>
+                        <label className="crm-label">Primary Tech Stack</label>
+                        <select
+                          value={selectedSelectStack}
+                          onChange={handleStackDropdownChange}
+                          className="crm-input"
+                        >
+                          <option value="">Select Stack</option>
+                          {STANDARD_STACKS.map(stackOpt => (
+                            <option key={stackOpt} value={stackOpt}>{stackOpt}</option>
+                          ))}
+                          <option value="Other">Other</option>
+                        </select>
                       </div>
-                    )}
+                      {selectedSelectStack === 'Other' && (
+                        <div>
+                          <label className="crm-label">Custom Tech Stack</label>
+                          <input
+                            type="text"
+                            value={customStackText}
+                            onChange={handleCustomStackChange}
+                            className="crm-input"
+                            placeholder="e.g. .NET Full Stack"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {profileType === 'directory' && (

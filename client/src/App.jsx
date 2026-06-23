@@ -26,6 +26,8 @@ import PlacementSplClasses from './pages/PlacementSplClasses';
 import ResumeBuilder from './pages/ResumeBuilder';
 import TeamManagement from './pages/TeamManagement';
 import StudentTeams from './pages/StudentTeams';
+import FrontendStudentList from './pages/FrontendStudentList';
+import SplRegistrations from './pages/SplRegistrations';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
 import { isAuthenticated } from './utils/auth';
@@ -55,7 +57,7 @@ function App() {
         />
         <Route path="/dashboard" element={<RoleRoute roles={[ 'admin' ]}><Dashboard /></RoleRoute>} />
         <Route path="/students" element={<RoleRoute roles={[ 'admin', 'coordinator' ]}><StudentList /></RoleRoute>} />
-        <Route path="/admin/frontend-students" element={<Navigate to="/students" replace />} />
+        <Route path="/admin/frontend-students" element={<RoleRoute roles={[ 'admin', 'coordinator' ]}><FrontendStudentList /></RoleRoute>} />
         <Route path="/eligibility" element={<RoleRoute roles={[ 'admin' ]}><EligibilityPage /></RoleRoute>} />
         <Route path="/admin/placements" element={<RoleRoute roles={[ 'admin' ]}><PlacementManagement /></RoleRoute>} />
         <Route path="/admin/coordinators" element={<RoleRoute roles={[ 'admin', 'coordinator' ]}><CoordinatorManagement /></RoleRoute>} />
@@ -65,7 +67,7 @@ function App() {
         <Route path="/settings" element={<RoleRoute roles={[ 'admin', 'student', 'placement', 'coordinator' ]}><Settings /></RoleRoute>} />
         <Route path="/spl-registration" element={<SplClassForm />} />
         <Route path="/spl-registration/success" element={<SplSuccess />} />
-        <Route path="/spl-registrations" element={<Navigate to="/students" replace />} />
+        <Route path="/spl-registrations" element={<RoleRoute roles={[ 'admin', 'coordinator', 'placement' ]}><SplRegistrations /></RoleRoute>} />
         <Route path="/placement/dashboard" element={<RoleRoute roles={[ 'placement' ]}><PlacementDashboard /></RoleRoute>} />
         <Route path="/placement/eligibility" element={<RoleRoute roles={[ 'placement' ]}><PlacementEligibility /></RoleRoute>} />
         <Route path="/placement/spl-classes" element={<RoleRoute roles={[ 'placement' ]}><PlacementSplClasses /></RoleRoute>} />

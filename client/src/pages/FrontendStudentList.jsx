@@ -144,6 +144,7 @@ export default function FrontendStudentList() {
       Name: s.name,
       Mobile: s.mobile,
       Email: s.email || '',
+      Degree: s.degree || '',
       Batch: s.batch || '',
       'Batch Year': s.passedOutYear || '',
       City: s.city || ''
@@ -334,6 +335,7 @@ export default function FrontendStudentList() {
                 </th>
                 <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Candidate Info</th>
                 <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Contact</th>
+                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Degree</th>
                 <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Batch details</th>
                 <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Team</th>
                 <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Location</th>
@@ -344,7 +346,7 @@ export default function FrontendStudentList() {
             <tbody className="divide-y divide-slate-100 bg-white">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="px-5 py-12 text-center">
+                  <td colSpan="9" className="px-5 py-12 text-center">
                     <div className="flex items-center justify-center gap-2 text-slate-500">
                       <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
                       <span className="text-sm font-semibold">Retrieving Frontend candidates...</span>
@@ -353,7 +355,7 @@ export default function FrontendStudentList() {
                 </tr>
               ) : currentItems.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-5 py-12 text-center text-sm font-semibold text-slate-500">
+                  <td colSpan="9" className="px-5 py-12 text-center text-sm font-semibold text-slate-500">
                     No frontend student records found matching the active filters.
                   </td>
                 </tr>
@@ -376,6 +378,9 @@ export default function FrontendStudentList() {
                     </td>
                     <td className="px-5 py-3 text-sm font-semibold text-slate-600">
                       {student.mobile}
+                    </td>
+                    <td className="px-5 py-3 text-sm font-semibold text-slate-600">
+                      {student.degree || '—'}
                     </td>
                     <td className="px-5 py-3 text-sm text-slate-600">
                       <div>
@@ -485,10 +490,16 @@ export default function FrontendStudentList() {
 }
 
 function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
+  const defaultDegreeOptions = ['B.Tech', 'M.Tech', 'BCA', 'MCA', 'B.Sc', 'M.Sc', 'B.Com', 'M.Com', 'BBA', 'MBA'];
+  const studentDegree = student?.degree ? String(student.degree).trim() : '';
+  const isCustomDegree = studentDegree && !defaultDegreeOptions.includes(studentDegree);
+
   const [formData, setFormData] = useState({
     name: student?.name || '',
     email: student?.email || '',
     mobile: student?.mobile || '',
+    degree: isCustomDegree ? 'Other' : studentDegree || '',
+    customDegree: isCustomDegree ? studentDegree : '',
     batch: student?.batch || '',
     passedOutYear: student?.passedOutYear || '',
     city: student?.city || '',
@@ -511,10 +522,16 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
         ? buildApiUrl(`/students/${student._id}`)
         : buildApiUrl('/students');
       
+      const payload = {
+        ...formData,
+        degree: formData.degree === 'Other' ? formData.customDegree.trim() || '' : formData.degree
+      };
+      delete payload.customDegree;
+
       const res = await fetch(url, {
         method: editMode ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
@@ -560,6 +577,48 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
+              <label className="crm-label">Degree</label>
+              <select 
+                required 
+                value={formData.degree} 
+                onChange={e => setFormData({...formData, degree: e.target.value, customDegree: e.target.value !== 'Other' ? '' : formData.customDegree})} 
+                className="crm-input"
+              >
+                <option value="">Select Degree</option>
+                {defaultDegreeOptions.map(deg => (
+                  <option key={deg} value={deg}>{deg}</option>
+                ))}
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            {formData.degree === 'Other' ? (
+              <div>
+                <label className="crm-label">Specify Degree</label>
+                <input
+                  required
+                  value={formData.customDegree}
+                  onChange={e => setFormData({...formData, customDegree: e.target.value})}
+                  className="crm-input"
+                  placeholder="e.g. B.Sc CS"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="crm-label">City</label>
+                <input value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="crm-input" placeholder="e.g. Bangalore" />
+              </div>
+            )}
+          </div>
+
+          {formData.degree === 'Other' && (
+            <div>
+              <label className="crm-label">City</label>
+              <input value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="crm-input" placeholder="e.g. Bangalore" />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
               <label className="crm-label">Batch</label>
               <input value={formData.batch} onChange={e => setFormData({...formData, batch: e.target.value})} className="crm-input" placeholder="e.g. Morning Batch" />
             </div>
@@ -567,11 +626,6 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
               <label className="crm-label">Batch Year</label>
               <input value={formData.passedOutYear} onChange={e => setFormData({...formData, passedOutYear: e.target.value})} className="crm-input" placeholder="e.g. 2024" />
             </div>
-          </div>
-
-          <div>
-            <label className="crm-label">City</label>
-            <input value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="crm-input" placeholder="e.g. Bangalore" />
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
@@ -618,6 +672,10 @@ function FrontendStudentDetailModal({ onClose, student }) {
             <div className="flex justify-between text-sm">
               <span className="text-slate-400 font-medium">Mobile</span>
               <span className="text-slate-800 font-semibold">{student.mobile}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400 font-medium">Degree</span>
+              <span className="text-slate-800 font-semibold">{student.degree || 'N/A'}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-slate-400 font-medium">Batch</span>

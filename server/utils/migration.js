@@ -315,23 +315,62 @@ export const runTeamMigration = async () => {
   try {
     const teams = await Team.find();
     for (const team of teams) {
-      let modified = false;
-      if (team.track === undefined) {
-        let isFrontendTeam = false;
-        if (team.members && team.members.length > 0) {
-          const membersList = await Student.find({ _id: { $in: team.members } });
-          isFrontendTeam = membersList.length > 0 && membersList.every(m => m.isFrontend || m.studentType === 'Frontend');
+      let isFrontendTeam = false;
+      let detectedBatch = '';
+
+      if (team.members && team.members.length > 0) {
+        // Find members in Student collection
+        const students = await Student.find({ _id: { $in: team.members } });
+        const studentMap = {};
+        students.forEach(s => { studentMap[String(s._id)] = s; });
+
+        // Find members in SplRegistration collection
+        const missingIds = team.members.filter(id => !studentMap[String(id)]);
+        if (missingIds.length > 0) {
+          const splRegs = await SplRegistration.find({ _id: { $in: missingIds } });
+          splRegs.forEach(r => {
+            studentMap[String(r._id)] = {
+              ...r.toObject(),
+              studentType: 'SPL',
+              enrollments: ['SPL'],
+              currentStatus: r.status,
+              passedOutYear: r.passedOutYear || r.batch
+            };
+          });
         }
-        team.track = isFrontendTeam ? 'Frontend' : 'Regular';
-        modified = true;
+
+        const membersList = Object.values(studentMap);
+
+        if (membersList.length > 0) {
+          isFrontendTeam = membersList.every(m => m.isFrontend || m.studentType === 'Frontend');
+
+          if (!isFrontendTeam) {
+            for (const member of membersList) {
+              if (member.batch && member.batch.startsWith('Batch')) {
+                detectedBatch = member.batch.trim();
+                break;
+              }
+            }
+            if (!detectedBatch) {
+              for (const member of membersList) {
+                if (member.batch) {
+                  detectedBatch = member.batch.trim();
+                  break;
+                }
+              }
+            }
+          }
+        }
       }
-      if (team.batch === undefined) {
-        team.batch = '';
-        modified = true;
-      }
-      if (modified) {
+
+      const targetTrack = isFrontendTeam ? 'Frontend' : 'Regular';
+      const targetBatch = detectedBatch || '';
+
+      if (team.track !== targetTrack || team.batch !== targetBatch) {
+        team.track = targetTrack;
+        team.batch = targetBatch;
         await team.save();
-        console.log(`[Migration] Migrated team "${team.name}" -> track: "${team.track}", batch: "${team.batch}"`);
+        console.log(`[Migration] Updated Team "${team.name}" -> track: "${team.track}", batch: "${team.batch}"`);
       }
     }
     console.log('[Migration] PlaceX team migration complete.');

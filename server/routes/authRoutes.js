@@ -63,7 +63,7 @@ const ensureStudentAccount = async (emailOrMobile) => {
 
     const email = primaryStudent.email ? primaryStudent.email.trim().toLowerCase() : '';
     const mobile = primaryStudent.mobile ? primaryStudent.mobile.trim() : '';
-    const expectedUserEmail = primaryStudent.studentType === 'SPL' && email ? email : mobile;
+    const expectedUserEmail = email ? email : mobile;
 
     if (expectedUserEmail) {
       const studentQuery = [];
@@ -161,7 +161,7 @@ const ensureStudentAccount = async (emailOrMobile) => {
   }
 };
 
-const ensureAllStudentAccounts = async () => {
+export const ensureAllStudentAccounts = async () => {
   try {
     const students = await Student.find();
     for (const student of students) {
@@ -813,8 +813,5 @@ router.post('/change-password', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Password update failed', error: error.message });
   }
 });
-
-// Sync student accounts on startup
-ensureAllStudentAccounts();
 
 export default router;

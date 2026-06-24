@@ -333,46 +333,29 @@ export default function FrontendStudentList() {
                     className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-3.5 w-3.5"
                   />
                 </th>
-<<<<<<< HEAD
-                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Candidate Info</th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Contact</th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Degree</th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Batch details</th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Team</th>
-                <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Location</th>
-                <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Actions</th>
-=======
                 <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Candidate Info</th>
                 <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact</th>
+                <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Degree</th>
                 <th className="hidden md:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Batch Details</th>
                 <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Team</th>
                 <th className="hidden md:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Location</th>
                 <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">Actions</th>
->>>>>>> 59692d661c93539444f2d3975aa8dc52caef5f7c
               </tr>
             </thead>
             
             <tbody className="divide-y divide-slate-100 bg-white">
               {loading ? (
                 <tr>
-<<<<<<< HEAD
-                  <td colSpan="9" className="px-5 py-12 text-center">
-=======
-                  <td colSpan="7" className="px-3 py-10 text-center">
->>>>>>> 59692d661c93539444f2d3975aa8dc52caef5f7c
+                  <td colSpan="8" className="px-3 py-10 text-center">
                     <div className="flex items-center justify-center gap-2 text-slate-500">
                       <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                      <span className="text-xs font-semibold">Retrieving Frontend candidates...</span>
+                      <span className="text-sm font-semibold">Retrieving Frontend candidates...</span>
                     </div>
                   </td>
                 </tr>
               ) : currentItems.length === 0 ? (
                 <tr>
-<<<<<<< HEAD
-                  <td colSpan="9" className="px-5 py-12 text-center text-sm font-semibold text-slate-500">
-=======
-                  <td colSpan="7" className="px-3 py-10 text-center text-xs font-semibold text-slate-500">
->>>>>>> 59692d661c93539444f2d3975aa8dc52caef5f7c
+                  <td colSpan="8" className="px-3 py-10 text-center text-xs font-semibold text-slate-500">
                     No frontend student records found matching the active filters.
                   </td>
                 </tr>
@@ -396,14 +379,10 @@ export default function FrontendStudentList() {
                     <td className="hidden sm:table-cell px-3 py-2 text-xs font-semibold text-slate-600">
                       {student.mobile}
                     </td>
-<<<<<<< HEAD
-                    <td className="px-5 py-3 text-sm font-semibold text-slate-600">
+                    <td className="hidden sm:table-cell px-3 py-2 text-xs font-semibold text-slate-650">
                       {student.degree || '—'}
                     </td>
-                    <td className="px-5 py-3 text-sm text-slate-600">
-=======
                     <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-650">
->>>>>>> 59692d661c93539444f2d3975aa8dc52caef5f7c
                       <div>
                         <p className="font-semibold text-slate-805 leading-tight">{student.batch || 'No batch'}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5 leading-none">Class of {student.passedOutYear || 'N/A'}</p>

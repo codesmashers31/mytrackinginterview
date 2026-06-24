@@ -139,6 +139,9 @@ export const runStudentMigration = async () => {
 
         // Copy SPL-specific fields from match details or from existing separate student record
         const sourceData = existingSplStudent || match;
+        if (!regularStudent.email && (sourceData.email || sourceData.splEmail)) {
+          regularStudent.email = (sourceData.email || sourceData.splEmail).trim().toLowerCase();
+        }
         regularStudent.stack = sourceData.stack || regularStudent.stack || '';
         regularStudent.willingCompanyProcess = sourceData.willingCompanyProcess !== undefined ? sourceData.willingCompanyProcess : regularStudent.willingCompanyProcess;
         regularStudent.willing30Days = sourceData.willing30Days || regularStudent.willing30Days || '';

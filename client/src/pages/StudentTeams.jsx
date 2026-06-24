@@ -68,7 +68,7 @@ export default function StudentTeams() {
         if (res.ok) {
           const data = await res.json();
           setProfile(data.studentProfile);
-          if (data.studentProfile?.studentType === 'Frontend') {
+          if (data.studentProfile) {
             fetchStudentTeamData();
           }
         }
@@ -109,20 +109,14 @@ export default function StudentTeams() {
     );
   }
 
-  if (!profile || profile.studentType !== 'Frontend') {
+  if (!profile) {
     return (
       <AppShell 
         title="Team Activity"
         subtitle="Guild activities and challenges dashboard."
       >
-        <div className="text-center py-16 border border-slate-200 rounded-3xl bg-slate-50/50 max-w-2xl mx-auto mt-8">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-amber-600 border border-amber-200 mb-4 animate-pulse">
-            <Trophy size={28} />
-          </div>
-          <h3 className="font-bold text-slate-800 text-lg">Feature Access Restricted</h3>
-          <p className="text-slate-500 text-sm mt-2 max-w-md mx-auto px-4 leading-relaxed">
-            Gamified team activities and challenges are exclusive to the **Frontend track**. Your profile is set to the **{profile?.studentType || 'Regular'} track**.
-          </p>
+        <div className="text-center py-16 border border-slate-200 rounded-3xl bg-slate-50/50 max-w-2xl mx-auto mt-8 text-slate-500 font-medium">
+          Loading candidate profile details...
         </div>
       </AppShell>
     );

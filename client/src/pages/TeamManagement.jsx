@@ -69,7 +69,7 @@ export default function TeamManagement() {
         fetch(buildApiUrl('/teams'), { headers: authHeaders() }),
         fetch(buildApiUrl('/teams/tasks'), { headers: authHeaders() }),
         fetch(buildApiUrl('/teams/leaderboard'), { headers: authHeaders() }),
-        fetch(buildApiUrl('/students?isFrontend=true'), { headers: authHeaders() }),
+        fetch(buildApiUrl('/students?all=true'), { headers: authHeaders() }),
         fetch(buildApiUrl('/teams/performances'), { headers: authHeaders() })
       ]);
 
@@ -78,8 +78,14 @@ export default function TeamManagement() {
       if (leadRes.ok) setLeaderboard(await leadRes.json());
       if (perfRes.ok) setTeamPerformances(await perfRes.json());
 
-      const frontData = frontRes.ok ? await frontRes.json() : [];
-      setStudents(frontData.map(s => ({ ...s, track: 'Frontend' })));
+      const allStudentsData = frontRes.ok ? await frontRes.json() : [];
+      setStudents(allStudentsData.map(s => {
+        let track = 'Regular';
+        if (s.isFrontend) track = 'Frontend';
+        else if (s.enrollments && s.enrollments.includes('SPL')) track = 'SPL';
+        else if (s.studentType === 'SPL') track = 'SPL';
+        return { ...s, track };
+      }));
     } catch (err) {
       toast.error('Failed to sync team data');
     } finally {
@@ -577,6 +583,19 @@ export default function TeamManagement() {
                           </select>
                         </div>
 
+                        <div>
+                          <select
+                            value={selectedTrack}
+                            onChange={(e) => setSelectedTrack(e.target.value)}
+                            className="w-full h-10 px-3 border border-slate-200 bg-slate-50/50 rounded-xl text-xs focus:border-indigo-600 outline-none transition"
+                          >
+                            <option value="All">All Tracks</option>
+                            <option value="Regular">Regular</option>
+                            <option value="SPL">SPL</option>
+                            <option value="Frontend">Frontend</option>
+                          </select>
+                        </div>
+
 
                       </div>
                     </div>
@@ -618,7 +637,16 @@ export default function TeamManagement() {
                                   </td>
                                   <td className="p-3 font-semibold text-slate-800">
                                     <div>
-                                      <p>{student.name}</p>
+                                      <p className="flex items-center gap-2">
+                                        {student.name}
+                                        <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase ${
+                                          student.track === 'Frontend' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100/30' :
+                                          student.track === 'SPL' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100/30' :
+                                          'bg-slate-100 text-slate-600 border border-slate-200/50'
+                                        }`}>
+                                          {student.track}
+                                        </span>
+                                      </p>
                                       <p className="text-[10px] text-slate-400 font-normal">{student.email || student.mobile}</p>
                                     </div>
                                   </td>

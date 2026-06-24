@@ -6,7 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // Route Imports
-import authRoutes from './routes/authRoutes.js';
+import authRoutes, { ensureAllStudentAccounts } from './routes/authRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
 // student route protection is handled inside the route file to allow public POST submissions
 import authMiddleware from './middleware/authMiddleware.js';
@@ -57,6 +57,11 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     console.log('PlaceX Database Linked: MongoDB Connected');
     await runStudentMigration();
+    try {
+      await ensureAllStudentAccounts();
+    } catch (syncErr) {
+      console.error('Failed to sync student accounts:', syncErr);
+    }
     try {
       const adminCount = await User.countDocuments({ role: 'admin' });
       if (adminCount === 0) {

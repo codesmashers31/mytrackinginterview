@@ -120,10 +120,44 @@ export const createRegistration = async (req, res) => {
 
 export const listRegistrations = async (req, res) => {
   try {
-    const regs = await SplRegistration.find().sort({ createdAt: -1 });
-    res.json(regs);
+    // 1. Fetch from SplRegistration collection
+    const splRegs = await SplRegistration.find().lean();
+    const mappedSplRegs = splRegs.map(r => ({
+      ...r,
+      isMergedStudent: false
+    }));
+
+    // 2. Fetch from Student collection where enrollments contains 'SPL'
+    const mergedStudents = await Student.find({ enrollments: 'SPL' }).lean();
+    const mappedMergedStudents = mergedStudents.map(student => ({
+      _id: student._id,
+      name: student.name,
+      email: student.email,
+      mobile: student.mobile,
+      degree: student.degree,
+      batch: student.batch || student.passedOutYear || '',
+      stack: student.stack || '',
+      willingCompanyProcess: student.willingCompanyProcess,
+      willing30Days: student.willing30Days || '',
+      acceptOffer: student.acceptOffer || '',
+      fullEffort: student.fullEffort || '',
+      issues: student.issues || '',
+      needMost: student.needMost || '',
+      status: student.status || 'New',
+      statusReason: student.statusReason || '',
+      grade: student.grade || '',
+      resumeData: student.resumeData || {},
+      createdAt: student.createdAt,
+      updatedAt: student.updatedAt,
+      isMergedStudent: true
+    }));
+
+    // 3. Combine and Sort by createdAt descending
+    const combined = [...mappedSplRegs, ...mappedMergedStudents].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    res.json(combined);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to list registrations' });
+    res.status(500).json({ message: 'Failed to list registrations', error: err.message });
   }
 };
 

@@ -77,18 +77,7 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'A team with this name already exists' });
     }
 
-    if (members && members.length > 0) {
-      const nonFrontendMembers = await Student.find({
-        _id: { $in: members },
-        studentType: { $ne: 'Frontend' }
-      });
-      if (nonFrontendMembers.length > 0) {
-        return res.status(400).json({
-          message: 'Teams are strictly for Frontend students. The following students are not on the Frontend track: ' +
-            nonFrontendMembers.map(s => s.name).join(', ')
-        });
-      }
-    }
+
 
     team = new Team({
       name: name.trim(),
@@ -134,18 +123,6 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
 
     if (members) {
-      if (members.length > 0) {
-        const nonFrontendMembers = await Student.find({
-          _id: { $in: members },
-          studentType: { $ne: 'Frontend' }
-        });
-        if (nonFrontendMembers.length > 0) {
-          return res.status(400).json({
-            message: 'Teams are strictly for Frontend students. The following students are not on the Frontend track: ' +
-              nonFrontendMembers.map(s => s.name).join(', ')
-          });
-        }
-      }
       team.members = members;
       if (members.length > 0) {
         await Team.updateMany(
@@ -366,7 +343,7 @@ router.get('/performances/my-team', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'Student profile not found' });
     }
 
-    const team = await Team.findOne({ members: studentId });
+    const team = await Team.findOne({ members: studentId }).populate('members');
     if (!team) {
       return res.status(404).json({ message: 'You are not assigned to a team.' });
     }

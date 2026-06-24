@@ -8,6 +8,7 @@ import multer from 'multer';
 import xlsx from 'xlsx';
 import fs from 'fs';
 import authMiddleware from '../middleware/authMiddleware.js';
+import { ensureAllStudentAccounts } from './authRoutes.js';
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
@@ -583,7 +584,7 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
         const students = data.map(row => ({
             name: row.Name || row.name || 'Unknown',
             mobile: String(row.Mobile || row.mobile || ''),
-            email: row.Email || row.email || '',
+            email: row.Email || row.email || row['Email ID'] || row['Email Id'] || row['Email id'] || row['email id'] || row['Email Address'] || row['Email address'] || row['email address'] || row.EmailId || row.emailId || '',
             degree: row.Degree || row.degree || (isFrontend ? 'Frontend' : 'Not Provided'),
             passedOutYear: String(row['Batch Year'] || row.Year || row['Passed Out Year'] || row.passedOutYear || 'Need to filled'),
             batch: String(row.Batch || row.batch || ''),
@@ -599,9 +600,36 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
             studentType: isFrontend ? 'Frontend' : 'Regular'
         }));
 
-        await Student.insertMany(students);
+        let insertCount = 0;
+        let updateCount = 0;
+        for (const studentData of students) {
+            if (!studentData.mobile) continue;
+            const cleanMobile = studentData.mobile.trim();
+            const existing = await Student.findOne({ mobile: cleanMobile });
+            if (existing) {
+                const updates = {};
+                for (const key of Object.keys(studentData)) {
+                    if (studentData[key] !== undefined && studentData[key] !== '') {
+                        updates[key] = studentData[key];
+                    }
+                }
+                if (existing.enrollments && existing.enrollments.length > 0) {
+                    delete updates.enrollments;
+                }
+                await Student.updateOne({ _id: existing._id }, { $set: updates });
+                updateCount++;
+            } else {
+                const student = new Student(studentData);
+                await student.save();
+                insertCount++;
+            }
+        }
         fs.unlinkSync(req.file.path);
-        res.json({ message: 'Bulk imported successfully', count: students.length });
+        
+        // Sync user accounts in background so that any updated student emails are reflected in their login accounts
+        ensureAllStudentAccounts().catch(err => console.error('Failed to sync student accounts after upload:', err));
+
+        res.json({ message: `Bulk import completed. Created: ${insertCount}, Updated: ${updateCount}`, count: students.length });
     } catch (error) {
         fs.unlinkSync(req.file.path);
         res.status(500).json({ message: 'Import failed', error: error.message });

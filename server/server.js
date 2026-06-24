@@ -56,7 +56,9 @@ app.use(errorHandler);
 mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     console.log('PlaceX Database Linked: MongoDB Connected');
-    await runStudentMigration();
+    // runStudentMigration() has already executed and completed the historical database cleanup.
+    // We can comment it out now to speed up server startups.
+    // await runStudentMigration();
     try {
       await ensureAllStudentAccounts();
     } catch (syncErr) {

@@ -40,13 +40,22 @@ export default function TeamManagement() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingTeamId, setEditingTeamId] = useState(null);
   const [newTeamName, setNewTeamName] = useState('');
+  const [newTeamTrack, setNewTeamTrack] = useState('Regular');
+  const [newTeamBatch, setNewTeamBatch] = useState('');
   const [selectedStudents, setSelectedStudents] = useState([]);
+
+  // Filters for team list
+  const [filterTeamTrack, setFilterTeamTrack] = useState('All');
+  const [filterTeamBatch, setFilterTeamBatch] = useState('All');
+
+  // Filters for leaderboard
+  const [filterLeaderboardTrack, setFilterLeaderboardTrack] = useState('All');
+  const [filterLeaderboardBatch, setFilterLeaderboardBatch] = useState('All');
 
   // Filters for student selection
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDegree, setSelectedDegree] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
-  const [selectedTrack, setSelectedTrack] = useState('All'); // All, Regular, Frontend
 
   // Create/Edit Challenge state
   const [editingChallengeId, setEditingChallengeId] = useState(null);
@@ -65,10 +74,11 @@ export default function TeamManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      const leadUrl = buildApiUrl(`/teams/leaderboard?track=${filterLeaderboardTrack}&batch=${filterLeaderboardBatch}`);
       const [teamsRes, chalRes, leadRes, frontRes, perfRes] = await Promise.all([
         fetch(buildApiUrl('/teams'), { headers: authHeaders() }),
         fetch(buildApiUrl('/teams/tasks'), { headers: authHeaders() }),
-        fetch(buildApiUrl('/teams/leaderboard'), { headers: authHeaders() }),
+        fetch(leadUrl, { headers: authHeaders() }),
         fetch(buildApiUrl('/students?all=true'), { headers: authHeaders() }),
         fetch(buildApiUrl('/teams/performances'), { headers: authHeaders() })
       ]);
@@ -95,13 +105,17 @@ export default function TeamManagement() {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab]);
+  }, [activeTab, filterLeaderboardTrack, filterLeaderboardBatch]);
 
   // Handle Team Creation / Modification
   const handleSaveTeam = async (e) => {
     e.preventDefault();
     if (!newTeamName.trim()) {
       toast.error('Please enter a team name');
+      return;
+    }
+    if (newTeamTrack === 'Regular' && !newTeamBatch) {
+      toast.error('Please select a batch for the team');
       return;
     }
     if (selectedStudents.length === 0) {
@@ -120,7 +134,9 @@ export default function TeamManagement() {
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           name: newTeamName.trim(),
-          members: selectedStudents
+          members: selectedStudents,
+          track: newTeamTrack,
+          batch: newTeamBatch
         })
       });
 
@@ -130,6 +146,8 @@ export default function TeamManagement() {
       toast.success(editingTeamId ? `Team "${data.name}" modified successfully!` : `Team "${data.name}" created successfully!`);
       setNewTeamName('');
       setSelectedStudents([]);
+      setNewTeamTrack('Regular');
+      setNewTeamBatch('');
       setEditingTeamId(null);
       setShowCreateModal(false);
       fetchData();
@@ -143,6 +161,8 @@ export default function TeamManagement() {
     setEditingTeamId(team._id);
     setNewTeamName(team.name);
     setSelectedStudents(team.members.map(m => m._id));
+    setNewTeamTrack(team.track || 'Regular');
+    setNewTeamBatch(team.batch || '');
     setShowCreateModal(true);
   };
 
@@ -329,15 +349,35 @@ export default function TeamManagement() {
     // 3. Status Filter
     const matchesStatus = selectedStatus === 'All' || student.currentStatus === selectedStatus;
 
-    // 4. Track Filter
-    const matchesTrack = selectedTrack === 'All' || student.track === selectedTrack;
+    // 4. Team Track and Batch Constraints
+    let matchesTrackAndBatch = false;
+    if (newTeamTrack === 'Frontend') {
+      matchesTrackAndBatch = student.track === 'Frontend';
+    } else {
+      // Regular track: student must be Regular or SPL, and match the selected team batch
+      const isRegularOrSpl = student.track === 'Regular' || student.track === 'SPL';
+      const matchesBatch = student.batch === newTeamBatch;
+      matchesTrackAndBatch = isRegularOrSpl && matchesBatch;
+    }
 
-    return matchesSearch && matchesDegree && matchesStatus && matchesTrack;
+    return matchesSearch && matchesDegree && matchesStatus && matchesTrackAndBatch;
   });
 
   // Extract unique degrees/statuses for filters
   const uniqueDegrees = [...new Set(students.map(s => s.degree).filter(Boolean))];
   const uniqueStatuses = [...new Set(students.map(s => s.currentStatus).filter(Boolean))];
+
+  // Get unique batches from student list (filtering out 4-digit years)
+  const uniqueBatches = [...new Set(students.map(s => s.batch ? s.batch.trim() : '').filter(Boolean))]
+    .filter(b => !/^\d{4}$/.test(b))
+    .sort();
+
+  // Filtered teams list for Teams list view
+  const filteredTeams = teams.filter(team => {
+    const matchesTrack = filterTeamTrack === 'All' || team.track === filterTeamTrack;
+    const matchesBatch = filterTeamTrack === 'Frontend' || filterTeamBatch === 'All' || team.batch === filterTeamBatch;
+    return matchesTrack && matchesBatch;
+  });
 
   const handleStudentSelect = (studentId) => {
     if (selectedStudents.includes(studentId)) {
@@ -393,6 +433,8 @@ export default function TeamManagement() {
                 setEditingTeamId(null);
                 setNewTeamName('');
                 setSelectedStudents([]);
+                setNewTeamTrack('Regular');
+                setNewTeamBatch('');
                 setShowCreateModal(true);
               }}
               className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-blue-700 hover:to-indigo-700 transition"
@@ -405,65 +447,118 @@ export default function TeamManagement() {
             <div className="flex justify-center items-center py-20">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
             </div>
-          ) : teams.length === 0 ? (
-            <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-4">
-                <Users size={28} />
-              </div>
-              <h3 className="font-bold text-slate-800 text-lg">No Teams Created</h3>
-              <p className="text-slate-500 text-sm mt-1 max-w-sm mx-auto">Create teams and assign students to start tracking their group activity scores.</p>
-            </div>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {teams.map(team => {
-                const totalScore = leaderboard.find(l => l._id === team._id)?.totalScore || 0;
-                return (
-                  <SurfaceCard key={team._id} className="p-6 relative group overflow-hidden border border-slate-100 hover:border-indigo-100 hover:shadow-lg transition-all duration-300">
-                    <div className="absolute top-0 right-0 h-20 w-20 bg-gradient-to-bl from-indigo-50/30 to-transparent rounded-bl-full pointer-events-none" />
-                    
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition truncate pr-16">{team.name}</h3>
-                        <span className="inline-flex items-center gap-1 mt-1 text-xs text-indigo-600 font-semibold bg-indigo-50 px-2 py-0.5 rounded-full">
-                          <Trophy size={10} /> {totalScore} pts
-                        </span>
-                      </div>
-                      
-                      <div className="flex gap-1 shrink-0">
-                        <button
-                          onClick={() => handleEditTeam(team)}
-                          className="rounded-xl p-2 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition"
-                          title="Modify Team"
-                        >
-                          <Edit size={15} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTeam(team._id, team.name)}
-                          className="rounded-xl p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
-                          title="Delete Team"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </div>
+            <>
+              {/* Teams Filter Bar */}
+              <div className="flex flex-wrap items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-500">Filter Track:</span>
+                  <select
+                    value={filterTeamTrack}
+                    onChange={(e) => {
+                      setFilterTeamTrack(e.target.value);
+                      if (e.target.value === 'Frontend') {
+                        setFilterTeamBatch('All');
+                      }
+                    }}
+                    className="h-9 px-3 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-700 focus:border-indigo-600 outline-none transition"
+                  >
+                    <option value="All">All Tracks</option>
+                    <option value="Regular">Regular</option>
+                    <option value="Frontend">Frontend</option>
+                  </select>
+                </div>
 
-                    <div className="border-t border-slate-100 pt-4 mt-2">
-                      <p className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Members ({team.members.length})</p>
-                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                        {team.members.map(member => (
-                          <div key={member._id} className="flex items-center justify-between text-sm py-1.5 px-2 bg-slate-50 rounded-xl hover:bg-slate-100/50 transition">
-                            <span className="font-semibold text-slate-700 truncate pr-2">{member.name}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 bg-slate-200 text-slate-600 rounded font-medium shrink-0">
-                              {member.degree || 'Track'}
-                            </span>
+                {filterTeamTrack !== 'Frontend' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-500">Filter Batch:</span>
+                    <select
+                      value={filterTeamBatch}
+                      onChange={(e) => setFilterTeamBatch(e.target.value)}
+                      className="h-9 px-3 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-700 focus:border-indigo-600 outline-none transition"
+                    >
+                      <option value="All">All Batches</option>
+                      {uniqueBatches.map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {filteredTeams.length === 0 ? (
+                <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-4">
+                    <Users size={28} />
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-lg">No Teams Found</h3>
+                  <p className="text-slate-500 text-sm mt-1 max-w-sm mx-auto">No teams match your active Track and Batch filters.</p>
+                </div>
+              ) : (
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {filteredTeams.map(team => {
+                    const totalScore = leaderboard.find(l => l._id === team._id)?.totalScore || 0;
+                    return (
+                      <SurfaceCard key={team._id} className="p-6 relative group overflow-hidden border border-slate-100 hover:border-indigo-100 hover:shadow-lg transition-all duration-300">
+                        <div className="absolute top-0 right-0 h-20 w-20 bg-gradient-to-bl from-indigo-50/30 to-transparent rounded-bl-full pointer-events-none" />
+                        
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition truncate pr-16">{team.name}</h3>
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              <span className="inline-flex items-center gap-1 text-[10px] text-indigo-600 font-semibold bg-indigo-50 px-2 py-0.5 rounded-full">
+                                <Trophy size={10} /> {totalScore} pts
+                              </span>
+                              <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                team.track === 'Frontend' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'bg-blue-50 text-blue-600 border border-blue-100'
+                              }`}>
+                                {team.track}
+                              </span>
+                              {team.batch && (
+                                <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                                  {team.batch}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  </SurfaceCard>
-                );
-              })}
-            </div>
+                          
+                          <div className="flex gap-1 shrink-0">
+                            <button
+                              onClick={() => handleEditTeam(team)}
+                              className="rounded-xl p-2 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition"
+                              title="Modify Team"
+                            >
+                              <Edit size={15} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTeam(team._id, team.name)}
+                              className="rounded-xl p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
+                              title="Delete Team"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-slate-100 pt-4 mt-2">
+                          <p className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Members ({team.members.length})</p>
+                          <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                            {team.members.map(member => (
+                              <div key={member._id} className="flex items-center justify-between text-sm py-1.5 px-2 bg-slate-50 rounded-xl hover:bg-slate-100/50 transition">
+                                <span className="font-semibold text-slate-700 truncate pr-2">{member.name}</span>
+                                <span className="text-[10px] px-1.5 py-0.5 bg-slate-200 text-slate-600 rounded font-medium shrink-0">
+                                  {member.degree || 'Track'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </SurfaceCard>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
 
           {/* CREATE / EDIT TEAM DRAWER MODAL */}
@@ -505,6 +600,43 @@ export default function TeamManagement() {
                         className="w-full h-11 px-4 border border-slate-200 bg-white rounded-2xl text-sm focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 outline-none transition"
                       />
                     </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Track</label>
+                      <select
+                        value={newTeamTrack}
+                        onChange={(e) => {
+                          setNewTeamTrack(e.target.value);
+                          if (e.target.value === 'Frontend') {
+                            setNewTeamBatch('');
+                          }
+                          setSelectedStudents([]);
+                        }}
+                        className="w-full h-11 px-4 border border-slate-200 bg-white rounded-2xl text-sm focus:border-indigo-600 outline-none transition font-semibold text-slate-700"
+                      >
+                        <option value="Regular">Regular</option>
+                        <option value="Frontend">Frontend</option>
+                      </select>
+                    </div>
+
+                    {newTeamTrack === 'Regular' && (
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Batch</label>
+                        <select
+                          value={newTeamBatch}
+                          onChange={(e) => {
+                            setNewTeamBatch(e.target.value);
+                            setSelectedStudents([]);
+                          }}
+                          className="w-full h-11 px-4 border border-slate-200 bg-white rounded-2xl text-sm focus:border-indigo-600 outline-none transition font-semibold text-slate-700"
+                        >
+                          <option value="">-- Select Batch --</option>
+                          {uniqueBatches.map(b => (
+                            <option key={b} value={b}>{b}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
 
                     <div>
                       <div className="flex items-center justify-between mb-3">
@@ -558,7 +690,7 @@ export default function TeamManagement() {
                   <div className="p-6 flex flex-col overflow-hidden">
                     <div className="space-y-4 mb-4 shrink-0">
                       {/* Search and Filters */}
-                      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+                      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
                         <div className="relative col-span-2">
                           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                           <input
@@ -574,7 +706,7 @@ export default function TeamManagement() {
                           <select
                             value={selectedDegree}
                             onChange={(e) => setSelectedDegree(e.target.value)}
-                            className="w-full h-10 px-3 border border-slate-200 bg-slate-50/50 rounded-xl text-xs focus:border-indigo-600 outline-none transition"
+                            className="w-full h-10 px-3 border border-slate-200 bg-slate-50/50 rounded-xl text-xs focus:border-indigo-600 outline-none transition font-semibold text-slate-700"
                           >
                             <option value="All">All Degrees</option>
                             {uniqueDegrees.map(d => (
@@ -582,27 +714,16 @@ export default function TeamManagement() {
                             ))}
                           </select>
                         </div>
-
-                        <div>
-                          <select
-                            value={selectedTrack}
-                            onChange={(e) => setSelectedTrack(e.target.value)}
-                            className="w-full h-10 px-3 border border-slate-200 bg-slate-50/50 rounded-xl text-xs focus:border-indigo-600 outline-none transition"
-                          >
-                            <option value="All">All Tracks</option>
-                            <option value="Regular">Regular</option>
-                            <option value="SPL">SPL</option>
-                            <option value="Frontend">Frontend</option>
-                          </select>
-                        </div>
-
-
                       </div>
                     </div>
 
                     {/* Student List */}
                     <div className="flex-1 overflow-y-auto border border-slate-100 rounded-2xl custom-scrollbar">
-                      {filteredStudents.length === 0 ? (
+                      {newTeamTrack === 'Regular' && !newTeamBatch ? (
+                        <div className="text-center py-20 text-slate-400">
+                          <p className="font-semibold text-slate-600">Please select a Batch on the left to see eligible students.</p>
+                        </div>
+                      ) : filteredStudents.length === 0 ? (
                         <div className="text-center py-20 text-slate-400">
                           <p>No available students match the active filters.</p>
                         </div>
@@ -973,6 +1094,43 @@ export default function TeamManagement() {
       {/* LEADERBOARD TAB */}
       {activeTab === 'Leaderboard' && (
         <div className="space-y-8 max-w-4xl mx-auto">
+          {/* Leaderboard Filters Bar */}
+          <div className="flex flex-wrap items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500">Filter Track:</span>
+              <select
+                value={filterLeaderboardTrack}
+                onChange={(e) => {
+                  setFilterLeaderboardTrack(e.target.value);
+                  if (e.target.value === 'Frontend') {
+                    setFilterLeaderboardBatch('All');
+                  }
+                }}
+                className="h-9 px-3 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-700 focus:border-indigo-600 outline-none transition"
+              >
+                <option value="All">All Tracks</option>
+                <option value="Regular">Regular</option>
+                <option value="Frontend">Frontend</option>
+              </select>
+            </div>
+
+            {filterLeaderboardTrack !== 'Frontend' && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-500">Filter Batch:</span>
+                <select
+                  value={filterLeaderboardBatch}
+                  onChange={(e) => setFilterLeaderboardBatch(e.target.value)}
+                  className="h-9 px-3 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-700 focus:border-indigo-600 outline-none transition"
+                >
+                  <option value="All">All Batches</option>
+                  {uniqueBatches.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
           {/* Top 3 Podiums */}
           {leaderboard.length >= 1 && (
             <div className="flex flex-col sm:flex-row items-end justify-center gap-4 sm:gap-6 pt-10 pb-4">

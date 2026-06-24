@@ -21,7 +21,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import leaveRoutes from './routes/leaveRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
-import { runStudentMigration } from './utils/migration.js';
+import { runStudentMigration, runTeamMigration } from './utils/migration.js';
 
 
 dotenv.config();
@@ -59,6 +59,11 @@ mongoose.connect(process.env.MONGODB_URI)
     // runStudentMigration() has already executed and completed the historical database cleanup.
     // We can comment it out now to speed up server startups.
     // await runStudentMigration();
+    try {
+      await runTeamMigration();
+    } catch (teamMigErr) {
+      console.error('Failed to run team migration:', teamMigErr);
+    }
     try {
       await ensureAllStudentAccounts();
     } catch (syncErr) {

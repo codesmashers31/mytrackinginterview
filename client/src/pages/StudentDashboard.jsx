@@ -36,16 +36,29 @@ export default function StudentDashboard() {
     }
 
     try {
-      const [logsRes, attendanceRes, tasksRes, meRes, teamRes, leadRes] = await Promise.all([
+      // 1. Fetch profile first to get student track and batch details
+      const meRes = await fetch(buildApiUrl('/auth/me'), { headers: authHeaders() });
+      if (meRes.status === 401) {
+        logout();
+        return;
+      }
+      const meData = meRes.ok ? await meRes.json() : {};
+      
+      const studentProfile = meData.studentProfile || {};
+      const isFrontend = studentProfile.isFrontend || studentProfile.studentType === 'Frontend';
+      const track = isFrontend ? 'Frontend' : 'Regular';
+      const batch = studentProfile.batch || '';
+
+      // 2. Fetch the rest of the endpoints including filtered leaderboard
+      const [logsRes, attendanceRes, tasksRes, teamRes, leadRes] = await Promise.all([
         fetch(buildApiUrl('/daily-activities/my'), { headers: authHeaders() }),
         fetch(buildApiUrl(`/attendance/student/${studentId}`), { headers: authHeaders() }),
         fetch(buildApiUrl('/tasks/my/list'), { headers: authHeaders() }),
-        fetch(buildApiUrl('/auth/me'), { headers: authHeaders() }),
         fetch(buildApiUrl('/teams/performances/my-team'), { headers: authHeaders() }),
-        fetch(buildApiUrl('/teams/leaderboard'), { headers: authHeaders() })
+        fetch(buildApiUrl(`/teams/leaderboard?track=${track}&batch=${batch}`), { headers: authHeaders() })
       ]);
 
-      if (logsRes.status === 401 || attendanceRes.status === 401 || tasksRes.status === 401 || meRes.status === 401) {
+      if (logsRes.status === 401 || attendanceRes.status === 401 || tasksRes.status === 401) {
         logout();
         return;
       }
@@ -53,7 +66,6 @@ export default function StudentDashboard() {
       const logsData = logsRes.ok ? await logsRes.json() : [];
       const attendanceData = attendanceRes.ok ? await attendanceRes.json() : [];
       const tasksData = tasksRes.ok ? await tasksRes.json() : [];
-      const meData = meRes.ok ? await meRes.json() : {};
       const teamData = teamRes.ok ? await teamRes.json() : null;
       const leadData = leadRes.ok ? await leadRes.json() : [];
 

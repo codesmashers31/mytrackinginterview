@@ -311,3 +311,32 @@ export const runStudentMigration = async () => {
   }
 };
 
+export const runTeamMigration = async () => {
+  try {
+    const teams = await Team.find();
+    for (const team of teams) {
+      let modified = false;
+      if (team.track === undefined) {
+        let isFrontendTeam = false;
+        if (team.members && team.members.length > 0) {
+          const membersList = await Student.find({ _id: { $in: team.members } });
+          isFrontendTeam = membersList.length > 0 && membersList.every(m => m.isFrontend || m.studentType === 'Frontend');
+        }
+        team.track = isFrontendTeam ? 'Frontend' : 'Regular';
+        modified = true;
+      }
+      if (team.batch === undefined) {
+        team.batch = '';
+        modified = true;
+      }
+      if (modified) {
+        await team.save();
+        console.log(`[Migration] Migrated team "${team.name}" -> track: "${team.track}", batch: "${team.batch}"`);
+      }
+    }
+    console.log('[Migration] PlaceX team migration complete.');
+  } catch (error) {
+    console.error('[Migration] Failed to run team migration:', error);
+  }
+};
+

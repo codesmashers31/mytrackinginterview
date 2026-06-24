@@ -32,13 +32,17 @@ export default function StudentTeams() {
   const [checkingAccess, setCheckingAccess] = useState(true);
 
   // Fetch student's team and performance data
-  const fetchStudentTeamData = async () => {
+  const fetchStudentTeamData = async (studentProfile) => {
     setLoading(true);
     try {
+      const isFrontend = studentProfile?.isFrontend || studentProfile?.studentType === 'Frontend';
+      const track = isFrontend ? 'Frontend' : 'Regular';
+      const batch = studentProfile?.batch || '';
+
       const [teamPerfRes, chalRes, leadRes] = await Promise.all([
         fetch(buildApiUrl('/teams/performances/my-team'), { headers: authHeaders() }),
         fetch(buildApiUrl('/teams/tasks'), { headers: authHeaders() }),
-        fetch(buildApiUrl('/teams/leaderboard'), { headers: authHeaders() })
+        fetch(buildApiUrl(`/teams/leaderboard?track=${track}&batch=${batch}`), { headers: authHeaders() })
       ]);
 
       if (teamPerfRes.ok) {
@@ -69,7 +73,7 @@ export default function StudentTeams() {
           const data = await res.json();
           setProfile(data.studentProfile);
           if (data.studentProfile) {
-            fetchStudentTeamData();
+            fetchStudentTeamData(data.studentProfile);
           }
         }
       } catch (err) {

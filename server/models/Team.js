@@ -10,7 +10,16 @@ const teamSchema = new mongoose.Schema({
   members: [{ 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Student' 
-  }]
+  }],
+  track: {
+    type: String,
+    enum: ['Regular', 'Frontend'],
+    default: 'Regular'
+  },
+  batch: {
+    type: String,
+    default: ''
+  }
 }, { timestamps: true });
 
 export default mongoose.model('Team', teamSchema);

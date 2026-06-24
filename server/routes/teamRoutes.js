@@ -90,7 +90,12 @@ const populateTeamMembers = async (teamsOrTeam) => {
 // GET all teams (with members populated) - Accessible to admin, coordinator, student, placement
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const teams = await Team.find().lean();
+    const { track, batch } = req.query;
+    let query = {};
+    if (track && track !== 'All') query.track = track;
+    if (batch && batch !== 'All') query.batch = batch;
+
+    const teams = await Team.find(query).lean();
     const populated = await populateTeamMembers(teams);
     res.json(populated);
   } catch (error) {
@@ -140,7 +145,9 @@ router.post('/', authMiddleware, async (req, res) => {
 
     team = new Team({
       name: name.trim(),
-      members: members || []
+      members: members || [],
+      track: req.body.track || 'Regular',
+      batch: req.body.batch || ''
     });
 
     await team.save();
@@ -167,7 +174,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Access Denied: Admins only' });
     }
 
-    const { name, members } = req.body;
+    const { name, members, track, batch } = req.body;
     const team = await Team.findById(req.params.id);
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
@@ -180,6 +187,13 @@ router.put('/:id', authMiddleware, async (req, res) => {
         return res.status(400).json({ message: 'A team with this name already exists' });
       }
       team.name = name.trim();
+    }
+
+    if (track !== undefined) {
+      team.track = track;
+    }
+    if (batch !== undefined) {
+      team.batch = batch;
     }
 
     if (members) {
@@ -427,7 +441,12 @@ router.get('/performances/my-team', authMiddleware, async (req, res) => {
 // GET Leaderboard (scores aggregated from performance records)
 router.get('/leaderboard', authMiddleware, async (req, res) => {
   try {
-    const teams = await Team.find().lean();
+    const { track, batch } = req.query;
+    let query = {};
+    if (track && track !== 'All') query.track = track;
+    if (batch && batch !== 'All') query.batch = batch;
+
+    const teams = await Team.find(query).lean();
     const performances = await TeamPerformance.find().lean();
 
     const leaderboard = teams.map(team => {

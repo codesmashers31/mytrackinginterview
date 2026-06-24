@@ -4,6 +4,7 @@ import TeamTask from '../models/TeamTask.js';
 import TeamPerformance from '../models/TeamPerformance.js';
 import Student from '../models/Student.js';
 import User from '../models/User.js';
+import SplRegistration from '../models/SplRegistration.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -26,6 +27,62 @@ const getStudentIdFromUser = async (user) => {
   return student ? student._id : null;
 };
 
+// Helper to populate team members from both Student and SplRegistration collections
+const populateTeamMembers = async (teamsOrTeam) => {
+  if (!teamsOrTeam) return teamsOrTeam;
+  const isArray = Array.isArray(teamsOrTeam);
+  const teams = isArray ? teamsOrTeam : [teamsOrTeam];
+
+  // Gather all unique member ObjectIds/IDs
+  const allMemberIds = [];
+  teams.forEach(team => {
+    if (team.members && team.members.length > 0) {
+      team.members.forEach(id => {
+        if (id && !allMemberIds.includes(String(id))) {
+          allMemberIds.push(id);
+        }
+      });
+    }
+  });
+
+  if (allMemberIds.length === 0) {
+    return teamsOrTeam;
+  }
+
+  // Fetch from Student collection
+  const students = await Student.find({ _id: { $in: allMemberIds } }).lean();
+  const studentMap = {};
+  students.forEach(s => {
+    studentMap[String(s._id)] = s;
+  });
+
+  // Fetch missing from SplRegistration collection
+  const missingIds = allMemberIds.filter(id => !studentMap[String(id)]);
+  if (missingIds.length > 0) {
+    const splRegs = await SplRegistration.find({ _id: { $in: missingIds } }).lean();
+    splRegs.forEach(r => {
+      studentMap[String(r._id)] = {
+        ...r,
+        studentType: 'SPL',
+        enrollments: ['SPL'],
+        currentStatus: r.status,
+        passedOutYear: r.passedOutYear || r.batch
+      };
+    });
+  }
+
+  // Map populated members back to each team
+  const populatedTeams = teams.map(team => {
+    const teamObj = typeof team.toObject === 'function' ? team.toObject() : team;
+    teamObj.members = (teamObj.members || [])
+      .map(id => studentMap[String(id)] || null)
+      .filter(m => m !== null);
+    return teamObj;
+  });
+
+  return isArray ? populatedTeams : populatedTeams[0];
+};
+
 // ----------------------------------------------------
 // TEAMS
 // ----------------------------------------------------
@@ -33,8 +90,9 @@ const getStudentIdFromUser = async (user) => {
 // GET all teams (with members populated) - Accessible to admin, coordinator, student, placement
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const teams = await Team.find().populate('members');
-    res.json(teams);
+    const teams = await Team.find().lean();
+    const populated = await populateTeamMembers(teams);
+    res.json(populated);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching teams', error: error.message });
   }
@@ -48,12 +106,13 @@ router.get('/my-team', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'Student profile not found' });
     }
 
-    const team = await Team.findOne({ members: studentId }).populate('members');
+    const team = await Team.findOne({ members: studentId }).lean();
     if (!team) {
       return res.status(404).json({ message: 'You are not assigned to any team yet.' });
     }
 
-    res.json(team);
+    const populated = await populateTeamMembers(team);
+    res.json(populated);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching my team', error: error.message });
   }
@@ -93,7 +152,8 @@ router.post('/', authMiddleware, async (req, res) => {
       );
     }
 
-    const populatedTeam = await Team.findById(team._id).populate('members');
+    const rawTeam = await Team.findById(team._id).lean();
+    const populatedTeam = await populateTeamMembers(rawTeam);
     res.status(201).json(populatedTeam);
   } catch (error) {
     res.status(400).json({ message: 'Error creating team', error: error.message });
@@ -133,7 +193,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
 
     await team.save();
-    const populatedTeam = await Team.findById(team._id).populate('members');
+    const rawTeam = await Team.findById(team._id).lean();
+    const populatedTeam = await populateTeamMembers(rawTeam);
     res.json(populatedTeam);
   } catch (error) {
     res.status(400).json({ message: 'Error updating team', error: error.message });
@@ -343,10 +404,12 @@ router.get('/performances/my-team', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'Student profile not found' });
     }
 
-    const team = await Team.findOne({ members: studentId }).populate('members');
-    if (!team) {
+    const teamDoc = await Team.findOne({ members: studentId }).lean();
+    if (!teamDoc) {
       return res.status(404).json({ message: 'You are not assigned to a team.' });
     }
+
+    const team = await populateTeamMembers(teamDoc);
 
     const performances = await TeamPerformance.find({ teamId: team._id })
       .populate('taskId')

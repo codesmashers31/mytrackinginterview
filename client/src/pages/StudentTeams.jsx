@@ -190,7 +190,7 @@ export default function StudentTeams() {
                 </h4>
 
                 <div className="grid gap-4 sm:grid-cols-2 max-h-72 overflow-y-auto pr-1 custom-scrollbar">
-                  {myTeam.members.map(member => (
+                  {myTeam.members.map(member => member && (
                     <div key={member._id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-100/50 hover:bg-white transition shadow-sm">
                       <div className="flex items-start justify-between">
                         <div>

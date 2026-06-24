@@ -18,6 +18,7 @@ const STANDARD_STACKS = [
 
 export default function SplRegistrations() {
   const [regs, setRegs] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,8 +58,21 @@ export default function SplRegistrations() {
     }
   };
 
+  const fetchTeams = async () => {
+    try {
+      const res = await fetch(buildApiUrl('/teams'), { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setTeams(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch teams:', err);
+    }
+  };
+
   useEffect(() => {
     fetchRegs();
+    fetchTeams();
   }, []);
 
   const filteredRegs = useMemo(() => {
@@ -198,6 +212,7 @@ export default function SplRegistrations() {
                   <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Email</th>
                   <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Mobile</th>
                   <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Stack</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Team</th>
                   <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>
                   <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400 font-medium">Actions</th>
                 </tr>
@@ -205,7 +220,7 @@ export default function SplRegistrations() {
               <tbody className="divide-y divide-slate-100 bg-white">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-10 text-center">
+                    <td colSpan={7} className="px-3 py-10 text-center">
                       <div className="flex items-center justify-center gap-2 text-slate-505">
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
                         <span className="text-xs font-semibold">Loading registrations...</span>
@@ -214,7 +229,7 @@ export default function SplRegistrations() {
                   </tr>
                 ) : currentItems.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-10 text-center text-xs font-semibold text-slate-500">
+                    <td colSpan={7} className="px-3 py-10 text-center text-xs font-semibold text-slate-500">
                       No matching registrations found.
                     </td>
                   </tr>
@@ -225,6 +240,15 @@ export default function SplRegistrations() {
                       <td className="whitespace-nowrap px-3 py-2 text-xs font-semibold text-slate-750">{reg.email}</td>
                       <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750 font-semibold">{reg.mobile || '—'}</td>
                       <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750">{reg.stack || '—'}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-xs">
+                        {teams.find(t => t.members?.some(m => m === reg._id || m._id === reg._id)) ? (
+                          <span className="font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded text-[10px] border border-indigo-100/30">
+                            {teams.find(t => t.members?.some(m => m === reg._id || m._id === reg._id))?.name}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-[10px] font-medium">—</span>
+                        )}
+                      </td>
                       <td className="whitespace-nowrap px-3 py-2">
                         <StatusBadge status={reg.status} />
                       </td>

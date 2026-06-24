@@ -12,6 +12,7 @@ const ITEMS_PER_PAGE = 8;
 export default function PlacementSplClasses() {
   const navigate = useNavigate();
   const [regs, setRegs] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,8 +49,21 @@ export default function PlacementSplClasses() {
     }
   };
 
+  const fetchTeams = async () => {
+    try {
+      const res = await fetch(buildApiUrl('/teams'), { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setTeams(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch teams:', err);
+    }
+  };
+
   useEffect(() => {
     fetchRegs();
+    fetchTeams();
   }, []);
 
   const filteredRegs = useMemo(() => {
@@ -186,6 +200,7 @@ export default function PlacementSplClasses() {
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Name</th>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Email</th>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Mobile</th>
+                  <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Team</th>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Status</th>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Actions</th>
                 </tr>
@@ -193,11 +208,11 @@ export default function PlacementSplClasses() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-slate-500">Loading registrations ...</td>
+                    <td colSpan={9} className="px-4 py-12 text-center text-slate-500">Loading registrations ...</td>
                   </tr>
                 ) : currentItems.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-slate-500">No matching registrations found.</td>
+                    <td colSpan={9} className="px-4 py-12 text-center text-slate-500">No matching registrations found.</td>
                   </tr>
                 ) : (
                   currentItems.map((reg, index) => (
@@ -205,6 +220,15 @@ export default function PlacementSplClasses() {
                       <td className="whitespace-nowrap px-4 py-4 text-slate-900">{reg.name}</td>
                       <td className="whitespace-nowrap px-4 py-4 text-slate-700">{reg.email}</td>
                       <td className="whitespace-nowrap px-4 py-4 text-slate-700">{reg.mobile || '—'}</td>
+                      <td className="whitespace-nowrap px-4 py-4">
+                        {teams.find(t => t.members?.some(m => m === reg._id || m._id === reg._id)) ? (
+                          <span className="font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded text-[10px] border border-indigo-100/30">
+                            {teams.find(t => t.members?.some(m => m === reg._id || m._id === reg._id))?.name}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs font-medium">—</span>
+                        )}
+                      </td>
                       <td className="whitespace-nowrap px-4 py-4"><StatusBadge status={reg.status} /></td>
                       <td className="whitespace-nowrap px-4 py-4">
                         <div className="flex flex-wrap gap-2">

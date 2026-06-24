@@ -34,9 +34,7 @@ const buildNavigationGroups = (role, studentType, onLogout) => {
       { to: '/student/resume-builder', label: 'Resume Builder', icon: FileText },
     ];
 
-    if (studentType === 'Frontend') {
-      workspaceItems.push({ to: '/student/teams', label: 'Team Activity', icon: Gamepad2 });
-    }
+    workspaceItems.push({ to: '/student/teams', label: 'Team Activity', icon: Gamepad2 });
 
     workspaceItems.push({ to: '/settings', label: 'Settings', icon: SettingsIcon });
 

@@ -8,17 +8,21 @@ import { buildApiUrl } from '../utils/api';
 export default function CoordinatorSplClasses() {
   const navigate = useNavigate();
   const [registrations, setRegistrations] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    fetch(buildApiUrl('/spl-registration'), { headers: authHeaders() })
-      .then(r => r.json().catch(() => []))
-      .then(data => {
-        setRegistrations(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    Promise.all([
+      fetch(buildApiUrl('/spl-registration'), { headers: authHeaders() }).then(r => r.json().catch(() => [])),
+      fetch(buildApiUrl('/teams'), { headers: authHeaders() }).then(r => r.json().catch(() => []))
+    ])
+    .then(([regData, teamData]) => {
+      setRegistrations(Array.isArray(regData) ? regData : []);
+      setTeams(Array.isArray(teamData) ? teamData : []);
+      setLoading(false);
+    })
+    .catch(() => setLoading(false));
   }, []);
 
   const filtered = registrations.filter(r =>
@@ -101,6 +105,7 @@ export default function CoordinatorSplClasses() {
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Email</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Degree</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Batch</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Team</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Status</th>
                 </tr>
               </thead>
@@ -111,6 +116,15 @@ export default function CoordinatorSplClasses() {
                     <td className="px-4 py-3.5 text-sm text-slate-600">{reg.email || '—'}</td>
                     <td className="px-4 py-3.5 text-sm text-slate-600">{reg.degree || '—'}</td>
                     <td className="px-4 py-3.5 text-sm text-slate-600">{reg.batch || '—'}</td>
+                    <td className="px-4 py-3.5 text-sm text-slate-600">
+                      {teams.find(t => t.members?.some(m => m === reg._id || m._id === reg._id)) ? (
+                        <span className="font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded text-[10px] border border-indigo-100/30">
+                          {teams.find(t => t.members?.some(m => m === reg._id || m._id === reg._id))?.name}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs font-medium">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3.5 text-right">
                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                         reg.status === 'Approved' ? 'bg-emerald-100 text-emerald-700'

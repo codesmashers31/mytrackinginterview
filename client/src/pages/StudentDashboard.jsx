@@ -12,7 +12,9 @@ import {
   CheckSquare,
   Flame,
   Activity,
-  ArrowRight
+  ArrowRight,
+  Gamepad2,
+  Trophy
 } from 'lucide-react';
 
 export default function StudentDashboard() {
@@ -21,6 +23,8 @@ export default function StudentDashboard() {
   const [attendance, setAttendance] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [grade, setGrade] = useState('N/A');
+  const [myTeam, setMyTeam] = useState(null);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchWorkspaceData = async () => {
@@ -32,11 +36,13 @@ export default function StudentDashboard() {
     }
 
     try {
-      const [logsRes, attendanceRes, tasksRes, meRes] = await Promise.all([
+      const [logsRes, attendanceRes, tasksRes, meRes, teamRes, leadRes] = await Promise.all([
         fetch(buildApiUrl('/daily-activities/my'), { headers: authHeaders() }),
         fetch(buildApiUrl(`/attendance/student/${studentId}`), { headers: authHeaders() }),
         fetch(buildApiUrl('/tasks/my/list'), { headers: authHeaders() }),
-        fetch(buildApiUrl('/auth/me'), { headers: authHeaders() })
+        fetch(buildApiUrl('/auth/me'), { headers: authHeaders() }),
+        fetch(buildApiUrl('/teams/performances/my-team'), { headers: authHeaders() }),
+        fetch(buildApiUrl('/teams/leaderboard'), { headers: authHeaders() })
       ]);
 
       if (logsRes.status === 401 || attendanceRes.status === 401 || tasksRes.status === 401 || meRes.status === 401) {
@@ -48,11 +54,15 @@ export default function StudentDashboard() {
       const attendanceData = attendanceRes.ok ? await attendanceRes.json() : [];
       const tasksData = tasksRes.ok ? await tasksRes.json() : [];
       const meData = meRes.ok ? await meRes.json() : {};
+      const teamData = teamRes.ok ? await teamRes.json() : null;
+      const leadData = leadRes.ok ? await leadRes.json() : [];
 
       setLogs(logsData);
       setAttendance(attendanceData);
       setTasks(tasksData);
       if (meData.grade) setGrade(meData.grade);
+      if (teamData && teamData.team) setMyTeam(teamData.team);
+      setLeaderboard(leadData);
     } catch (err) {
       toast.error('Failed to sync dashboard telemetry');
     } finally {
@@ -202,6 +212,79 @@ export default function StudentDashboard() {
               </div>
             )}
           </SurfaceCard>
+
+          {/* Team Guild Card */}
+          <SurfaceCard className="p-6 border border-slate-100 bg-gradient-to-br from-white to-indigo-50/5">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                  <Gamepad2 size={20} />
+                </div>
+                <h2 className="text-xl font-bold text-slate-900">My Team Guild</h2>
+              </div>
+              {myTeam && (
+                <button 
+                  onClick={() => navigate('/student/teams')}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition"
+                >
+                  View Details <ArrowRight size={14} />
+                </button>
+              )}
+            </div>
+
+            {loading ? (
+              <div className="flex min-h-[140px] items-center justify-center">
+                <div className="h-6 w-6 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+              </div>
+            ) : !myTeam ? (
+              <div className="text-center py-6 text-slate-500">
+                <p className="text-sm font-medium">No Team Assigned Yet</p>
+                <p className="text-xs text-slate-400 mt-1">Ask your administrator to add you to a team guild to participate in activities and challenges!</p>
+              </div>
+            ) : (
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                  <div>
+                    <span className="text-[9px] bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Active Guild
+                    </span>
+                    <h3 className="text-xl font-black text-slate-900 mt-2">{myTeam.name}</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Crew Size: {myTeam.members?.length || 0} members</p>
+                  </div>
+                  <div className="mt-4 flex items-center gap-4 border-t border-slate-100 pt-3">
+                    <div className="flex items-center gap-1.5 text-indigo-600 font-black text-base">
+                      <Trophy size={16} className="text-indigo-500" />
+                      {leaderboard.find(l => l._id === myTeam._id)?.totalScore || 0} <span className="text-[10px] font-normal text-slate-400">pts</span>
+                    </div>
+                    <div className="text-xs font-bold text-slate-700">
+                      Rank #{leaderboard.findIndex(l => l._id === myTeam._id) + 1 || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <h4 className="font-bold text-slate-800 text-xs mb-2.5 uppercase tracking-wider text-slate-400 font-medium">
+                    Companions
+                  </h4>
+                  <div className="space-y-2 max-h-[100px] overflow-y-auto pr-1 custom-scrollbar">
+                    {myTeam.members?.slice(0, 4).map(member => member && (
+                      <div key={member._id} className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-700 truncate max-w-[140px]">{member.name}</span>
+                        <span className="text-[9px] font-medium text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-150 truncate max-w-[80px]">
+                          {member.currentStatus || 'Active'}
+                        </span>
+                      </div>
+                    ))}
+                    {myTeam.members?.length > 4 && (
+                      <p className="text-[10px] text-slate-400 text-center font-medium mt-1">
+                        + {myTeam.members.length - 4} more companions
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </SurfaceCard>
         </div>
 
         {/* Right Side: Quick Actions */}
@@ -240,6 +323,17 @@ export default function StudentDashboard() {
                 <div className="flex items-center gap-3">
                   <CheckSquare size={18} className="text-emerald-300" />
                   View Assigned Tasks
+                </div>
+                <ArrowRight size={16} className="text-slate-400" />
+              </button>
+
+              <button 
+                onClick={() => navigate('/student/teams')}
+                className="w-full flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 rounded-xl transition font-semibold"
+              >
+                <div className="flex items-center gap-3">
+                  <Gamepad2 size={18} className="text-amber-300" />
+                  Team Guild Activity
                 </div>
                 <ArrowRight size={16} className="text-slate-400" />
               </button>

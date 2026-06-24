@@ -53,11 +53,6 @@ const splMatches = [
   { splName: "Ranjani Ram", splEmail: "ranjaniram81@gmail.com", splMobile: "" }
 ];
 
-const isRegularBatch1to9 = (batch) => {
-  if (!batch) return false;
-  return /Batch\s*[1-9]\b/i.test(batch.trim());
-};
-
 export const runStudentMigration = async () => {
   console.log('[Migration] Starting PlaceX student record migration (Restoring SplRegistration)...');
   try {
@@ -121,8 +116,8 @@ export const runStudentMigration = async () => {
         regularStudent = await Student.findOne({ email, enrollments: 'Regular' });
       }
 
-      // Check if candidate is Batch 1-9 regular student
-      const isBatch1to9 = regularStudent && isRegularBatch1to9(regularStudent.batch);
+      // Check if candidate is regular student (any batch)
+      const shouldMerge = !!regularStudent;
 
       // Find any separate SPL student profile currently in the Student collection
       let existingSplStudent = null;
@@ -133,7 +128,7 @@ export const runStudentMigration = async () => {
         existingSplStudent = await Student.findOne({ email, studentType: 'SPL' });
       }
 
-      if (isBatch1to9) {
+      if (shouldMerge) {
         // --- DUPLICATE MERGE CASE ---
         console.log(`[Migration] Merging duplicate SPL candidate: "${match.splName.trim()}" into regular student "${regularStudent.name}" (Batch: ${regularStudent.batch})`);
         
@@ -251,13 +246,24 @@ export const runStudentMigration = async () => {
         };
 
         if (splReg) {
-          Object.assign(splReg, payload);
-          await splReg.save();
+          // If splReg already exists, only fill in fields that are currently empty/falsy, do NOT overwrite populated fields!
+          let saved = false;
+          for (const key of Object.keys(payload)) {
+            if (payload[key] && !splReg[key]) {
+              splReg[key] = payload[key];
+              saved = true;
+            }
+          }
+          if (saved) {
+            await splReg.save();
+            console.log(`[Migration] Backfilled missing fields for SplRegistration profile: "${splReg.name.trim()}"`);
+          }
         } else {
           splReg = new SplRegistration(payload);
           await splReg.save();
           console.log(`[Migration] Restored SplRegistration profile for: "${payload.name.trim()}"`);
         }
+
 
         // Clean up regular student record if it exists (since they are separate now)
         if (regularStudent) {

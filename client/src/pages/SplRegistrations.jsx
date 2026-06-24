@@ -164,76 +164,85 @@ export default function SplRegistrations() {
 
   return (
     <AppShell title="SPL Registrations" subtitle="Submitted SPL class registrations">
-      <SurfaceCard>
-        <div className="space-y-6 p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <SurfaceCard className="overflow-hidden">
+        <div className="space-y-4 p-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">SPL Registrations</h2>
-              <p className="mt-1 text-sm text-slate-500">Review, update, or delete submitted applications with pagination and search.</p>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">SPL Registrations</h2>
+              <p className="mt-1 text-xs text-slate-500 font-medium">Review, update, or delete submitted applications with pagination and search.</p>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                Total applications: <span className="font-semibold text-slate-900">{regs.length}</span>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold text-slate-700">
+                Total: <span className="font-bold text-slate-900">{regs.length}</span>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                Showing page <span className="font-semibold text-slate-900">{currentPage}</span> of <span className="font-semibold text-slate-900">{totalPages}</span>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold text-slate-700">
+                Page <span className="font-bold text-slate-900">{currentPage}</span> of <span className="font-bold text-slate-900">{totalPages}</span>
               </div>
             </div>
           </div>
 
-            <div className="relative col-span-1 lg:col-span-2">
-              <input
-                value={searchQuery}
-                onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                placeholder="Search registrations by name, email, mobile, degree, or status"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none shadow-sm transition focus:border-slate-400 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
+          <div className="relative">
+            <input
+              value={searchQuery}
+              onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+              placeholder="Search registrations by name, email, mobile, degree, or status..."
+              className="crm-input h-10 rounded-xl"
+            />
+          </div>
 
-          <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <table className="min-w-full border-separate border-spacing-0 text-sm">
-              <thead className="bg-slate-50 text-slate-600">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+            <table className="min-w-full divide-y divide-slate-100">
+              <thead className="bg-slate-50">
                 <tr>
-                  <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Name</th>
-                  <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Email</th>
-                  <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Mobile</th>
-                  <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Stack</th>
-                  <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Status</th>
-                  <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Actions</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Name</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Email</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Mobile</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Stack</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>
+                  <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400 font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100 bg-white">
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-12 text-center text-slate-500">Loading registrations ...</td>
+                    <td colSpan={6} className="px-3 py-10 text-center">
+                      <div className="flex items-center justify-center gap-2 text-slate-505">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                        <span className="text-xs font-semibold">Loading registrations...</span>
+                      </div>
+                    </td>
                   </tr>
                 ) : currentItems.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-12 text-center text-slate-500">No matching registrations found.</td>
+                    <td colSpan={6} className="px-3 py-10 text-center text-xs font-semibold text-slate-500">
+                      No matching registrations found.
+                    </td>
                   </tr>
                 ) : (
                   currentItems.map((reg, index) => (
                     <tr key={reg._id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                      <td className="whitespace-nowrap px-4 py-4 text-slate-900">{reg.name}</td>
-                      <td className="whitespace-nowrap px-4 py-4 text-slate-700">{reg.email}</td>
-                      <td className="whitespace-nowrap px-4 py-4 text-slate-700">{reg.mobile || '—'}</td>
-                      <td className="whitespace-nowrap px-4 py-4 text-slate-700">{reg.stack || '—'}</td>
-                      <td className="whitespace-nowrap px-4 py-4"><StatusBadge status={reg.status} /></td>
-                      <td className="whitespace-nowrap px-4 py-4">
-                        <div className="flex flex-wrap gap-2">
+                      <td className="whitespace-nowrap px-3 py-2 text-xs font-bold text-slate-900">{reg.name}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-xs font-semibold text-slate-750">{reg.email}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750 font-semibold">{reg.mobile || '—'}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750">{reg.stack || '—'}</td>
+                      <td className="whitespace-nowrap px-3 py-2">
+                        <StatusBadge status={reg.status} />
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-right">
+                        <div className="flex justify-end gap-2">
                           <button
                             type="button"
                             onClick={() => openEditModal(reg)}
-                            className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-100"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-blue-100 bg-blue-50 text-[11px] font-semibold text-blue-700 transition hover:bg-blue-100"
                           >
-                            <Edit size={14} /> Edit
+                            <Edit size={11} /> Edit
                           </button>
                           <button
                             type="button"
                             onClick={() => confirmDelete(reg)}
-                            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-slate-200 bg-white text-[11px] font-semibold text-slate-700 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
                           >
-                            <Trash2 size={14} /> Delete
+                            <Trash2 size={11} /> Delete
                           </button>
                         </div>
                       </td>
@@ -244,7 +253,7 @@ export default function SplRegistrations() {
             </table>
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
             <div>
               Showing <span className="font-semibold text-slate-900">{currentItems.length}</span> of <span className="font-semibold text-slate-900">{filteredRegs.length}</span> results
             </div>
@@ -253,18 +262,18 @@ export default function SplRegistrations() {
                 type="button"
                 onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
                 disabled={currentPage === 1}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-1 px-3 py-1.5 border border-slate-200 bg-white rounded-lg font-bold text-slate-700 hover:bg-slate-50 transition disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <ArrowLeft size={16} /> Previous
+                <ArrowLeft size={14} /> Previous
               </button>
-              <span className="text-sm text-slate-800">Page <span className="font-semibold">{currentPage}</span> of <span className="font-semibold">{totalPages}</span></span>
+              <span className="text-slate-800">Page <span className="font-bold">{currentPage}</span> of <span className="font-bold">{totalPages}</span></span>
               <button
                 type="button"
                 onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
                 disabled={currentPage === totalPages}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-1 px-3 py-1.5 border border-slate-200 bg-white rounded-lg font-bold text-slate-700 hover:bg-slate-50 transition disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Next <ArrowRight size={16} />
+                Next <ArrowRight size={14} />
               </button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import Attendance from '../models/Attendance.js';
 import Student from '../models/Student.js';
+import SplRegistration from '../models/SplRegistration.js';
 import User from '../models/User.js';
 import { createNotification, notifyAdmins } from '../utils/notifications.js';
 
@@ -22,7 +23,10 @@ export const markAttendance = async (req, res) => {
     }
 
     // Verify student exists
-    const student = await Student.findById(studentId);
+    let student = await Student.findById(studentId);
+    if (!student) {
+      student = await SplRegistration.findById(studentId);
+    }
     if (!student) {
       return res.status(404).json({ message: 'Student not found' });
     }
@@ -85,7 +89,10 @@ export const markBulkAttendance = async (req, res) => {
       }
 
       try {
-        const student = await Student.findById(studentId);
+        let student = await Student.findById(studentId);
+        if (!student) {
+          student = await SplRegistration.findById(studentId);
+        }
         if (!student) {
           results.push({
             studentId,
@@ -147,10 +154,16 @@ export const getStudentAttendance = async (req, res) => {
     let query = {};
     let student = await Student.findById(studentId).catch(() => null);
     if (!student) {
+      student = await SplRegistration.findById(studentId).catch(() => null);
+    }
+    if (!student) {
       const user = await User.findById(studentId).catch(() => null);
       if (user) {
         if (user.studentId) {
           student = await Student.findById(user.studentId).catch(() => null);
+          if (!student) {
+            student = await SplRegistration.findById(user.studentId).catch(() => null);
+          }
         }
         if (!student) {
           student = await Student.findOne({
@@ -159,6 +172,14 @@ export const getStudentAttendance = async (req, res) => {
               { mobile: user.email }
             ]
           });
+          if (!student) {
+            student = await SplRegistration.findOne({
+              $or: [
+                { email: user.email.toLowerCase() },
+                { mobile: user.email }
+              ]
+            });
+          }
         }
       }
     }
@@ -341,6 +362,12 @@ export const getUnmarkedStudents = async (req, res) => {
 
     // Get all active students (not inactive)
     const allStudents = await Student.find({ currentStatus: { $not: /^inactive/i } });
+    const splRegs = await SplRegistration.find({ status: { $not: /^inactive/i } });
+    const mappedSpls = splRegs.map(r => ({
+      ...r.toObject(),
+      currentStatus: r.status
+    }));
+    const combinedStudents = [...allStudents, ...mappedSpls];
 
     // Get marked attendance for this date
     const markedAttendance = await Attendance.find({
@@ -353,7 +380,7 @@ export const getUnmarkedStudents = async (req, res) => {
     const markedStudentIds = markedAttendance.map(a => a.studentId.toString());
 
     // Find unmarked students
-    const unmarkedStudents = allStudents.filter(
+    const unmarkedStudents = combinedStudents.filter(
       student => !markedStudentIds.includes(student._id.toString())
     );
 
@@ -401,6 +428,9 @@ export const studentCheckIn = async (req, res) => {
     let student = null;
     if (user.studentId) {
       student = await Student.findById(user.studentId);
+      if (!student) {
+        student = await SplRegistration.findById(user.studentId);
+      }
     }
     if (!student) {
       student = await Student.findOne({
@@ -409,6 +439,14 @@ export const studentCheckIn = async (req, res) => {
           { mobile: user.email }
         ]
       });
+      if (!student) {
+        student = await SplRegistration.findOne({
+          $or: [
+            { email: user.email.toLowerCase() },
+            { mobile: user.email }
+          ]
+        });
+      }
     }
 
     if (!student) {
@@ -478,6 +516,9 @@ export const studentCheckOut = async (req, res) => {
     let student = null;
     if (user.studentId) {
       student = await Student.findById(user.studentId);
+      if (!student) {
+        student = await SplRegistration.findById(user.studentId);
+      }
     }
     if (!student) {
       student = await Student.findOne({
@@ -486,6 +527,14 @@ export const studentCheckOut = async (req, res) => {
           { mobile: user.email }
         ]
       });
+      if (!student) {
+        student = await SplRegistration.findOne({
+          $or: [
+            { email: user.email.toLowerCase() },
+            { mobile: user.email }
+          ]
+        });
+      }
     }
 
     if (!student) {
@@ -552,6 +601,9 @@ export const getTodayAttendance = async (req, res) => {
     let student = null;
     if (user.studentId) {
       student = await Student.findById(user.studentId);
+      if (!student) {
+        student = await SplRegistration.findById(user.studentId);
+      }
     }
     if (!student) {
       student = await Student.findOne({
@@ -560,6 +612,14 @@ export const getTodayAttendance = async (req, res) => {
           { mobile: user.email }
         ]
       });
+      if (!student) {
+        student = await SplRegistration.findOne({
+          $or: [
+            { email: user.email.toLowerCase() },
+            { mobile: user.email }
+          ]
+        });
+      }
     }
 
     if (!student) {

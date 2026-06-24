@@ -2,6 +2,8 @@ import express from 'express';
 import Student from '../models/Student.js';
 import SplRegistration from '../models/SplRegistration.js';
 import User from '../models/User.js';
+import Attendance from '../models/Attendance.js';
+import Task from '../models/Task.js';
 import multer from 'multer';
 import xlsx from 'xlsx';
 import fs from 'fs';
@@ -124,23 +126,133 @@ router.get('/stats', authMiddleware, async (req, res) => {
             regularQuery.mobile = { $nin: splMobiles };
         }
 
-        const total = await Student.countDocuments(regularQuery);
-        
-        // Use case-insensitive matching for robust counting
-        const jobSeekers = await Student.countDocuments({ ...regularQuery, currentStatus: { $regex: /^job seeker$/i } });
-        const placed = await Student.countDocuments({ ...regularQuery, currentStatus: { $regex: /^placed$/i } });
-        const needToFilled = await Student.countDocuments({ ...regularQuery, currentStatus: { $regex: /^need to filled$/i } });
-        const inactiveUsers = await Student.countDocuments({ ...regularQuery, currentStatus: { $regex: /^inactive - not responded$/i } });
-        const interviewProcess = await Student.countDocuments({ ...regularQuery, currentStatus: { $regex: /^interview process$/i } });
-        
-        const recent = await Student.find(regularQuery).sort({ createdAt: -1 }).limit(5);
-
-        // Stats for Frontend track
         const frontendQuery = { isFrontend: true };
-        const frontendTotal = await Student.countDocuments(frontendQuery);
-        const frontendPlaced = await Student.countDocuments({ ...frontendQuery, currentStatus: { $regex: /^placed$/i } });
-        const frontendJobSeekers = await Student.countDocuments({ ...frontendQuery, currentStatus: { $regex: /^job seeker$/i } });
-        const recentFrontend = await Student.find(frontendQuery).sort({ createdAt: -1 }).limit(5);
+        
+        // Calculate today's date boundary in UTC (matching attendance parseUTCDate)
+        const d = new Date();
+        const today = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+
+        // Run queries in parallel
+        const [
+            total,
+            regularGroups,
+            recent,
+            frontendTotal,
+            frontendGroups,
+            recentFrontend,
+            
+            // Telemetry: Attendance Today
+            attendanceCheckedIn,
+            attendanceCheckedOut,
+            attendanceOnLeave,
+
+            // Telemetry: Tasks
+            tasksCompleted,
+            tasksPending,
+            tasksReview,
+
+            // SPL stats
+            splTotal,
+            splPlaced,
+            splWilling,
+            splNew,
+            splInProgress,
+            splRecent,
+
+            // Cohort breakdown
+            regularOnlyCount,
+            frontendTrackCount,
+            overlappingCount,
+
+            // Year aggregations
+            studentYearsAgg,
+            splYearsAgg
+        ] = await Promise.all([
+            Student.countDocuments(regularQuery),
+            Student.aggregate([
+                { $match: regularQuery },
+                { $group: { _id: { $toLower: "$currentStatus" }, count: { $sum: 1 } } }
+            ]),
+            Student.find(regularQuery).sort({ updatedAt: -1 }).limit(5).lean(),
+            Student.countDocuments(frontendQuery),
+            Student.aggregate([
+                { $match: frontendQuery },
+                { $group: { _id: { $toLower: "$currentStatus" }, count: { $sum: 1 } } }
+            ]),
+            Student.find(frontendQuery).sort({ updatedAt: -1 }).limit(5).lean(),
+
+            // Attendance stats
+            Attendance.countDocuments({ date: today }),
+            Attendance.countDocuments({ date: today, checkOutTime: { $ne: null } }),
+            Attendance.countDocuments({ date: today, status: { $in: ['Leave', 'Absent'] } }),
+
+            // Task stats
+            Task.countDocuments({ overallStatus: 'Completed' }),
+            Task.countDocuments({ overallStatus: { $in: ['Pending', 'In Progress'] } }),
+            Task.countDocuments({ overallStatus: 'Review' }),
+
+            // SPL stats
+            SplRegistration.countDocuments(),
+            SplRegistration.countDocuments({ status: 'Placed' }),
+            SplRegistration.countDocuments({ willingCompanyProcess: true }),
+            SplRegistration.countDocuments({ status: 'New' }),
+            SplRegistration.countDocuments({ status: 'In Progress' }),
+            SplRegistration.find().sort({ updatedAt: -1 }).limit(5).lean(),
+
+            // Cohort distribution counts
+            Student.countDocuments({ enrollments: 'Regular', isFrontend: { $ne: true } }),
+            Student.countDocuments({ isFrontend: true }),
+            Student.countDocuments({ enrollments: { $all: ['Regular', 'SPL'] } }),
+
+            // Graduation cohorts aggregation
+            Student.aggregate([
+                { $group: { _id: "$passedOutYear", count: { $sum: 1 } } }
+            ]),
+            SplRegistration.aggregate([
+                { $group: { _id: "$batch", count: { $sum: 1 } } }
+            ])
+        ]);
+
+        // Map status counts from regular aggregation
+        const regularCounts = {};
+        regularGroups.forEach(g => {
+            if (g._id) {
+                regularCounts[g._id.trim()] = g.count;
+            }
+        });
+
+        const jobSeekers = regularCounts['job seeker'] || 0;
+        const placed = regularCounts['placed'] || 0;
+        const needToFilled = regularCounts['need to filled'] || 0;
+        const inactiveUsers = regularCounts['inactive - not responded'] || 0;
+        const interviewProcess = regularCounts['interview process'] || 0;
+
+        // Map status counts from frontend aggregation
+        const frontendCounts = {};
+        frontendGroups.forEach(g => {
+            if (g._id) {
+                frontendCounts[g._id.trim()] = g.count;
+            }
+        });
+
+        const frontendPlaced = frontendCounts['placed'] || 0;
+        const frontendJobSeekers = frontendCounts['job seeker'] || 0;
+
+        // Process graduation cohorts year distribution map
+        const yearsMap = {};
+        studentYearsAgg.forEach(item => {
+            const yr = (item._id || 'Not Specified').trim();
+            if (!yearsMap[yr]) yearsMap[yr] = { year: yr, regular: 0, spl: 0 };
+            yearsMap[yr].regular += item.count;
+        });
+
+        splYearsAgg.forEach(item => {
+            const yr = (item._id || 'Not Specified').trim();
+            if (!yearsMap[yr]) yearsMap[yr] = { year: yr, regular: 0, spl: 0 };
+            yearsMap[yr].spl += item.count;
+        });
+
+        const passedOutYears = Object.values(yearsMap).sort((a, b) => a.year.localeCompare(b.year));
 
         res.json({ 
             total, 
@@ -153,9 +265,41 @@ router.get('/stats', authMiddleware, async (req, res) => {
             frontendTotal,
             frontendPlaced,
             frontendJobSeekers,
-            recentFrontend
+            recentFrontend,
+            
+            // New operational metrics
+            telemetry: {
+                attendance: {
+                    checkedIn: attendanceCheckedIn,
+                    checkedOut: attendanceCheckedOut,
+                    onLeave: attendanceOnLeave
+                },
+                tasks: {
+                    completed: tasksCompleted,
+                    pending: tasksPending,
+                    review: tasksReview
+                }
+            },
+            splStats: {
+                total: splTotal,
+                placed: splPlaced,
+                willing: splWilling,
+                splNew,
+                splInProgress,
+                recent: splRecent
+            },
+
+            // Full analytics reporting metrics
+            cohortDistribution: {
+                regularOnly: regularOnlyCount,
+                frontendTrack: frontendTrackCount,
+                overlapping: overlappingCount,
+                pureSpl: splTotal
+            },
+            passedOutYears
         });
     } catch (error) {
+        console.error('Dashboard stats failure:', error);
         res.status(500).json({ message: 'Dashboard stats failure' });
     }
 });
@@ -215,6 +359,14 @@ router.put('/:id', authMiddleware, async (req, res) => {
                         await user.save();
                     }
                 }
+                const mappedReg = {
+                    ...reg.toObject(),
+                    studentType: 'SPL',
+                    enrollments: ['SPL'],
+                    currentStatus: reg.status,
+                    passedOutYear: reg.passedOutYear || reg.batch
+                };
+                return res.json(mappedReg);
             }
             return res.json(reg);
         }

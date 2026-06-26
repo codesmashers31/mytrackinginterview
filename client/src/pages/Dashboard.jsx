@@ -1325,7 +1325,6 @@ export default function Dashboard() {
                           <td className="px-4 py-3.5">
                             <div>
                               <p className="text-sm font-semibold text-slate-900">{reg.name}</p>
-                              <p className="text-xs text-slate-500">{reg.email}</p>
                             </div>
                           </td>
                           <td className="px-4 py-3.5">
@@ -1388,14 +1387,12 @@ export default function Dashboard() {
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Candidate</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Degree</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Batch</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Grade</th>
                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Status</th>
                       </tr>
                     ) : (
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Candidate</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Batch</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Batch Year</th>
                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">City</th>
                       </tr>
@@ -1413,9 +1410,6 @@ export default function Dashboard() {
                               </div>
                             </td>
                             <td className="px-4 py-3.5 text-sm text-slate-600">{student.degree}</td>
-                            <td className="px-4 py-3.5 text-sm text-slate-600">
-                              {student.batch || student.passedOutYear || 'Not added'}
-                            </td>
                             <td className="px-4 py-3.5 text-sm font-semibold">
                               {student.grade ? (
                                 <span className={`inline-flex items-center justify-center h-5 w-5 rounded text-[10px] font-bold ${student.grade === 'A' ? 'bg-emerald-100 text-emerald-700' : student.grade === 'B' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
@@ -1430,7 +1424,7 @@ export default function Dashboard() {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="5" className="px-4 py-10 text-center text-sm text-slate-500">
+                          <td colSpan="4" className="px-4 py-10 text-center text-sm text-slate-500">
                             No recent student records available.
                           </td>
                         </tr>
@@ -1445,14 +1439,13 @@ export default function Dashboard() {
                                 <p className="text-xs text-slate-500">{student.mobile}</p>
                               </div>
                             </td>
-                            <td className="px-4 py-3.5 text-sm text-slate-600">{student.batch || 'No Batch'}</td>
                             <td className="px-4 py-3.5 text-sm text-slate-600">{student.passedOutYear || 'N/A'}</td>
                             <td className="px-4 py-3.5 text-sm text-slate-600 text-right">{student.city || '-'}</td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="4" className="px-4 py-10 text-center text-sm text-slate-500">
+                          <td colSpan="3" className="px-4 py-10 text-center text-sm text-slate-500">
                             No recent frontend student records available.
                           </td>
                         </tr>

@@ -22,10 +22,8 @@ export default function SplRegistrations() {
   const [showColumnDropdown, setShowColumnDropdown] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState({
     name: true,
-    email: true,
     mobile: true,
     degree: false,
-    batch: false,
     stack: true,
     willingness: false,
     grade: false,
@@ -218,10 +216,8 @@ export default function SplRegistrations() {
                             className="rounded border-slate-350 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
                           />
                           <span>{col === 'name' ? 'Name' : 
-                                 col === 'email' ? 'Email' : 
                                  col === 'mobile' ? 'Mobile' : 
                                  col === 'degree' ? 'Degree' :
-                                 col === 'batch' ? 'Batch' :
                                  col === 'willingness' ? 'Willingness' :
                                  col === 'grade' ? 'Grade' :
                                  col === 'stack' ? 'Stack' : 
@@ -249,10 +245,8 @@ export default function SplRegistrations() {
               <thead className="bg-slate-50">
                 <tr>
                   {visibleColumns.name && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Name</th>}
-                  {visibleColumns.email && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Email</th>}
                   {visibleColumns.mobile && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Mobile</th>}
                   {visibleColumns.degree && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Degree</th>}
-                  {visibleColumns.batch && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Batch</th>}
                   {visibleColumns.stack && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Stack</th>}
                   {visibleColumns.willingness && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Willingness</th>}
                   {visibleColumns.grade && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Grade</th>}
@@ -279,12 +273,10 @@ export default function SplRegistrations() {
                 ) : (
                   currentItems.map((reg, index) => (
                     <tr key={reg._id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                      {visibleColumns.name && <td className="whitespace-nowrap px-3 py-2 text-xs font-bold text-slate-900">{reg.name}</td>}
-                      {visibleColumns.email && <td className="whitespace-nowrap px-3 py-2 text-xs font-semibold text-slate-750">{reg.email}</td>}
-                      {visibleColumns.mobile && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750 font-semibold">{reg.mobile || '—'}</td>}
-                      {visibleColumns.degree && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750">{reg.degree || '—'}</td>}
-                      {visibleColumns.batch && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750 font-semibold">{reg.batch || '—'}</td>}
-                      {visibleColumns.stack && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750">{reg.stack || '—'}</td>}
+                    {visibleColumns.name && <td className="whitespace-nowrap px-3 py-2 text-xs font-bold text-slate-900">{reg.name}</td>}
+                    {visibleColumns.mobile && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750 font-semibold">{reg.mobile || '—'}</td>}
+                    {visibleColumns.degree && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750">{reg.degree || '—'}</td>}
+                    {visibleColumns.stack && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750">{reg.stack || '—'}</td>}
                       {visibleColumns.willingness && (
                         <td className="whitespace-nowrap px-3 py-2 text-xs">
                           {reg.willingCompanyProcess ? (

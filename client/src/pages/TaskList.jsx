@@ -435,10 +435,6 @@ export default function TaskList({ isEmbedded = false, onSwitchTab }) {
                             </div>
                             <div className="min-w-0 max-w-[130px]">
                               <p className="text-xs font-bold text-slate-800 truncate leading-tight hover:text-blue-600 transition-colors cursor-pointer" title={task.studentName}>{task.studentName}</p>
-                              <p className="text-[10px] text-slate-450 truncate mt-0.5 leading-none flex items-center gap-1" title={task.studentEmail || 'No email'}>
-                                <Mail size={10} className="shrink-0 text-slate-400/85" />
-                                <span>{task.studentEmail || 'No email'}</span>
-                              </p>
                             </div>
                           </div>
                         </td>

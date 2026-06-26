@@ -91,7 +91,6 @@ export default function CoordinatorEligibility() {
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Student</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Degree</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Batch</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Grade</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Eligibility</th>
                 </tr>
@@ -106,7 +105,6 @@ export default function CoordinatorEligibility() {
                         <p className="text-xs text-slate-500">{student.mobile || student.email || '—'}</p>
                       </td>
                       <td className="px-4 py-3.5 text-sm text-slate-600">{student.degree || '—'}</td>
-                      <td className="px-4 py-3.5 text-sm text-slate-600">{student.batch || student.passedOutYear || '—'}</td>
                       <td className="px-4 py-3.5 text-sm font-semibold">
                         {student.grade ? (
                           <span className={`inline-flex items-center justify-center h-5 w-5 rounded text-[10px] font-bold ${

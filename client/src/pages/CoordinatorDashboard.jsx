@@ -95,9 +95,7 @@ export default function CoordinatorDashboard() {
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Email</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Degree</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Batch</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Status</th>
                   </tr>
                 </thead>
@@ -105,9 +103,7 @@ export default function CoordinatorDashboard() {
                   {students.slice(0, 10).map(student => (
                     <tr key={student._id} className="transition hover:bg-slate-50">
                       <td className="px-4 py-3.5 text-sm font-semibold text-slate-900">{student.name}</td>
-                      <td className="px-4 py-3.5 text-sm text-slate-600">{student.email || '—'}</td>
                       <td className="px-4 py-3.5 text-sm text-slate-600">{student.degree || '—'}</td>
-                      <td className="px-4 py-3.5 text-sm text-slate-600">{student.batch || student.passedOutYear || '—'}</td>
                       <td className="px-4 py-3.5 text-right">
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                           student.currentStatus === 'Placed'

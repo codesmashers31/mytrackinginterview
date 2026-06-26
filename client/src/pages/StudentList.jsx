@@ -46,7 +46,6 @@ export default function StudentList() {
   const [visibleColumns, setVisibleColumns] = useState({
     candidateInfo: true,
     classification: true,
-    academicBatch: true,
     team: false,
     placementInfo: false,
     skills: false,
@@ -496,7 +495,6 @@ export default function StudentList() {
                              />
                              <span>{col === 'candidateInfo' ? 'Candidate Info' : 
                                     col === 'classification' ? 'Classification' : 
-                                    col === 'academicBatch' ? 'Academic & Batch' : 
                                     col === 'team' ? 'Team' :
                                     col === 'placementInfo' ? 'Placement Info' :
                                     col === 'skills' ? 'Skills' :
@@ -524,7 +522,6 @@ export default function StudentList() {
                       </th>
                        {visibleColumns.candidateInfo && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Candidate Info</th>}
                        {visibleColumns.classification && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Classification</th>}
-                       {visibleColumns.academicBatch && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Academic & Batch</th>}
                        {visibleColumns.team && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Team</th>}
                        {visibleColumns.placementInfo && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Placement Info</th>}
                        {visibleColumns.skills && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Skills</th>}
@@ -561,10 +558,6 @@ export default function StudentList() {
                               </div>
                               <div className="min-w-0 max-w-[130px]">
                                 <p className="text-xs font-bold text-slate-800 truncate leading-tight hover:text-blue-600 transition-colors cursor-pointer" title={student.name}>{student.name}</p>
-                                <p className="text-[10px] text-slate-450 truncate mt-0.5 leading-none flex items-center gap-1" title={student.email || 'No email'}>
-                                  <Mail size={10} className="shrink-0 text-slate-400/85" />
-                                  <span>{student.email || 'No email'}</span>
-                                </p>
                                 <p className="text-[10px] text-slate-400 truncate mt-0.5 leading-none flex items-center gap-1 font-semibold" title={student.mobile}>
                                   <Phone size={9} className="shrink-0 text-slate-400/85" />
                                   <span>{student.mobile}</span>
@@ -596,28 +589,7 @@ export default function StudentList() {
                             </div>
                           </td>
                         )}
-                        {visibleColumns.academicBatch && (
-                          <td className="px-3 py-2.5 text-xs">
-                            <div className="flex items-center gap-1.5">
-                              <div className="p-1 rounded-md bg-slate-100/80 text-slate-500 shrink-0">
-                                <GraduationCap size={11} />
-                              </div>
-                              <div className="max-w-[120px]">
-                                <p className="font-bold text-slate-700 leading-tight truncate" title={student.degree || 'No Degree'}>
-                                  {student.degree || 'No Degree'}
-                                  {getValidBatchYear(student.passedOutYear) && (
-                                    <span className="text-slate-400 font-normal text-[10px] ml-1">
-                                      ({getValidBatchYear(student.passedOutYear)})
-                                    </span>
-                                  )}
-                                </p>
-                                <p className="text-[10px] text-slate-405 mt-0.5 leading-none truncate" title={student.batch ? `Batch: ${student.batch}` : 'No batch code'}>
-                                  {student.batch ? `Batch: ${student.batch}` : 'No batch code'}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                        )}
+
                         {visibleColumns.team && (
                           <td className="px-3 py-2.5 text-xs">
                             <div className="flex items-center gap-1.5">

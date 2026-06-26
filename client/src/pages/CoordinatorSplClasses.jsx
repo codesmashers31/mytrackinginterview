@@ -102,9 +102,7 @@ export default function CoordinatorSplClasses() {
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Email</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Degree</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Batch</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Team</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Status</th>
                 </tr>
@@ -113,9 +111,7 @@ export default function CoordinatorSplClasses() {
                 {filtered.map(reg => (
                   <tr key={reg._id} className="transition hover:bg-slate-50">
                     <td className="px-4 py-3.5 text-sm font-semibold text-slate-900">{reg.name}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-600">{reg.email || '—'}</td>
                     <td className="px-4 py-3.5 text-sm text-slate-600">{reg.degree || '—'}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-600">{reg.batch || '—'}</td>
                     <td className="px-4 py-3.5 text-sm text-slate-600">
                       {teams.find(t => t.members?.some(m => m === reg._id || m._id === reg._id)) ? (
                         <span className="font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded text-[10px] border border-indigo-100/30">

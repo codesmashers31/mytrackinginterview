@@ -33,7 +33,6 @@ export default function FrontendStudentList() {
     candidateInfo: true,
     contact: true,
     degree: true,
-    batchDetails: true,
     team: false,
     location: true,
     status: false,
@@ -405,7 +404,6 @@ export default function FrontendStudentList() {
                         <span>{col === 'candidateInfo' ? 'Candidate Info' : 
                                col === 'contact' ? 'Contact' : 
                                col === 'degree' ? 'Degree' : 
-                               col === 'batchDetails' ? 'Batch Details' : 
                                col === 'team' ? 'Team' :
                                col === 'location' ? 'Location' : 
                                col === 'status' ? 'Status' : col}</span>
@@ -432,7 +430,6 @@ export default function FrontendStudentList() {
                 {visibleColumns.candidateInfo && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Candidate Info</th>}
                 {visibleColumns.contact && <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact</th>}
                 {visibleColumns.degree && <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Degree</th>}
-                {visibleColumns.batchDetails && <th className="hidden md:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Batch Details</th>}
                 {visibleColumns.team && <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Team</th>}
                 {visibleColumns.location && <th className="hidden md:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Location</th>}
                 {visibleColumns.status && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>}
@@ -475,10 +472,6 @@ export default function FrontendStudentList() {
                           </div>
                           <div className="min-w-0 max-w-[130px]">
                             <p className="text-xs font-bold text-slate-800 truncate leading-tight hover:text-blue-600 transition-colors cursor-pointer" title={student.name}>{student.name}</p>
-                            <p className="text-[10px] text-slate-450 truncate mt-0.5 leading-none flex items-center gap-1" title={student.email || 'No email'}>
-                              <Mail size={10} className="shrink-0 text-slate-400/85" />
-                              <span>{student.email || 'No email'}</span>
-                            </p>
                           </div>
                         </div>
                       </td>
@@ -503,19 +496,7 @@ export default function FrontendStudentList() {
                         </div>
                       </td>
                     )}
-                    {visibleColumns.batchDetails && (
-                      <td className="hidden md:table-cell px-3 py-2.5 text-xs text-slate-650">
-                        <div className="flex items-center gap-1.5">
-                          <div className="p-1 rounded-md bg-slate-100/80 text-slate-500 shrink-0">
-                            <Calendar size={11} />
-                          </div>
-                          <div className="max-w-[110px]">
-                            <p className="font-bold text-slate-700 leading-tight truncate" title={student.batch || 'No batch'}>{student.batch || 'No batch'}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5 leading-none truncate" title={`Class of ${student.passedOutYear || 'N/A'}`}>Class of {student.passedOutYear || 'N/A'}</p>
-                          </div>
-                        </div>
-                      </td>
-                    )}
+
                     {visibleColumns.team && (
                       <td className="hidden sm:table-cell px-3 py-2.5 text-xs">
                         <div className="flex items-center gap-1.5">

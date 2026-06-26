@@ -198,7 +198,6 @@ export default function PlacementSplClasses() {
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Name</th>
-                  <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Email</th>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Mobile</th>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Team</th>
                   <th className="sticky top-0 border-b border-slate-200 px-4 py-4 text-left font-semibold">Status</th>
@@ -218,7 +217,6 @@ export default function PlacementSplClasses() {
                   currentItems.map((reg, index) => (
                     <tr key={reg._id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
                       <td className="whitespace-nowrap px-4 py-4 text-slate-900">{reg.name}</td>
-                      <td className="whitespace-nowrap px-4 py-4 text-slate-700">{reg.email}</td>
                       <td className="whitespace-nowrap px-4 py-4 text-slate-700">{reg.mobile || '—'}</td>
                       <td className="whitespace-nowrap px-4 py-4">
                         {teams.find(t => t.members?.some(m => m === reg._id || m._id === reg._id)) ? (

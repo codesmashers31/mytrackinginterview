@@ -383,7 +383,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
         const jobSeekers = regularCounts['job seeker'] || 0;
         const placed = regularCounts['placed'] || 0;
         const needToFilled = regularCounts['need to filled'] || 0;
-        const inactiveUsers = regularCounts['inactive - not responded'] || 0;
+        const inactiveUsers = (regularCounts['inactive/suspend'] || 0) + (regularCounts['inactive - not responded'] || 0) + (regularCounts['inactive'] || 0);
         const interviewProcess = regularCounts['interview process'] || 0;
 
         // Map status counts from frontend aggregation

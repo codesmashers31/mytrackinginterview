@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Search, Download, Upload, Plus, Edit, Eye, Trash2, X, ChevronLeft, ChevronRight, ClipboardList
+  Search, Download, Upload, Plus, Edit, Eye, Trash2, X, ChevronLeft, ChevronRight, ClipboardList,
+  Mail, Phone, GraduationCap, Calendar, Users, Award, SlidersHorizontal, ChevronDown
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
@@ -28,7 +29,7 @@ export default function StudentList() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [enrollmentFilter, setEnrollmentFilter] = useState('All');
   const [batchFilter, setBatchFilter] = useState('All');
-  const [sortBy, setSortBy] = useState('batch-desc');
+  const [sortBy, setSortBy] = useState('batch-asc');
   
   // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -41,6 +42,17 @@ export default function StudentList() {
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [isDeleteSelectedOpen, setIsDeleteSelectedOpen] = useState(false);
   const [isDeletingSelected, setIsDeletingSelected] = useState(false);
+  const [showColumnDropdown, setShowColumnDropdown] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState({
+    candidateInfo: true,
+    classification: true,
+    academicBatch: true,
+    team: false,
+    placementInfo: false,
+    skills: false,
+    grade: true,
+    status: true,
+  });
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -287,19 +299,16 @@ export default function StudentList() {
         return b.name.localeCompare(a.name, undefined, { sensitivity: 'base' });
       }
 
-      const yearA = getValidBatchYear(a.passedOutYear);
-      const yearB = getValidBatchYear(b.passedOutYear);
-
-      if (!yearA && !yearB) {
-        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+      if (sortBy === 'batch-asc' || sortBy === 'batch-desc') {
+        const bA = String(a.batch || '').trim();
+        const bB = String(b.batch || '').trim();
+        if (!bA && !bB) return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        if (!bA) return 1;
+        if (!bB) return -1;
+        const cmp = bA.localeCompare(bB, undefined, { numeric: true, sensitivity: 'base' });
+        return sortBy === 'batch-asc' ? cmp : -cmp;
       }
-
-      if (!yearA) return 1;
-      if (!yearB) return -1;
-
-      return sortBy === 'batch-asc'
-        ? Number(yearA) - Number(yearB)
-        : Number(yearB) - Number(yearA);
+      return 0;
     });
 
   useEffect(() => {
@@ -376,8 +385,8 @@ export default function StudentList() {
                    }}
                    className="w-full py-2 px-3 bg-white border border-slate-200 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4338ca] text-[12px] md:text-[13px] font-semibold text-[#1e293b] cursor-pointer transition-shadow"
                  >
-                    <option value="batch-desc">Institute Batch: New to Old</option>
                     <option value="batch-asc">Institute Batch: Old to New</option>
+                    <option value="batch-desc">Institute Batch: New to Old</option>
                     <option value="name-asc">Name: A to Z</option>
                     <option value="name-desc">Name: Z to A</option>
                  </select>
@@ -450,13 +459,56 @@ export default function StudentList() {
 
            {/* Master Table */}
            <SurfaceCard className="overflow-hidden">
-             <div className="px-4 md:px-5 py-3 border-b border-slate-100 bg-white flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                <h3 className="text-sm md:text-base font-bold text-[#1e293b]">Enrolled Candidates</h3>
-                <p className="text-[11px] md:text-xs font-medium text-slate-500">
-                  Showing <span className="font-bold text-slate-700">{processedStudents.length}</span> student{processedStudents.length === 1 ? '' : 's'}
-                  {batchFilter !== 'All' ? ` in ${batchFilter}` : ''}
-                </p>
-             </div>
+              <div className="px-4 md:px-5 py-3 border-b border-slate-100 bg-white flex flex-col gap-2 md:flex-row md:items-center md:justify-between relative">
+                 <div>
+                    <h3 className="text-sm md:text-base font-bold text-[#1e293b]">Enrolled Candidates</h3>
+                    <p className="text-[11px] md:text-xs font-medium text-slate-500">
+                      Showing <span className="font-bold text-slate-700">{processedStudents.length}</span> student{processedStudents.length === 1 ? '' : 's'}
+                      {batchFilter !== 'All' ? ` in ${batchFilter}` : ''}
+                    </p>
+                 </div>
+
+                 {/* Column Visibility Selector */}
+                 <div className="relative">
+                   <button 
+                     onClick={() => setShowColumnDropdown(!showColumnDropdown)}
+                     className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                   >
+                     <SlidersHorizontal size={13} />
+                     <span>Columns</span>
+                     <ChevronDown size={12} className={`transition-transform duration-200 ${showColumnDropdown ? 'rotate-180' : ''}`} />
+                   </button>
+
+                   {showColumnDropdown && (
+                     <>
+                       <div className="fixed inset-0 z-10" onClick={() => setShowColumnDropdown(false)}></div>
+                       <div className="absolute right-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-2">
+                         <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1.5">
+                           Toggle Columns
+                         </div>
+                         {Object.keys(visibleColumns).map((col) => (
+                           <label key={col} className="flex items-center px-3 py-1.5 hover:bg-slate-50 cursor-pointer select-none text-xs font-medium text-slate-700 gap-2">
+                             <input 
+                               type="checkbox"
+                               checked={visibleColumns[col]}
+                               onChange={() => setVisibleColumns(prev => ({ ...prev, [col]: !prev[col] }))}
+                               className="rounded border-slate-350 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                             />
+                             <span>{col === 'candidateInfo' ? 'Candidate Info' : 
+                                    col === 'classification' ? 'Classification' : 
+                                    col === 'academicBatch' ? 'Academic & Batch' : 
+                                    col === 'team' ? 'Team' :
+                                    col === 'placementInfo' ? 'Placement Info' :
+                                    col === 'skills' ? 'Skills' :
+                                    col === 'grade' ? 'Grade' : 
+                                    col === 'status' ? 'Status' : col}</span>
+                           </label>
+                         ))}
+                       </div>
+                     </>
+                   )}
+                 </div>
+              </div>
              
              <div className="overflow-x-auto">
                <table className="w-full min-w-[720px] text-left">
@@ -470,19 +522,21 @@ export default function StudentList() {
                           className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-3.5 w-3.5"
                         />
                       </th>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Candidate Info</th>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Classification</th>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Academic & Batch</th>
-                      <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Team</th>
-                      <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">Grade</th>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>
+                       {visibleColumns.candidateInfo && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Candidate Info</th>}
+                       {visibleColumns.classification && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Classification</th>}
+                       {visibleColumns.academicBatch && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Academic & Batch</th>}
+                       {visibleColumns.team && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Team</th>}
+                       {visibleColumns.placementInfo && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Placement Info</th>}
+                       {visibleColumns.skills && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Skills</th>}
+                       {visibleColumns.grade && <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">Grade</th>}
+                       {visibleColumns.status && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>}
                       <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
                     {loading ? (
                       <tr>
-                        <td colSpan="8" className="px-3 py-10 text-center">
+                        <td colSpan={2 + Object.values(visibleColumns).filter(Boolean).length} className="px-3 py-10 text-center">
                           <div className="flex items-center justify-center gap-2 text-slate-500">
                             <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
                             <span className="text-xs font-semibold">Retrieving candidates...</span>
@@ -490,96 +544,154 @@ export default function StudentList() {
                         </td>
                       </tr>
                     ) : currentItems.length > 0 ? currentItems.map(student => (
-                      <tr key={student._id} className="transition-colors hover:bg-slate-50/40">
-                        <td className="px-2 py-2 text-center">
+                      <tr key={student._id} className="transition-all hover:bg-slate-50/70 border-l-2 border-l-transparent hover:border-l-blue-600 duration-150">
+                        <td className="px-2 py-2.5 text-center">
                           <input
                             type="checkbox"
                             checked={selectedStudentIds.includes(student._id)}
                             onChange={() => handleToggleSelect(student._id)}
-                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-3.5 w-3.5"
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-3.5 w-3.5 transition-all"
                           />
                         </td>
-                        <td className="px-3 py-2">
-                          <div className="min-w-0 max-w-[180px] md:max-w-xs">
-                            <p className="text-xs font-bold text-slate-800 truncate leading-tight">{student.name}</p>
-                            <p className="text-[10px] text-slate-450 truncate mt-0.5 leading-none">{student.email || 'No email'}</p>
-                            <p className="text-[10px] text-slate-400 truncate mt-0.5 leading-none font-semibold">{student.mobile}</p>
-                          </div>
-                        </td>
-                        <td className="px-3 py-2">
-                          <div className="flex flex-wrap gap-1">
-                            {student.isFrontend && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200/30">
-                                Frontend
-                              </span>
-                            )}
-                            {(student.enrollments || []).map(enrollment => (
-                              <span key={enrollment} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                                enrollment === 'SPL' ? 'bg-purple-50 text-purple-700 border border-purple-200/30' : 'bg-blue-50 text-blue-700 border border-blue-200/30'
-                              }`}>
-                                {enrollment}
-                              </span>
-                            ))}
-                            {(!student.enrollments || student.enrollments.length === 0) && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200/30">
-                                Regular
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-xs">
-                          <div>
-                            <p className="font-semibold text-slate-850 leading-tight">
-                              {student.degree || 'No Degree'}
-                              {getValidBatchYear(student.passedOutYear) && (
-                                <span className="text-slate-400 font-normal text-[10px] ml-1">
-                                  (Class of {getValidBatchYear(student.passedOutYear)})
+                        {visibleColumns.candidateInfo && (
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-2.5">
+                              <div className="h-7 w-7 rounded-lg bg-linear-to-br from-blue-500 to-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shadow-xs shrink-0 select-none">
+                                {student.name.slice(0, 2).toUpperCase()}
+                              </div>
+                              <div className="min-w-0 max-w-[130px]">
+                                <p className="text-xs font-bold text-slate-800 truncate leading-tight hover:text-blue-600 transition-colors cursor-pointer" title={student.name}>{student.name}</p>
+                                <p className="text-[10px] text-slate-450 truncate mt-0.5 leading-none flex items-center gap-1" title={student.email || 'No email'}>
+                                  <Mail size={10} className="shrink-0 text-slate-400/85" />
+                                  <span>{student.email || 'No email'}</span>
+                                </p>
+                                <p className="text-[10px] text-slate-400 truncate mt-0.5 leading-none flex items-center gap-1 font-semibold" title={student.mobile}>
+                                  <Phone size={9} className="shrink-0 text-slate-400/85" />
+                                  <span>{student.mobile}</span>
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.classification && (
+                          <td className="px-3 py-2.5">
+                            <div className="flex flex-wrap gap-1 max-w-[110px]">
+                              {student.isFrontend && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200/30">
+                                  Frontend
                                 </span>
                               )}
-                            </p>
-                            <p className="text-[10px] text-slate-450 mt-0.5 leading-none">
-                              {student.batch ? `Batch: ${student.batch}` : 'No batch code'}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="hidden sm:table-cell px-3 py-2 text-xs">
-                          {teams.find(t => t.members.some(m => m._id === student._id || m === student._id)) ? (
-                            <span className="font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded text-[10px] border border-indigo-100/30">
-                              {teams.find(t => t.members.some(m => m._id === student._id || m === student._id))?.name}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-[10px] font-medium">-</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-center text-xs font-semibold">
-                          {student.grade ? (
-                            <span className={`inline-flex items-center justify-center h-5 w-5 rounded text-[10px] font-bold ${student.grade === 'A' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100/30' : student.grade === 'B' ? 'bg-blue-50 text-blue-700 border border-blue-100/30' : 'bg-amber-50 text-amber-700 border border-amber-100/30'}`}>
-                              {student.grade}
-                            </span>
-                          ) : '-'}
-                        </td>
-                        <td className="px-3 py-2">
-                          <StatusBadge status={student.currentStatus} />
-                        </td>
+                              {(student.enrollments || []).map(enrollment => (
+                                <span key={enrollment} className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold ${
+                                  enrollment === 'SPL' ? 'bg-purple-50 text-purple-700 border border-purple-200/30' : 'bg-blue-50 text-blue-700 border border-blue-200/30'
+                                }`}>
+                                  {enrollment}
+                                </span>
+                              ))}
+                              {(!student.enrollments || student.enrollments.length === 0) && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200/30">
+                                  Regular
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.academicBatch && (
+                          <td className="px-3 py-2.5 text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <div className="p-1 rounded-md bg-slate-100/80 text-slate-500 shrink-0">
+                                <GraduationCap size={11} />
+                              </div>
+                              <div className="max-w-[120px]">
+                                <p className="font-bold text-slate-700 leading-tight truncate" title={student.degree || 'No Degree'}>
+                                  {student.degree || 'No Degree'}
+                                  {getValidBatchYear(student.passedOutYear) && (
+                                    <span className="text-slate-400 font-normal text-[10px] ml-1">
+                                      ({getValidBatchYear(student.passedOutYear)})
+                                    </span>
+                                  )}
+                                </p>
+                                <p className="text-[10px] text-slate-405 mt-0.5 leading-none truncate" title={student.batch ? `Batch: ${student.batch}` : 'No batch code'}>
+                                  {student.batch ? `Batch: ${student.batch}` : 'No batch code'}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.team && (
+                          <td className="px-3 py-2.5 text-xs">
+                            <div className="flex items-center gap-1.5">
+                              {teams.find(t => t.members.some(m => m._id === student._id || m === student._id)) ? (
+                                <>
+                                  <div className="p-1 rounded-md bg-indigo-50 text-indigo-500 shrink-0">
+                                    <Users size={11} />
+                                  </div>
+                                  <span 
+                                    className="font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded text-[10px] border border-indigo-100/30 truncate max-w-[100px] inline-block align-middle"
+                                    title={teams.find(t => t.members.some(m => m._id === student._id || m === student._id))?.name}
+                                  >
+                                    {teams.find(t => t.members.some(m => m._id === student._id || m === student._id))?.name}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-slate-400 text-[10px] font-medium pl-6">-</span>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.placementInfo && (
+                          <td className="px-3 py-2.5 text-xs font-semibold text-slate-600">
+                            {student.companyName ? (
+                              <div>
+                                <p className="font-bold text-slate-700 truncate" title={student.companyName}>{student.companyName}</p>
+                                <p className="text-[10px] text-slate-400 mt-0.5 leading-none">{student.packageLpa || '—'} LPA</p>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 text-[10px] font-medium pl-6">-</span>
+                            )}
+                          </td>
+                        )}
+                        {visibleColumns.skills && (
+                          <td className="px-3 py-2.5 text-xs text-slate-500 max-w-[120px] truncate" title={student.skills || '—'}>
+                            {student.skills || '—'}
+                          </td>
+                        )}
+                        {visibleColumns.grade && (
+                          <td className="px-3 py-2.5 text-center text-xs font-semibold">
+                            {student.grade ? (
+                              <div className="flex items-center justify-center gap-1">
+                                <Award size={11} className="text-amber-500 shrink-0 animate-pulse" />
+                                <span className={`inline-flex items-center justify-center h-5 w-5 rounded-md text-[10px] font-bold ${student.grade === 'A' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100/30' : student.grade === 'B' ? 'bg-blue-50 text-blue-700 border border-blue-100/30' : 'bg-amber-50 text-amber-700 border border-amber-100/30'}`}>
+                                  {student.grade}
+                                </span>
+                              </div>
+                            ) : '-'}
+                          </td>
+                        )}
+                        {visibleColumns.status && (
+                          <td className="px-3 py-2.5">
+                            <StatusBadge status={student.currentStatus} />
+                          </td>
+                        )}
                         <td className="px-3 py-2 text-right">
-                          <div className="inline-flex gap-1">
+                          <div className="inline-flex gap-1.5">
                             <button
                               onClick={() => { setSelectedStudent(student); setIsViewOpen(true); }}
-                              className="p-1 text-slate-500 hover:text-slate-800 bg-slate-55 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200/30"
+                              className="p-1.5 text-emerald-600 hover:text-white bg-emerald-50 hover:bg-emerald-500 rounded-lg transition-all duration-200 border border-emerald-100 hover:border-emerald-500 hover:scale-105 active:scale-95 shadow-2xs hover:shadow-[0_4px_12px_rgba(16,185,129,0.2)] cursor-pointer"
                               title="View Details"
                             >
                               <Eye size={13} />
                             </button>
                             <button
                               onClick={() => { setSelectedStudent(student); setEditMode(true); setIsModalOpen(true); }}
-                              className="p-1 text-blue-600 hover:text-blue-800 bg-blue-50/50 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200/20"
+                              className="p-1.5 text-blue-600 hover:text-white bg-blue-50/50 hover:bg-blue-600 rounded-lg transition-all duration-200 border border-blue-100/50 hover:border-blue-600 hover:scale-105 active:scale-95 shadow-2xs hover:shadow-[0_4px_12px_rgba(37,99,235,0.2)] cursor-pointer"
                               title="Edit Candidate"
                             >
                               <Edit size={13} />
                             </button>
                             <button
                               onClick={() => { setSelectedStudent(student); setIsDeleteOpen(true); }}
-                              className="p-1 text-rose-650 hover:text-rose-800 bg-rose-50/30 hover:bg-rose-50 rounded-lg transition-colors border border-rose-200/20"
+                              className="p-1.5 text-rose-650 hover:text-white bg-rose-50/30 hover:bg-rose-600 rounded-lg transition-all duration-200 border border-rose-100/50 hover:border-rose-600 hover:scale-105 active:scale-95 shadow-2xs hover:shadow-[0_4px_12px_rgba(225,29,72,0.2)] cursor-pointer"
                               title="Delete Candidate"
                             >
                               <Trash2 size={13} />
@@ -589,7 +701,7 @@ export default function StudentList() {
                       </tr>
                     )) : (
                       <tr>
-                        <td colSpan="8" className="px-4 py-8 md:py-10 text-center text-slate-450 font-medium text-xs">
+                        <td colSpan={2 + Object.values(visibleColumns).filter(Boolean).length} className="px-4 py-8 md:py-10 text-center text-slate-450 font-medium text-xs">
                           No records matched search parameters
                         </td>
                       </tr>
@@ -706,8 +818,7 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
     { value: 'Placed', label: 'Placed successfully' },
     { value: 'Need to filled', label: 'Needs Updates' },
     { value: 'Interview Process', label: 'Interviewing' },
-    { value: 'Inactive', label: 'Suspended/Inactive' },
-    { value: 'Inactive - Not Responded', label: 'Inactive - Not Responded' },
+    { value: 'Inactive/Suspend', label: 'Inactive/Suspend' },
     { value: 'Not Picking the call', label: 'Not Picking the call' },
     { value: 'Not Reachable', label: 'Not Reachable' }
   ];
@@ -875,7 +986,7 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
                          </select>
                       </div>
 
-                      {['inactive', 'suspended/inactive'].includes(formData.currentStatus.toLowerCase()) && (
+                      {['inactive', 'suspended/inactive', 'inactive/suspend'].includes(formData.currentStatus.toLowerCase()) && (
                         <div>
                            <label className="crm-label">Suspend / Inactive Reason</label>
                            <textarea

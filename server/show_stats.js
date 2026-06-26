@@ -13,7 +13,7 @@ const checkStats = async () => {
         const jobSeekers = await Student.countDocuments({ currentStatus: { $regex: /^job seeker$/i } });
         const placed = await Student.countDocuments({ currentStatus: { $regex: /^placed$/i } });
         const needToFilled = await Student.countDocuments({ currentStatus: { $regex: /^need to filled$/i } });
-        const inactiveUsers = await Student.countDocuments({ currentStatus: { $regex: /^inactive - not responded$/i } });
+        const inactiveUsers = await Student.countDocuments({ currentStatus: { $regex: /^(inactive\/suspend|inactive - not responded|inactive)$/i } });
         const interviewProcess = await Student.countDocuments({ currentStatus: { $regex: /^interview process$/i } });
 
         console.log('📊 CURRENT DATABASE STATS:');

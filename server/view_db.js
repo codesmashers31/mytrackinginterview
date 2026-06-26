@@ -49,7 +49,7 @@ const updateStudentStatuses = async () => {
         console.log('  2. Placed');
         console.log('  3. Need to filled');
         console.log('  4. Interview Process');
-        console.log('  5. Inactive - Not Responded');
+        console.log('  5. Inactive/Suspend');
         console.log('  6. Got Job');
 
         process.exit(0);

@@ -122,7 +122,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }) {
                     <option value="Placed" className="bg-surface">Placed</option>
                     <option value="Need to filled" className="bg-surface">Need to filled</option>
                     <option value="Interview Process" className="bg-surface">Interview Process</option>
-                    <option value="Inactive - Not Responded" className="bg-surface">Inactive - Not Responded</option>
+                    <option value="Inactive/Suspend" className="bg-surface">Inactive/Suspend</option>
                     <option value="Not Picking the call" className="bg-surface">Not Picking the call</option>
                     <option value="Not Reachable" className="bg-surface">Not Reachable</option>
                   </select>

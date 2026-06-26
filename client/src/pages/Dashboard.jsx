@@ -677,7 +677,7 @@ export default function Dashboard() {
               <option value="Placed">Placed</option>
               <option value="Job Seeker">Job Seeker</option>
               <option value="Needs Update">Needs Update</option>
-              <option value="Inactive">Inactive</option>
+              <option value="Inactive/Suspend">Inactive/Suspend</option>
               <option value="Interview Process">Interview Process</option>
             </select>
           </div>

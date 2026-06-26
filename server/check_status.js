@@ -36,12 +36,12 @@ const checkAndDisplay = async () => {
             }
         });
 
-        // Check for "Inactive - Not Responded"
-        const inactiveCount = statusGroups['Inactive - Not Responded'] ? statusGroups['Inactive - Not Responded'].length : 0;
-        console.log(`\n🔴 "Inactive - Not Responded": ${inactiveCount} students`);
+        // Check for "Inactive/Suspend"
+        const inactiveCount = statusGroups['Inactive/Suspend'] ? statusGroups['Inactive/Suspend'].length : 0;
+        console.log(`\n🔴 "Inactive/Suspend": ${inactiveCount} students`);
 
         if (inactiveCount === 0) {
-            console.log('\n⚠️  No students with "Inactive - Not Responded" status yet!');
+            console.log('\n⚠️  No students with "Inactive/Suspend" status yet!');
             console.log('\n💡 To fix this, run:');
             console.log('   node update_students_to_inactive.js\n');
         }

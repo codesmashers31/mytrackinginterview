@@ -44,7 +44,7 @@ const updateToInactive = async () => {
                         { _id: nameOrId }
                     ]
                 },
-                { currentStatus: 'Inactive - Not Responded' }
+                { currentStatus: 'Inactive/Suspend' }
             );
             
             if (result.modifiedCount > 0) {
@@ -55,7 +55,7 @@ const updateToInactive = async () => {
             }
         }
 
-        console.log(`\n✅ Updated ${updated} student(s) to "Inactive - Not Responded" status`);
+        console.log(`\n✅ Updated ${updated} student(s) to "Inactive/Suspend" status`);
         process.exit(0);
     } catch (error) {
         console.error('❌ Error:', error.message);

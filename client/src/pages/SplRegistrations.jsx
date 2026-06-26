@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard, StatusBadge } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
-import { Edit, Check, X, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Edit, Check, X, Trash2, ArrowLeft, ArrowRight, SlidersHorizontal, ChevronDown } from 'lucide-react';
 
 const STATUS_OPTIONS = ['New', 'Reviewed', 'Shortlisted', 'Rejected', 'Placed'];
 const ITEMS_PER_PAGE = 8;
@@ -18,8 +18,19 @@ const STANDARD_STACKS = [
 
 export default function SplRegistrations() {
   const [regs, setRegs] = useState([]);
-  const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showColumnDropdown, setShowColumnDropdown] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState({
+    name: true,
+    email: true,
+    mobile: true,
+    degree: false,
+    batch: false,
+    stack: true,
+    willingness: false,
+    grade: false,
+    status: true,
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRegistration, setSelectedRegistration] = useState(null);
@@ -58,21 +69,8 @@ export default function SplRegistrations() {
     }
   };
 
-  const fetchTeams = async () => {
-    try {
-      const res = await fetch(buildApiUrl('/teams'), { headers: authHeaders() });
-      if (res.ok) {
-        const data = await res.json();
-        setTeams(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch teams:', err);
-    }
-  };
-
   useEffect(() => {
     fetchRegs();
-    fetchTeams();
   }, []);
 
   const filteredRegs = useMemo(() => {
@@ -192,6 +190,48 @@ export default function SplRegistrations() {
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold text-slate-700">
                 Page <span className="font-bold text-slate-900">{currentPage}</span> of <span className="font-bold text-slate-900">{totalPages}</span>
               </div>
+
+              {/* Column Visibility Selector */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowColumnDropdown(!showColumnDropdown)}
+                  className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <SlidersHorizontal size={13} />
+                  <span>Columns</span>
+                  <ChevronDown size={12} className={`transition-transform duration-200 ${showColumnDropdown ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showColumnDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowColumnDropdown(false)}></div>
+                    <div className="absolute right-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-2 text-left">
+                      <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1.5">
+                        Toggle Columns
+                      </div>
+                      {Object.keys(visibleColumns).map((col) => (
+                        <label key={col} className="flex items-center px-3 py-1.5 hover:bg-slate-50 cursor-pointer select-none text-xs font-medium text-slate-700 gap-2">
+                          <input 
+                            type="checkbox"
+                            checked={visibleColumns[col]}
+                            onChange={() => setVisibleColumns(prev => ({ ...prev, [col]: !prev[col] }))}
+                            className="rounded border-slate-350 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                          />
+                          <span>{col === 'name' ? 'Name' : 
+                                 col === 'email' ? 'Email' : 
+                                 col === 'mobile' ? 'Mobile' : 
+                                 col === 'degree' ? 'Degree' :
+                                 col === 'batch' ? 'Batch' :
+                                 col === 'willingness' ? 'Willingness' :
+                                 col === 'grade' ? 'Grade' :
+                                 col === 'stack' ? 'Stack' : 
+                                 col === 'status' ? 'Status' : col}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -208,19 +248,22 @@ export default function SplRegistrations() {
             <table className="min-w-full divide-y divide-slate-100">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Name</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Email</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Mobile</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Stack</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Team</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>
+                  {visibleColumns.name && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Name</th>}
+                  {visibleColumns.email && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Email</th>}
+                  {visibleColumns.mobile && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Mobile</th>}
+                  {visibleColumns.degree && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Degree</th>}
+                  {visibleColumns.batch && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Batch</th>}
+                  {visibleColumns.stack && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Stack</th>}
+                  {visibleColumns.willingness && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Willingness</th>}
+                  {visibleColumns.grade && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Grade</th>}
+                  {visibleColumns.status && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>}
                   <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-3 py-10 text-center">
+                    <td colSpan={1 + Object.values(visibleColumns).filter(Boolean).length} className="px-3 py-10 text-center">
                       <div className="flex items-center justify-center gap-2 text-slate-505">
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
                         <span className="text-xs font-semibold">Loading registrations...</span>
@@ -229,29 +272,34 @@ export default function SplRegistrations() {
                   </tr>
                 ) : currentItems.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-3 py-10 text-center text-xs font-semibold text-slate-500">
+                    <td colSpan={1 + Object.values(visibleColumns).filter(Boolean).length} className="px-3 py-10 text-center text-xs font-semibold text-slate-500">
                       No matching registrations found.
                     </td>
                   </tr>
                 ) : (
                   currentItems.map((reg, index) => (
                     <tr key={reg._id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                      <td className="whitespace-nowrap px-3 py-2 text-xs font-bold text-slate-900">{reg.name}</td>
-                      <td className="whitespace-nowrap px-3 py-2 text-xs font-semibold text-slate-750">{reg.email}</td>
-                      <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750 font-semibold">{reg.mobile || '—'}</td>
-                      <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750">{reg.stack || '—'}</td>
-                      <td className="whitespace-nowrap px-3 py-2 text-xs">
-                        {teams.find(t => t.members?.some(m => m === reg._id || m._id === reg._id)) ? (
-                          <span className="font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded text-[10px] border border-indigo-100/30">
-                            {teams.find(t => t.members?.some(m => m === reg._id || m._id === reg._id))?.name}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 text-[10px] font-medium">—</span>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2">
-                        <StatusBadge status={reg.status} />
-                      </td>
+                      {visibleColumns.name && <td className="whitespace-nowrap px-3 py-2 text-xs font-bold text-slate-900">{reg.name}</td>}
+                      {visibleColumns.email && <td className="whitespace-nowrap px-3 py-2 text-xs font-semibold text-slate-750">{reg.email}</td>}
+                      {visibleColumns.mobile && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750 font-semibold">{reg.mobile || '—'}</td>}
+                      {visibleColumns.degree && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750">{reg.degree || '—'}</td>}
+                      {visibleColumns.batch && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750 font-semibold">{reg.batch || '—'}</td>}
+                      {visibleColumns.stack && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750">{reg.stack || '—'}</td>}
+                      {visibleColumns.willingness && (
+                        <td className="whitespace-nowrap px-3 py-2 text-xs">
+                          {reg.willingCompanyProcess ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px]">Willing</span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-50 text-slate-500 font-medium text-[10px]">Not Willing</span>
+                          )}
+                        </td>
+                      )}
+                      {visibleColumns.grade && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750 font-bold">{reg.grade || '—'}</td>}
+                      {visibleColumns.status && (
+                        <td className="whitespace-nowrap px-3 py-2">
+                          <StatusBadge status={reg.status} />
+                        </td>
+                      )}
                       <td className="whitespace-nowrap px-3 py-2 text-right">
                         <div className="flex justify-end gap-2">
                           <button
@@ -309,199 +357,134 @@ export default function SplRegistrations() {
           <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-xl font-semibold text-slate-900">Update registration</h3>
-                <p className="mt-2 text-sm text-slate-600">Update the status and reason for {selectedRegistration.name}.</p>
+                <h3 className="text-xl font-bold text-slate-900 tracking-tight">Update Student Registration</h3>
+                <p className="mt-2 text-sm text-slate-500 font-medium">Update student profile info, cohort batch, stack, status, and performance grades for {selectedRegistration.name}.</p>
               </div>
-              <button type="button" onClick={closeEditModal} className="rounded-full bg-slate-100 p-2 text-slate-600 transition hover:bg-slate-200 hover:text-slate-900">
+              <button type="button" onClick={closeEditModal} className="rounded-full bg-slate-100 p-2 text-slate-650 transition hover:bg-slate-200 hover:text-slate-900">
                 <X size={18} />
               </button>
             </div>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Status</label>
-                <select
-                  value={editState.status}
-                  onChange={(e) => setEditState(prev => ({ ...prev, status: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                >
-                  {STATUS_OPTIONS.map(option => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Reason (optional)</label>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 max-h-[60vh] overflow-y-auto pr-1 scrollbar-thin">
+              {/* Name */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Full Name</label>
                 <input
-                  value={editState.statusReason}
-                  onChange={(e) => setEditState(prev => ({ ...prev, statusReason: e.target.value }))}
-                  placeholder="Enter an optional reason"
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Name</label>
-                <input
+                  type="text"
                   value={editState.name}
                   onChange={(e) => setEditState(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Email</label>
+
+              {/* Email */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Email Address</label>
                 <input
                   type="email"
                   value={editState.email}
                   onChange={(e) => setEditState(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Mobile</label>
+
+              {/* Mobile */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Mobile Number</label>
                 <input
+                  type="text"
                   value={editState.mobile}
                   onChange={(e) => setEditState(prev => ({ ...prev, mobile: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Degree</label>
+
+              {/* Degree */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Degree</label>
                 <input
+                  type="text"
                   value={editState.degree}
                   onChange={(e) => setEditState(prev => ({ ...prev, degree: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Batch</label>
+
+              {/* Batch */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Cohort Batch</label>
                 <input
+                  type="text"
                   value={editState.batch}
                   onChange={(e) => setEditState(prev => ({ ...prev, batch: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Tech Stack</label>
+
+              {/* Tech Stack Select */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Technology Stack</label>
                 <select
                   value={modalStackSelect}
                   onChange={(e) => setModalStackSelect(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="">Select Stack</option>
-                  {STANDARD_STACKS.map(stackOpt => (
-                    <option key={stackOpt} value={stackOpt}>{stackOpt}</option>
+                  {STANDARD_STACKS.map(stack => (
+                    <option key={stack} value={stack}>{stack}</option>
                   ))}
-                  <option value="Other">Other</option>
+                  <option value="Other">Other (Custom)</option>
                 </select>
               </div>
+
+              {/* Custom Stack input */}
               {modalStackSelect === 'Other' && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Custom Tech Stack</label>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Custom Stack Name</label>
                   <input
+                    type="text"
                     value={modalCustomStack}
                     onChange={(e) => setModalCustomStack(e.target.value)}
-                    placeholder="Enter custom stack"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Enter custom stack name..."
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
               )}
-              <div className="space-y-2">
-                <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={editState.willingCompanyProcess}
-                    onChange={(e) => setEditState(prev => ({ ...prev, willingCompanyProcess: e.target.checked }))}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  Willing Company Process
-                </label>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Will you attend 30 days?</label>
-                <select
-                  value={editState.willing30Days}
-                  onChange={(e) => setEditState(prev => ({ ...prev, willing30Days: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                >
-                  <option value="">Select</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Offer acceptance</label>
-                <select
-                  value={editState.acceptOffer}
-                  onChange={(e) => setEditState(prev => ({ ...prev, acceptOffer: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                >
-                  <option value="">Select</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Full effort</label>
-                <select
-                  value={editState.fullEffort}
-                  onChange={(e) => setEditState(prev => ({ ...prev, fullEffort: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                >
-                  <option value="">Select</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Issues</label>
-                <textarea
-                  value={editState.issues}
-                  onChange={(e) => setEditState(prev => ({ ...prev, issues: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Need most</label>
-                <textarea
-                  value={editState.needMost}
-                  onChange={(e) => setEditState(prev => ({ ...prev, needMost: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Status</label>
+
+              {/* Status */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Status</label>
                 <select
                   value={editState.status}
                   onChange={(e) => setEditState(prev => ({ ...prev, status: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                 >
-                  {STATUS_OPTIONS.map(option => (
-                    <option key={option} value={option}>{option}</option>
+                  {STATUS_OPTIONS.map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </select>
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Grade (Optional)</label>
-                <select
+
+              {/* Grade */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Performance Grade</label>
+                <input
+                  type="text"
                   value={editState.grade}
                   onChange={(e) => setEditState(prev => ({ ...prev, grade: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                >
-                  <option value="">None</option>
-                  <option value="A">Grade A</option>
-                  <option value="B">Grade B</option>
-                  <option value="C">Grade C</option>
-                </select>
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  placeholder="e.g. A+, B"
+                />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Status reason</label>
-                <input
+
+              {/* Status Reason */}
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Status Reason / Grader Notes</label>
+                <textarea
                   value={editState.statusReason}
                   onChange={(e) => setEditState(prev => ({ ...prev, statusReason: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  rows={2}
+                  placeholder="Notes regarding status, placement, or performance..."
                 />
               </div>
             </div>

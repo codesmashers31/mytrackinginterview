@@ -288,90 +288,26 @@ export default function PlacementSplClasses() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-xl font-semibold text-slate-900">Update registration</h3>
-                <p className="mt-2 text-sm text-slate-600">Update the status and reason for {selectedRegistration.name}.</p>
+                <p className="mt-2 text-sm text-slate-600">Update SPL eligibility and process details for {selectedRegistration.name}.</p>
               </div>
               <button type="button" onClick={closeEditModal} className="rounded-full bg-slate-100 p-2 text-slate-600 transition hover:bg-slate-200 hover:text-slate-900">
                 <X size={18} />
               </button>
             </div>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Status</label>
-                <select
-                  value={editState.status}
-                  onChange={(e) => setEditState(prev => ({ ...prev, status: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                >
-                  {STATUS_OPTIONS.map(option => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Reason (optional)</label>
-                <input
-                  value={editState.statusReason}
-                  onChange={(e) => setEditState(prev => ({ ...prev, statusReason: e.target.value }))}
-                  placeholder="Enter an optional reason"
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Name</label>
-                <input
-                  value={editState.name}
-                  onChange={(e) => setEditState(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Email</label>
-                <input
-                  type="email"
-                  value={editState.email}
-                  onChange={(e) => setEditState(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Mobile</label>
-                <input
-                  value={editState.mobile}
-                  onChange={(e) => setEditState(prev => ({ ...prev, mobile: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Degree</label>
-                <input
-                  value={editState.degree}
-                  onChange={(e) => setEditState(prev => ({ ...prev, degree: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Batch</label>
-                <input
-                  value={editState.batch}
-                  onChange={(e) => setEditState(prev => ({ ...prev, batch: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
+              <div className="space-y-2 sm:col-span-2">
+                <label className="flex items-center gap-3 text-sm font-semibold text-slate-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={editState.willingCompanyProcess}
                     onChange={(e) => setEditState(prev => ({ ...prev, willingCompanyProcess: e.target.checked }))}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                   />
                   Willing Company Process
                 </label>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Will you attend 30 days?</label>
+                <label className="text-sm font-semibold text-slate-700">Will you attend 30 days?</label>
                 <select
                   value={editState.willing30Days}
                   onChange={(e) => setEditState(prev => ({ ...prev, willing30Days: e.target.value }))}
@@ -383,7 +319,7 @@ export default function PlacementSplClasses() {
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Offer acceptance</label>
+                <label className="text-sm font-semibold text-slate-700">Offer acceptance</label>
                 <select
                   value={editState.acceptOffer}
                   onChange={(e) => setEditState(prev => ({ ...prev, acceptOffer: e.target.value }))}
@@ -394,8 +330,8 @@ export default function PlacementSplClasses() {
                   <option value="no">No</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Full effort</label>
+              <div className="space-y-2 sm:col-span-2">
+                <label className="text-sm font-semibold text-slate-700">Full effort</label>
                 <select
                   value={editState.fullEffort}
                   onChange={(e) => setEditState(prev => ({ ...prev, fullEffort: e.target.value }))}
@@ -406,55 +342,22 @@ export default function PlacementSplClasses() {
                   <option value="no">No</option>
                 </select>
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Issues</label>
+              <div className="space-y-2 sm:col-span-2">
+                <label className="text-sm font-semibold text-slate-700">Issues</label>
                 <textarea
                   value={editState.issues}
                   onChange={(e) => setEditState(prev => ({ ...prev, issues: e.target.value }))}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                  rows={3}
+                  rows={2}
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Need most</label>
+              <div className="space-y-2 sm:col-span-2">
+                <label className="text-sm font-semibold text-slate-700">Need most</label>
                 <textarea
                   value={editState.needMost}
                   onChange={(e) => setEditState(prev => ({ ...prev, needMost: e.target.value }))}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Status</label>
-                <select
-                  value={editState.status}
-                  onChange={(e) => setEditState(prev => ({ ...prev, status: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                >
-                  {STATUS_OPTIONS.map(option => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Grade (Optional)</label>
-                <select
-                  value={editState.grade}
-                  onChange={(e) => setEditState(prev => ({ ...prev, grade: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                >
-                  <option value="">None</option>
-                  <option value="A">Grade A</option>
-                  <option value="B">Grade B</option>
-                  <option value="C">Grade C</option>
-                </select>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Status reason</label>
-                <input
-                  value={editState.statusReason}
-                  onChange={(e) => setEditState(prev => ({ ...prev, statusReason: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  rows={2}
                 />
               </div>
             </div>

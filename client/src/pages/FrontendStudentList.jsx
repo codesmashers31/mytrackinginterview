@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Search, Download, Upload, Plus, Edit, Eye, Trash2, X, ChevronLeft, ChevronRight
+  Search, Download, Upload, Plus, Edit, Eye, Trash2, X, ChevronLeft, ChevronRight,
+  User, Mail, Phone, GraduationCap, Calendar, Users, MapPin, SlidersHorizontal, ChevronDown
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
@@ -16,6 +17,7 @@ export default function FrontendStudentList() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [sortBy, setSortBy] = useState('batch-asc');
   
   // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,6 +28,16 @@ export default function FrontendStudentList() {
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [isDeleteSelectedOpen, setIsDeleteSelectedOpen] = useState(false);
   const [isDeletingSelected, setIsDeletingSelected] = useState(false);
+  const [showColumnDropdown, setShowColumnDropdown] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState({
+    candidateInfo: true,
+    contact: true,
+    degree: true,
+    batchDetails: true,
+    team: false,
+    location: true,
+    status: false,
+  });
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -207,9 +219,27 @@ export default function FrontendStudentList() {
     e.target.value = null;
   };
 
-  const availableStatuses = ['Job Seeker', 'Placed', 'Need to filled', 'Inactive'];
+  const availableStatuses = ['Job Seeker', 'Placed', 'Need to filled', 'Inactive/Suspend'];
 
-  const processedStudents = students;
+  const processedStudents = [...students]
+    .sort((a, b) => {
+      if (sortBy === 'name-asc') {
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+      }
+      if (sortBy === 'name-desc') {
+        return b.name.localeCompare(a.name, undefined, { sensitivity: 'base' });
+      }
+      if (sortBy === 'batch-asc' || sortBy === 'batch-desc') {
+        const bA = String(a.batch || '').trim();
+        const bB = String(b.batch || '').trim();
+        if (!bA && !bB) return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        if (!bA) return 1;
+        if (!bB) return -1;
+        const cmp = bA.localeCompare(bB, undefined, { numeric: true, sensitivity: 'base' });
+        return sortBy === 'batch-asc' ? cmp : -cmp;
+      }
+      return 0;
+    });
   const totalPages = Math.ceil(processedStudents.length / itemsPerPage);
   const currentItems = processedStudents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
@@ -272,6 +302,23 @@ export default function FrontendStudentList() {
               ))}
             </select>
           </div>
+
+          {/* Sorting selector */}
+          <div className="w-full sm:w-[180px]">
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full py-2.5 px-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100 rounded-xl text-xs font-semibold text-slate-700 outline-none transition-all cursor-pointer"
+            >
+              <option value="batch-asc">Batch: 1 to 9 (Asc)</option>
+              <option value="batch-desc">Batch: 9 to 1 (Desc)</option>
+              <option value="name-asc">Name: A to Z</option>
+              <option value="name-desc">Name: Z to A</option>
+            </select>
+          </div>
         </div>
 
         {/* Action Buttons */}
@@ -321,6 +368,55 @@ export default function FrontendStudentList() {
 
       {/* Roster list view */}
       <SurfaceCard className="overflow-hidden">
+        <div className="px-4 md:px-5 py-3 border-b border-slate-100 bg-white flex flex-col gap-2 md:flex-row md:items-center md:justify-between relative">
+           <div>
+              <h3 className="text-sm md:text-base font-bold text-[#1e293b]">Enrolled Candidates</h3>
+              <p className="text-[11px] md:text-xs font-medium text-slate-500">
+                Showing <span className="font-bold text-slate-700">{processedStudents.length}</span> student{processedStudents.length === 1 ? '' : 's'}
+              </p>
+           </div>
+
+           {/* Column Visibility Selector */}
+           <div className="relative">
+             <button 
+               onClick={() => setShowColumnDropdown(!showColumnDropdown)}
+               className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+             >
+               <SlidersHorizontal size={13} />
+               <span>Columns</span>
+               <ChevronDown size={12} className={`transition-transform duration-200 ${showColumnDropdown ? 'rotate-180' : ''}`} />
+             </button>
+
+             {showColumnDropdown && (
+               <>
+                 <div className="fixed inset-0 z-10" onClick={() => setShowColumnDropdown(false)}></div>
+                 <div className="absolute right-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-2">
+                   <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1.5">
+                     Toggle Columns
+                   </div>
+                   {Object.keys(visibleColumns).map((col) => (
+                     <label key={col} className="flex items-center px-3 py-1.5 hover:bg-slate-50 cursor-pointer select-none text-xs font-medium text-slate-700 gap-2">
+                       <input 
+                         type="checkbox"
+                         checked={visibleColumns[col]}
+                         onChange={() => setVisibleColumns(prev => ({ ...prev, [col]: !prev[col] }))}
+                         className="rounded border-slate-350 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                       />
+                        <span>{col === 'candidateInfo' ? 'Candidate Info' : 
+                               col === 'contact' ? 'Contact' : 
+                               col === 'degree' ? 'Degree' : 
+                               col === 'batchDetails' ? 'Batch Details' : 
+                               col === 'team' ? 'Team' :
+                               col === 'location' ? 'Location' : 
+                               col === 'status' ? 'Status' : col}</span>
+                     </label>
+                   ))}
+                 </div>
+               </>
+             )}
+           </div>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-100">
             <thead className="bg-slate-50">
@@ -333,12 +429,13 @@ export default function FrontendStudentList() {
                     className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-3.5 w-3.5"
                   />
                 </th>
-                <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Candidate Info</th>
-                <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact</th>
-                <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Degree</th>
-                <th className="hidden md:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Batch Details</th>
-                <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Team</th>
-                <th className="hidden md:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Location</th>
+                {visibleColumns.candidateInfo && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Candidate Info</th>}
+                {visibleColumns.contact && <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact</th>}
+                {visibleColumns.degree && <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Degree</th>}
+                {visibleColumns.batchDetails && <th className="hidden md:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Batch Details</th>}
+                {visibleColumns.team && <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Team</th>}
+                {visibleColumns.location && <th className="hidden md:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Location</th>}
+                {visibleColumns.status && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>}
                 <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">Actions</th>
               </tr>
             </thead>
@@ -346,7 +443,7 @@ export default function FrontendStudentList() {
             <tbody className="divide-y divide-slate-100 bg-white">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="px-3 py-10 text-center">
+                  <td colSpan={2 + Object.values(visibleColumns).filter(Boolean).length} className="px-3 py-10 text-center">
                     <div className="flex items-center justify-center gap-2 text-slate-500">
                       <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
                       <span className="text-sm font-semibold">Retrieving Frontend candidates...</span>
@@ -355,70 +452,125 @@ export default function FrontendStudentList() {
                 </tr>
               ) : currentItems.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-3 py-10 text-center text-xs font-semibold text-slate-500">
+                  <td colSpan={2 + Object.values(visibleColumns).filter(Boolean).length} className="px-3 py-10 text-center text-xs font-semibold text-slate-500">
                     No frontend student records found matching the active filters.
                   </td>
                 </tr>
               ) : (
                 currentItems.map(student => (
-                  <tr key={student._id} className="transition-colors hover:bg-slate-50/40">
-                    <td className="px-2 py-2 text-center">
+                  <tr key={student._id} className="transition-all hover:bg-slate-50/70 border-l-2 border-l-transparent hover:border-l-blue-600 duration-150">
+                    <td className="px-2 py-2.5 text-center">
                       <input 
                         type="checkbox"
                         checked={selectedStudentIds.includes(student._id)}
                         onChange={() => handleToggleSelect(student._id)}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-3.5 w-3.5"
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-3.5 w-3.5 transition-all"
                       />
                     </td>
-                    <td className="px-3 py-2">
-                      <div className="min-w-0 max-w-[180px] md:max-w-xs">
-                        <p className="text-xs font-bold text-slate-800 truncate leading-tight">{student.name}</p>
-                        <p className="text-[10px] text-slate-450 truncate mt-0.5 leading-none">{student.email || 'No email'}</p>
-                      </div>
-                    </td>
-                    <td className="hidden sm:table-cell px-3 py-2 text-xs font-semibold text-slate-600">
-                      {student.mobile}
-                    </td>
-                    <td className="hidden sm:table-cell px-3 py-2 text-xs font-semibold text-slate-650">
-                      {student.degree || '—'}
-                    </td>
-                    <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-650">
-                      <div>
-                        <p className="font-semibold text-slate-805 leading-tight">{student.batch || 'No batch'}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5 leading-none">Class of {student.passedOutYear || 'N/A'}</p>
-                      </div>
-                    </td>
-                    <td className="hidden sm:table-cell px-3 py-2 text-xs">
-                      {teams.find(t => t.members.some(m => m._id === student._id || m === student._id)) ? (
-                        <span className="font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded text-[10px] border border-indigo-100/30">
-                          {teams.find(t => t.members.some(m => m._id === student._id || m === student._id))?.name}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 text-[10px] font-medium">-</span>
-                      )}
-                    </td>
-                    <td className="hidden md:table-cell px-3 py-2 text-xs font-semibold text-slate-600">
-                      {student.city || '-'}
-                    </td>
+                    {visibleColumns.candidateInfo && (
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-7 w-7 rounded-lg bg-linear-to-br from-blue-500 to-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shadow-xs shrink-0 select-none">
+                            {student.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 max-w-[130px]">
+                            <p className="text-xs font-bold text-slate-800 truncate leading-tight hover:text-blue-600 transition-colors cursor-pointer" title={student.name}>{student.name}</p>
+                            <p className="text-[10px] text-slate-450 truncate mt-0.5 leading-none flex items-center gap-1" title={student.email || 'No email'}>
+                              <Mail size={10} className="shrink-0 text-slate-400/85" />
+                              <span>{student.email || 'No email'}</span>
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                    )}
+                    {visibleColumns.contact && (
+                      <td className="hidden sm:table-cell px-3 py-2.5 text-xs font-semibold text-slate-600">
+                        <div className="flex items-center gap-1.5 text-slate-600">
+                          <div className="p-1 rounded-md bg-slate-100/80 text-slate-500 shrink-0">
+                            <Phone size={10} />
+                          </div>
+                          <span className="truncate max-w-[90px] block" title={student.mobile}>{student.mobile}</span>
+                        </div>
+                      </td>
+                    )}
+                    {visibleColumns.degree && (
+                      <td className="hidden sm:table-cell px-3 py-2.5 text-xs font-semibold text-slate-655">
+                        <div className="flex items-center gap-1.5 text-slate-600">
+                          <div className="p-1 rounded-md bg-slate-100/80 text-slate-500 shrink-0">
+                            <GraduationCap size={11} />
+                          </div>
+                          <span className="truncate max-w-[90px] block font-bold text-slate-700" title={student.degree || '—'}>{student.degree || '—'}</span>
+                        </div>
+                      </td>
+                    )}
+                    {visibleColumns.batchDetails && (
+                      <td className="hidden md:table-cell px-3 py-2.5 text-xs text-slate-650">
+                        <div className="flex items-center gap-1.5">
+                          <div className="p-1 rounded-md bg-slate-100/80 text-slate-500 shrink-0">
+                            <Calendar size={11} />
+                          </div>
+                          <div className="max-w-[110px]">
+                            <p className="font-bold text-slate-700 leading-tight truncate" title={student.batch || 'No batch'}>{student.batch || 'No batch'}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5 leading-none truncate" title={`Class of ${student.passedOutYear || 'N/A'}`}>Class of {student.passedOutYear || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </td>
+                    )}
+                    {visibleColumns.team && (
+                      <td className="hidden sm:table-cell px-3 py-2.5 text-xs">
+                        <div className="flex items-center gap-1.5">
+                          {teams.find(t => t.members.some(m => m._id === student._id || m === student._id)) ? (
+                            <>
+                              <div className="p-1 rounded-md bg-indigo-50 text-indigo-500 shrink-0">
+                                <Users size={11} />
+                              </div>
+                              <span 
+                                className="font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded text-[10px] border border-indigo-100/30 truncate max-w-[100px] inline-block align-middle"
+                                title={teams.find(t => t.members.some(m => m._id === student._id || m === student._id))?.name}
+                              >
+                                {teams.find(t => t.members.some(m => m._id === student._id || m === student._id))?.name}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-slate-400 text-[10px] font-medium pl-6">-</span>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                    {visibleColumns.location && (
+                      <td className="hidden md:table-cell px-3 py-2.5 text-xs font-semibold text-slate-600">
+                        <div className="flex items-center gap-1.5 text-slate-600">
+                          <div className="p-1 rounded-md bg-slate-100/80 text-slate-500 shrink-0">
+                            <MapPin size={11} />
+                          </div>
+                          <span className="truncate max-w-[90px] block font-bold text-slate-700" title={student.city || '-'}>{student.city || '-'}</span>
+                        </div>
+                      </td>
+                    )}
+                    {visibleColumns.status && (
+                      <td className="px-3 py-2.5">
+                        <StatusBadge status={student.currentStatus} />
+                      </td>
+                    )}
                     <td className="px-3 py-2 text-right">
-                      <div className="inline-flex gap-1">
+                      <div className="inline-flex gap-1.5">
                         <button 
                           onClick={() => { setSelectedStudent(student); setIsViewOpen(true); }}
-                          className="p-1 text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border border-slate-205/30"
+                          className="p-1.5 text-emerald-600 hover:text-white bg-emerald-50 hover:bg-emerald-500 rounded-lg transition-all duration-200 border border-emerald-100 hover:border-emerald-500 hover:scale-105 active:scale-95 shadow-2xs hover:shadow-[0_4px_12px_rgba(16,185,129,0.2)] cursor-pointer"
                           title="View Details"
                         >
                           <Eye size={13} />
                         </button>
                         <button 
                           onClick={() => { setSelectedStudent(student); setEditMode(true); setIsModalOpen(true); }}
-                          className="p-1 text-blue-600 hover:text-blue-800 bg-blue-50/50 hover:bg-blue-50 rounded-lg transition-colors border border-blue-205/20"
+                          className="p-1.5 text-blue-600 hover:text-white bg-blue-50/50 hover:bg-blue-600 rounded-lg transition-all duration-200 border border-blue-100/50 hover:border-blue-600 hover:scale-105 active:scale-95 shadow-2xs hover:shadow-[0_4px_12px_rgba(37,99,235,0.2)] cursor-pointer"
                           title="Modify Record"
                         >
                           <Edit size={13} />
                         </button>
                         <button 
                           onClick={() => { setSelectedStudent(student); setIsDeleteOpen(true); }}
-                          className="p-1 text-rose-650 hover:text-rose-800 bg-rose-50/30 hover:bg-rose-50 rounded-lg transition-colors border border-rose-205/20"
+                          className="p-1.5 text-rose-650 hover:text-white bg-rose-50/30 hover:bg-rose-600 rounded-lg transition-all duration-200 border border-rose-100/50 hover:border-rose-600 hover:scale-105 active:scale-95 shadow-2xs hover:shadow-[0_4px_12px_rgba(225,29,72,0.2)] cursor-pointer"
                           title="Delete Record"
                         >
                           <Trash2 size={13} />
@@ -516,7 +668,7 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
     { value: 'Job Seeker', label: 'Active Job Seeker' },
     { value: 'Placed', label: 'Placed successfully' },
     { value: 'Need to filled', label: 'Needs Updates' },
-    { value: 'Inactive', label: 'Suspended/Inactive' }
+    { value: 'Inactive/Suspend', label: 'Inactive/Suspend' }
   ];
 
   const handleSubmit = async (e) => {

@@ -15,7 +15,7 @@ const updateToInactive = async () => {
                 $nin: [
                     /^placed$/i,
                     /^got job$/i,
-                    /^inactive - not responded$/i
+                    /^(inactive\/suspend|inactive - not responded)$/i
                 ]
             }
         }).limit(3);
@@ -27,14 +27,14 @@ const updateToInactive = async () => {
             process.exit(0);
         }
 
-        console.log('Updating these students to "Inactive - Not Responded":');
+        console.log('Updating these students to "Inactive/Suspend":');
         console.log('='.repeat(80));
 
         let updated = 0;
         for (const student of studentsToUpdate) {
             const result = await Student.updateOne(
                 { _id: student._id },
-                { currentStatus: 'Inactive - Not Responded' }
+                { currentStatus: 'Inactive/Suspend' }
             );
             
             if (result.modifiedCount > 0) {
@@ -44,7 +44,7 @@ const updateToInactive = async () => {
         }
 
         console.log('='.repeat(80));
-        console.log(`\n✅ Successfully updated ${updated} students to "Inactive - Not Responded"\n`);
+        console.log(`\n✅ Successfully updated ${updated} students to "Inactive/Suspend"\n`);
         console.log('Now refresh your dashboard to see the count!\n');
 
         process.exit(0);

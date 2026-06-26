@@ -394,7 +394,7 @@ export default function Settings() {
                           </>
                         )}
 
-                        {!profileData.isFrontend && ['inactive - not responded', 'not picking the call', 'not reachable'].includes(profileData.currentStatus?.toLowerCase()) && (
+                        {!profileData.isFrontend && ['inactive/suspend', 'inactive - not responded', 'inactive', 'not picking the call', 'not reachable'].includes(profileData.currentStatus?.toLowerCase()) && (
                           <div className="md:col-span-2">
                             <label className="crm-label">Status Reason (Remarks)</label>
                             <textarea

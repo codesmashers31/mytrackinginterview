@@ -46,8 +46,13 @@ export default function StudentDashboard() {
       
       const studentProfile = meData.studentProfile || {};
       const isFrontend = studentProfile.isFrontend || studentProfile.studentType === 'Frontend';
-      const track = isFrontend ? 'Frontend' : 'Regular';
+      const isSpl = studentProfile.studentType === 'SPL' || (studentProfile.enrollments && studentProfile.enrollments.includes('SPL'));
+      const track = isFrontend ? 'Frontend' : (isSpl ? 'SPL' : 'Regular');
       const batch = studentProfile.batch || '';
+
+      const leadUrl = (track === 'Frontend' || track === 'SPL')
+        ? buildApiUrl(`/teams/leaderboard?track=${track}`)
+        : buildApiUrl(`/teams/leaderboard?track=${track}&batch=${batch}`);
 
       // 2. Fetch the rest of the endpoints including filtered leaderboard
       const [logsRes, attendanceRes, tasksRes, teamRes, leadRes] = await Promise.all([
@@ -55,7 +60,7 @@ export default function StudentDashboard() {
         fetch(buildApiUrl(`/attendance/student/${studentId}`), { headers: authHeaders() }),
         fetch(buildApiUrl('/tasks/my/list'), { headers: authHeaders() }),
         fetch(buildApiUrl('/teams/performances/my-team'), { headers: authHeaders() }),
-        fetch(buildApiUrl(`/teams/leaderboard?track=${track}&batch=${batch}`), { headers: authHeaders() })
+        fetch(leadUrl, { headers: authHeaders() })
       ]);
 
       if (logsRes.status === 401 || attendanceRes.status === 401 || tasksRes.status === 401) {
@@ -258,7 +263,7 @@ export default function StudentDashboard() {
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col justify-between">
                   <div>
                     <span className="text-[9px] bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                      Active Guild
+                      Active Guild - {myTeam.track}
                     </span>
                     <h3 className="text-xl font-black text-slate-900 mt-2">{myTeam.name}</h3>
                     <p className="text-[10px] text-slate-400 mt-0.5">Crew Size: {myTeam.members?.length || 0} members</p>

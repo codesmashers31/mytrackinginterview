@@ -21,7 +21,7 @@ import {
 import { AppShell, MetricCard, SectionTabs, StatusBadge, SurfaceCard } from '../components/AppShell';
 import { authHeaders, logout } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
-import { exportToExcel } from '../utils/excelExporter';
+import { exportToExcel, exportRegularAnalyticsToExcel } from '../utils/excelExporter';
 
 function getNormalizedYear(student) {
   let yr = student.passedOutYear;
@@ -389,6 +389,50 @@ export default function Dashboard() {
     });
 
     return Object.values(yearsMap).sort((a, b) => {
+      if (a.year === 'Not Specified') return 1;
+      if (b.year === 'Not Specified') return -1;
+      return b.year.localeCompare(a.year);
+    });
+  }, [filteredStudents]);
+
+  const regularStatsPivotData = useMemo(() => {
+    const degreeYearMap = {};
+    
+    const regularOnlyStudents = filteredStudents.filter(s => 
+      !s.isFrontend && 
+      (s.studentType === 'Regular' || s.enrollments?.includes('Regular'))
+    );
+
+    regularOnlyStudents.forEach(s => {
+      const yr = getNormalizedYear(s);
+      const degree = s.degree ? s.degree.trim() : 'Not Specified';
+      const key = `${degree} | ${yr}`;
+
+      const isPlaced = (s.currentStatus && s.currentStatus.toLowerCase() === 'placed') || 
+                       (s.status && s.status.toLowerCase() === 'placed');
+      
+      const isOnboard = (s.currentStatus && s.currentStatus.toLowerCase() === 'onboard') || 
+                        (s.status && s.status.toLowerCase() === 'onboard');
+
+      if (!degreeYearMap[key]) {
+        degreeYearMap[key] = {
+          degree: degree,
+          year: yr,
+          total: 0,
+          placed: 0,
+          onboard: 0
+        };
+      }
+
+      degreeYearMap[key].total += 1;
+      if (isPlaced) degreeYearMap[key].placed += 1;
+      if (isOnboard) degreeYearMap[key].onboard += 1;
+    });
+
+    return Object.values(degreeYearMap).sort((a, b) => {
+      const degCompare = a.degree.localeCompare(b.degree);
+      if (degCompare !== 0) return degCompare;
+      
       if (a.year === 'Not Specified') return 1;
       if (b.year === 'Not Specified') return -1;
       return b.year.localeCompare(a.year);
@@ -1045,6 +1089,97 @@ export default function Dashboard() {
                     <tr>
                       <td colSpan="9" className="px-4 py-8 text-center text-slate-500 font-medium bg-slate-50/50">
                         No student records match the active filter criteria.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </SurfaceCard>
+
+          {/* Regular Student counts & Analytics Table */}
+          <SurfaceCard className="p-6">
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 mb-1">Regular Students Placement & Onboarding Analytics</h3>
+                <p className="text-xs text-slate-500 font-medium">Breakdown of regular student counts, placed counts, and onboarded status counts by year and degree.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.open(buildApiUrl('/students/export-regular-excel'), '_blank')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition"
+                >
+                  <Download size={13} />
+                  Download Excel Report
+                </button>
+                <div className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0">
+                  {filteredStudents.filter(s => !s.isFrontend && (s.studentType === 'Regular' || s.enrollments?.includes('Regular'))).length} Regular Records
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+              <table className="min-w-full divide-y divide-slate-200 text-xs text-left">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-slate-500">Degree</th>
+                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-slate-500">Graduation Year</th>
+                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-slate-500 text-center">Total Students</th>
+                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-slate-500 text-center">Placed</th>
+                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-slate-500 text-center">Onboarded</th>
+                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-slate-500 text-center">Placement Rate</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {regularStatsPivotData.length > 0 ? (
+                    <>
+                      {regularStatsPivotData.map(row => {
+                        const rate = row.total > 0 ? Math.round((row.placed / row.total) * 100) : 0;
+                        return (
+                          <tr key={`${row.degree} | ${row.year}`} className="hover:bg-slate-50/50 transition font-medium text-slate-700">
+                            <td className="px-4 py-3 font-bold text-slate-900">{row.degree}</td>
+                            <td className="px-4 py-3 text-slate-650 font-bold">{row.year}</td>
+                            <td className="px-4 py-3 text-center font-bold text-slate-900">{row.total}</td>
+                            <td className="px-4 py-3 text-center text-emerald-600 font-bold">{row.placed}</td>
+                            <td className="px-4 py-3 text-center text-blue-600 font-bold">{row.onboard}</td>
+                            <td className="px-4 py-3 text-center font-bold">
+                              <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${rate >= 75 ? 'bg-emerald-50 text-emerald-700' : rate >= 50 ? 'bg-blue-50 text-blue-700' : 'bg-slate-50 text-slate-500'}`}>
+                                {rate}%
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {/* Overall Summary Row */}
+                      <tr className="bg-slate-50/80 font-bold text-slate-900 border-t border-slate-300">
+                        <td colSpan="2" className="px-4 py-3">Total (Overall)</td>
+                        <td className="px-4 py-3 text-center font-black">
+                          {regularStatsPivotData.reduce((sum, r) => sum + r.total, 0)}
+                        </td>
+                        <td className="px-4 py-3 text-center text-emerald-700 font-black">
+                          {regularStatsPivotData.reduce((sum, r) => sum + r.placed, 0)}
+                        </td>
+                        <td className="px-4 py-3 text-center text-blue-700 font-black">
+                          {regularStatsPivotData.reduce((sum, r) => sum + r.onboard, 0)}
+                        </td>
+                        <td className="px-4 py-3 text-center font-black">
+                          {(() => {
+                            const tot = regularStatsPivotData.reduce((sum, r) => sum + r.total, 0);
+                            const plc = regularStatsPivotData.reduce((sum, r) => sum + r.placed, 0);
+                            const rate = tot > 0 ? Math.round((plc / tot) * 100) : 0;
+                            return (
+                              <span className="bg-slate-900 text-white px-2 py-0.5 rounded text-[10px] font-bold">
+                                {rate}%
+                              </span>
+                            );
+                          })()}
+                        </td>
+                      </tr>
+                    </>
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="px-4 py-8 text-center text-slate-500 font-medium bg-slate-50/50">
+                        No regular student records match the active filter criteria.
                       </td>
                     </tr>
                   )}

@@ -114,6 +114,164 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 });
 
+// GET export regular students analytics excel (direct download link)
+router.get('/export-regular-excel', async (req, res) => {
+    try {
+        const students = await Student.find().lean();
+        const splRegs = await SplRegistration.find().lean();
+
+        const allRecords = [
+            ...students.map(s => ({ ...s, source: 'Student' })),
+            ...splRegs.map(r => ({
+                ...r,
+                source: 'SplRegistration',
+                studentType: 'SPL',
+                enrollments: ['SPL'],
+                currentStatus: r.status,
+                passedOutYear: r.batch
+            }))
+        ];
+
+        // Filter Regular students (exclude Frontend, include Regular)
+        const regularStudents = allRecords.filter(s => 
+            !s.isFrontend && 
+            (s.studentType === 'Regular' || (s.enrollments && s.enrollments.includes('Regular')))
+        );
+
+        // Build Summary Pivot Data Grouped by Degree & Year
+        const degreeYearMap = {};
+        regularStudents.forEach(s => {
+            let yr = s.passedOutYear;
+            const lowerYr = yr ? String(yr).trim().toLowerCase() : '';
+            if (!yr || lowerYr === 'need to filled' || lowerYr === 'need to filled  ' || lowerYr === 'undefined' || lowerYr === '') {
+                yr = s.batch;
+            }
+            yr = (yr && typeof yr === 'string') ? yr.trim() : '';
+            if (!yr || yr === 'undefined' || yr === '') {
+                yr = 'Not Specified';
+            }
+
+            const degree = s.degree ? s.degree.trim() : 'Not Specified';
+            const isPlaced = (s.currentStatus && s.currentStatus.toLowerCase() === 'placed') || 
+                             (s.status && s.status.toLowerCase() === 'placed');
+            const isOnboard = (s.currentStatus && s.currentStatus.toLowerCase() === 'onboard') || 
+                              (s.status && s.status.toLowerCase() === 'onboard');
+
+            const key = `${degree} | ${yr}`;
+
+            if (!degreeYearMap[key]) {
+                degreeYearMap[key] = {
+                    'Degree': degree,
+                    'Graduation Year': yr,
+                    'Total Students': 0,
+                    'Placed Students': 0,
+                    'Onboarded Students': 0
+                };
+            }
+
+            degreeYearMap[key]['Total Students'] += 1;
+            if (isPlaced) degreeYearMap[key]['Placed Students'] += 1;
+            if (isOnboard) degreeYearMap[key]['Onboarded Students'] += 1;
+        });
+
+        const pivotRows = Object.values(degreeYearMap).sort((a, b) => {
+            const degCompare = a['Degree'].localeCompare(b['Degree']);
+            if (degCompare !== 0) return degCompare;
+            
+            if (a['Graduation Year'] === 'Not Specified') return 1;
+            if (b['Graduation Year'] === 'Not Specified') return -1;
+            return b['Graduation Year'].localeCompare(a['Graduation Year']);
+        });
+
+        const excelRows = pivotRows.map(row => {
+            const total = row['Total Students'];
+            const placed = row['Placed Students'];
+            const rate = total > 0 ? Math.round((placed / total) * 100) + '%' : '0%';
+
+            return {
+                'Degree': row['Degree'],
+                'Graduation Year': row['Graduation Year'],
+                'Total Students': total,
+                'Placed Students': placed,
+                'Onboarded Students': row['Onboarded Students'],
+                'Placement Rate': rate
+            };
+        });
+
+        const totals = {
+            'Degree': 'Total (Overall)',
+            'Graduation Year': '',
+            'Total Students': 0,
+            'Placed Students': 0,
+            'Onboarded Students': 0,
+            'Placement Rate': ''
+        };
+
+        excelRows.forEach(row => {
+            totals['Total Students'] += row['Total Students'];
+            totals['Placed Students'] += row['Placed Students'];
+            totals['Onboarded Students'] += row['Onboarded Students'];
+        });
+
+        totals['Placement Rate'] = totals['Total Students'] > 0 
+            ? Math.round((totals['Placed Students'] / totals['Total Students']) * 100) + '%'
+            : '0%';
+
+        const pivotSheetData = [...excelRows, {}, totals];
+
+        // Detailed List Sheet Data
+        const detailedSheetData = regularStudents.map(s => {
+            let yr = s.passedOutYear;
+            const lowerYr = yr ? String(yr).trim().toLowerCase() : '';
+            if (!yr || lowerYr === 'need to filled' || lowerYr === 'need to filled  ' || lowerYr === 'undefined' || lowerYr === '') {
+                yr = s.batch;
+            }
+            yr = (yr && typeof yr === 'string') ? yr.trim() : '';
+            const normYr = yr || 'Not Specified';
+
+            return {
+                'Candidate Name': s.name || '',
+                'Email ID': s.email || '',
+                'Mobile Number': s.mobile || '',
+                'Graduation Year / Batch': normYr,
+                'Degree': s.degree || 'Not Provided',
+                'Placement Status': s.currentStatus || s.status || 'Needs Update',
+                'Placed Company': s.companyName || '-',
+                'Package (LPA)': s.packageLpa || '-',
+                'Job Channel / Mode': s.jobGetMode || '-',
+                'City / Region': s.city || '-',
+                'Technical Skills': s.skills || '-'
+            };
+        });
+
+        const wb = xlsx.utils.book_new();
+        const wsPivot = xlsx.utils.json_to_sheet(pivotSheetData);
+        const wsDetailed = xlsx.utils.json_to_sheet(detailedSheetData);
+
+        const pivotWidths = [
+            { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 18 }
+        ];
+        wsPivot['!cols'] = pivotWidths;
+
+        const detailedWidths = [
+            { wch: 22 }, { wch: 25 }, { wch: 15 }, { wch: 22 }, { wch: 25 }, { wch: 18 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 30 }
+        ];
+        wsDetailed['!cols'] = detailedWidths;
+
+        xlsx.utils.book_append_sheet(wb, wsPivot, 'Regular Analytics Summary');
+        xlsx.utils.book_append_sheet(wb, wsDetailed, 'Regular Candidates Detail');
+
+        const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="Regular_Students_Onboarding_Analytics.xlsx"');
+        res.send(buffer);
+    } catch (error) {
+        console.error('Failed to export regular analytics to Excel:', error);
+        res.status(500).json({ message: 'Export failed', error: error.message });
+    }
+});
+
 // GET dashboard stats (protected)
 router.get('/stats', authMiddleware, async (req, res) => {
     try {

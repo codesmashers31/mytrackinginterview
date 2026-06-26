@@ -317,6 +317,7 @@ export const runTeamMigration = async () => {
     for (const team of teams) {
       let isFrontendTeam = false;
       let detectedBatch = '';
+      let membersList = [];
 
       if (team.members && team.members.length > 0) {
         // Find members in Student collection
@@ -339,7 +340,7 @@ export const runTeamMigration = async () => {
           });
         }
 
-        const membersList = Object.values(studentMap);
+        membersList = Object.values(studentMap);
 
         if (membersList.length > 0) {
           isFrontendTeam = membersList.every(m => m.isFrontend || m.studentType === 'Frontend');
@@ -363,8 +364,14 @@ export const runTeamMigration = async () => {
         }
       }
 
-      const targetTrack = isFrontendTeam ? 'Frontend' : 'Regular';
-      const targetBatch = detectedBatch || '';
+      let targetTrack = 'Regular';
+      if (isFrontendTeam) {
+        targetTrack = 'Frontend';
+      } else if (team.track === 'SPL' || (membersList.length > 0 && membersList.every(m => m.studentType === 'SPL' || (m.enrollments && m.enrollments.includes('SPL'))))) {
+        targetTrack = 'SPL';
+      }
+
+      const targetBatch = targetTrack === 'Regular' ? (detectedBatch || '') : '';
 
       if (team.track !== targetTrack || team.batch !== targetBatch) {
         team.track = targetTrack;

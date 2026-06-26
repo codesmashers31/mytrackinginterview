@@ -36,13 +36,18 @@ export default function StudentTeams() {
     setLoading(true);
     try {
       const isFrontend = studentProfile?.isFrontend || studentProfile?.studentType === 'Frontend';
-      const track = isFrontend ? 'Frontend' : 'Regular';
+      const isSpl = studentProfile?.studentType === 'SPL' || (studentProfile?.enrollments && studentProfile?.enrollments.includes('SPL'));
+      const track = isFrontend ? 'Frontend' : (isSpl ? 'SPL' : 'Regular');
       const batch = studentProfile?.batch || '';
+
+      const leadUrl = (track === 'Frontend' || track === 'SPL')
+        ? buildApiUrl(`/teams/leaderboard?track=${track}`)
+        : buildApiUrl(`/teams/leaderboard?track=${track}&batch=${batch}`);
 
       const [teamPerfRes, chalRes, leadRes] = await Promise.all([
         fetch(buildApiUrl('/teams/performances/my-team'), { headers: authHeaders() }),
         fetch(buildApiUrl('/teams/tasks'), { headers: authHeaders() }),
-        fetch(buildApiUrl(`/teams/leaderboard?track=${track}&batch=${batch}`), { headers: authHeaders() })
+        fetch(leadUrl, { headers: authHeaders() })
       ]);
 
       if (teamPerfRes.ok) {
@@ -162,7 +167,7 @@ export default function StudentTeams() {
               <SurfaceCard className="p-6 md:col-span-1 border border-slate-100 flex flex-col justify-between bg-gradient-to-br from-white to-indigo-50/10">
                 <div>
                   <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                    My Guild
+                    My Guild - {myTeam.track}
                   </span>
                   <h3 className="text-2xl font-black text-slate-900 mt-3">{myTeam.name}</h3>
                   <p className="text-xs text-slate-400 mt-1">Formed on {new Date(myTeam.createdAt).toLocaleDateString()}</p>
@@ -220,71 +225,78 @@ export default function StudentTeams() {
       )}
 
       {/* TEAM CHALLENGES TAB */}
-      {activeTab === 'Challenges' && (
-        <div className="space-y-6">
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <CheckSquare className="text-indigo-600" />
-            Activity Challenges ({allChallenges.length})
-          </h2>
+      {activeTab === 'Challenges' && (() => {
+        const displayChallenges = allChallenges.filter(chal => {
+          if (!myTeam) return false;
+          return chal.associatedTeams && chal.associatedTeams.some(t => (typeof t === 'object' ? t._id : t) === myTeam._id);
+        });
 
-          {loading && allChallenges.length === 0 ? (
-            <div className="flex justify-center items-center py-20">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
-            </div>
-          ) : allChallenges.length === 0 ? (
-            <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50">
-              <CheckSquare size={28} className="mx-auto mb-3 text-slate-400" />
-              <h3 className="font-bold text-slate-800 text-lg">No Challenges Published</h3>
-              <p className="text-slate-500 text-sm mt-1">There are no team challenges assigned yet.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {allChallenges.map(chal => {
-                const perf = getChallengePerformance(chal._id);
-                const isGraded = !!perf;
+        return (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <CheckSquare className="text-indigo-600" />
+              Activity Challenges ({displayChallenges.length})
+            </h2>
 
-                return (
-                  <SurfaceCard key={chal._id} className="p-5 border border-slate-100 hover:shadow-md transition">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                      <div>
-                        <h4 className="font-bold text-slate-900 text-base">{chal.title}</h4>
-                        <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
-                          <Clock size={12} /> Due: {formatDateTime(chal.dueDate)}
-                        </p>
-                        {chal.description && (
-                          <p className="text-sm text-slate-600 mt-3 border-l-2 border-slate-200 pl-3 leading-relaxed whitespace-pre-wrap">{chal.description}</p>
-                        )}
-                      </div>
-                      
-                      <div className="shrink-0 flex sm:flex-col items-end gap-2">
-                        {isGraded ? (
-                          <div className="text-right">
-                            <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full border border-emerald-200">
-                              Graded: {perf.marksObtained} / {chal.maxMarks} pts
+            {loading && displayChallenges.length === 0 ? (
+              <div className="flex justify-center items-center py-20">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+              </div>
+            ) : displayChallenges.length === 0 ? (
+              <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50">
+                <CheckSquare size={28} className="mx-auto mb-3 text-slate-400" />
+                <h3 className="font-bold text-slate-800 text-lg">No Challenges Published</h3>
+                <p className="text-slate-500 text-sm mt-1">There are no team challenges assigned yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {displayChallenges.map(chal => {
+                  const perf = getChallengePerformance(chal._id);
+                  const isGraded = !!perf;
+
+                  return (
+                    <SurfaceCard key={chal._id} className="p-5 border border-slate-100 hover:shadow-md transition">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-base">{chal.title}</h4>
+                          <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
+                            <Clock size={12} /> Due: {formatDateTime(chal.dueDate)}
+                          </p>
+                          {chal.description && (
+                            <p className="text-sm text-slate-600 mt-3 border-l-2 border-slate-200 pl-3 leading-relaxed whitespace-pre-wrap">{chal.description}</p>
+                          )}
+                        </div>
+                        
+                        <div className="shrink-0 flex sm:flex-col items-end gap-2">
+                          {isGraded ? (
+                            <div className="text-right">
+                              <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full border border-emerald-200">
+                                Graded: {perf.marksObtained} / {chal.maxMarks} pts
+                              </span>
+                              <p className="text-[10px] text-slate-400 mt-1">By {perf.markedBy || 'Admin'}</p>
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-bold px-3 py-1 rounded-full border border-amber-200">
+                              Pending Evaluation
                             </span>
-                            <p className="text-[10px] text-slate-400 mt-1">By {perf.markedBy || 'Admin'}</p>
-                          </div>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-bold px-3 py-1 rounded-full border border-amber-200">
-                            Pending Evaluation
-                          </span>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    {isGraded && perf.remarks && (
-                      <div className="mt-4 p-3 bg-slate-50 border border-slate-100 rounded-xl">
-                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Feedback</p>
-                        <p className="text-sm text-slate-700 italic">"{perf.remarks}"</p>
-                      </div>
-                    )}
-                  </SurfaceCard>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+                      {isGraded && perf.remarks && (
+                        <div className="mt-4 p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Feedback</p>
+                          <p className="text-sm text-slate-700 italic">"{perf.remarks}"</p>
+                        </div>
+                      )}
+                    </SurfaceCard>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* LEADERBOARD TAB */}
       {activeTab === 'Leaderboard' && (
@@ -337,7 +349,12 @@ export default function StudentTeams() {
           <SurfaceCard className="p-6 border border-slate-100">
             <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
               <Trophy className="text-indigo-600" />
-              Guild Standing Leaderboard
+              {(() => {
+                const isFrontend = profile?.isFrontend || profile?.studentType === 'Frontend';
+                const isSpl = profile?.studentType === 'SPL' || (profile?.enrollments && profile?.enrollments.includes('SPL'));
+                const trackName = isFrontend ? 'Frontend' : (isSpl ? 'SPL' : 'Regular');
+                return `${trackName} Standing`;
+              })()} Leaderboard
             </h3>
 
             {leaderboard.length === 0 ? (

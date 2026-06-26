@@ -24,7 +24,15 @@ const getStudentIdFromUser = async (user) => {
       { mobile: user.email }
     ]
   });
-  return student ? student._id : null;
+  if (student) return student._id;
+
+  const splReg = await SplRegistration.findOne({
+    $or: [
+      { email: emailVal },
+      { mobile: user.email }
+    ]
+  });
+  return splReg ? splReg._id : null;
 };
 
 // Helper to populate team members from both Student and SplRegistration collections
@@ -243,7 +251,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 // GET all team tasks
 router.get('/tasks', authMiddleware, async (req, res) => {
   try {
-    const tasks = await TeamTask.find().sort({ dueDate: 1 });
+    const tasks = await TeamTask.find().populate('associatedTeams').sort({ dueDate: 1 });
     res.json(tasks);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching team tasks', error: error.message });
@@ -257,7 +265,7 @@ router.post('/tasks', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Access Denied: Admins only' });
     }
 
-    const { title, description, maxMarks, dueDate } = req.body;
+    const { title, description, maxMarks, dueDate, associatedTeams } = req.body;
     if (!title || !dueDate) {
       return res.status(400).json({ message: 'Title and Due Date/Time are required' });
     }
@@ -266,11 +274,13 @@ router.post('/tasks', authMiddleware, async (req, res) => {
       title: title.trim(),
       description: description || '',
       maxMarks: Number(maxMarks) || 100,
-      dueDate: new Date(dueDate)
+      dueDate: new Date(dueDate),
+      associatedTeams: associatedTeams || []
     });
 
     await task.save();
-    res.status(201).json(task);
+    const populatedTask = await TeamTask.findById(task._id).populate('associatedTeams');
+    res.status(201).json(populatedTask);
   } catch (error) {
     res.status(400).json({ message: 'Error creating team task', error: error.message });
   }
@@ -304,7 +314,7 @@ router.put('/tasks/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Access Denied: Admins only' });
     }
 
-    const { title, description, maxMarks, dueDate } = req.body;
+    const { title, description, maxMarks, dueDate, associatedTeams } = req.body;
     const task = await TeamTask.findById(req.params.id);
     if (!task) {
       return res.status(404).json({ message: 'Team task not found' });
@@ -314,9 +324,11 @@ router.put('/tasks/:id', authMiddleware, async (req, res) => {
     if (description !== undefined) task.description = description;
     if (maxMarks !== undefined) task.maxMarks = Number(maxMarks) || 100;
     if (dueDate) task.dueDate = new Date(dueDate);
+    if (associatedTeams !== undefined) task.associatedTeams = associatedTeams;
 
     await task.save();
-    res.json(task);
+    const populatedTask = await TeamTask.findById(task._id).populate('associatedTeams');
+    res.json(populatedTask);
   } catch (error) {
     res.status(400).json({ message: 'Error updating team task', error: error.message });
   }
@@ -443,7 +455,11 @@ router.get('/leaderboard', authMiddleware, async (req, res) => {
   try {
     const { track, batch } = req.query;
     let query = {};
-    if (track && track !== 'All') query.track = track;
+    if (track && track !== 'All') {
+      query.track = track;
+    } else {
+      query.track = { $ne: 'Frontend' };
+    }
     if (batch && batch !== 'All') query.batch = batch;
 
     const teams = await Team.find(query).lean();

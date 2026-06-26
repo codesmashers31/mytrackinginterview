@@ -13,7 +13,7 @@ const teamSchema = new mongoose.Schema({
   }],
   track: {
     type: String,
-    enum: ['Regular', 'Frontend'],
+    enum: ['Regular', 'Frontend', 'SPL'],
     default: 'Regular'
   },
   batch: {

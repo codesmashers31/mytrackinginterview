@@ -17,7 +17,11 @@ const teamTaskSchema = new mongoose.Schema({
   dueDate: { 
     type: Date, 
     required: true 
-  }
+  },
+  associatedTeams: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team'
+  }]
 }, { timestamps: true });
 
 export default mongoose.model('TeamTask', teamTaskSchema);

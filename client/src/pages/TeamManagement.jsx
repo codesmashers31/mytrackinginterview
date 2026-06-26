@@ -63,6 +63,7 @@ export default function TeamManagement() {
   const [challengeDesc, setChallengeDesc] = useState('');
   const [challengeMaxMarks, setChallengeMaxMarks] = useState(100);
   const [challengeDueDate, setChallengeDueDate] = useState('');
+  const [challengeTeams, setChallengeTeams] = useState([]);
 
   // Grading state
   const [selectedGradeTeam, setSelectedGradeTeam] = useState('');
@@ -206,7 +207,8 @@ export default function TeamManagement() {
           title: challengeTitle.trim(),
           description: challengeDesc.trim(),
           maxMarks: Number(challengeMaxMarks),
-          dueDate: challengeDueDate
+          dueDate: challengeDueDate,
+          associatedTeams: challengeTeams
         })
       });
 
@@ -218,6 +220,7 @@ export default function TeamManagement() {
       setChallengeDesc('');
       setChallengeMaxMarks(100);
       setChallengeDueDate('');
+      setChallengeTeams([]);
       setEditingChallengeId(null);
       fetchData();
     } catch (err) {
@@ -236,6 +239,7 @@ export default function TeamManagement() {
     const tzoffset = d.getTimezoneOffset() * 60000; // offset in milliseconds
     const localISOTime = (new Date(d.getTime() - tzoffset)).toISOString().slice(0, 16);
     setChallengeDueDate(localISOTime);
+    setChallengeTeams(chal.associatedTeams ? chal.associatedTeams.map(t => typeof t === 'object' ? t._id : t) : []);
   };
 
   const handleCancelChallengeEdit = () => {
@@ -244,6 +248,7 @@ export default function TeamManagement() {
     setChallengeDesc('');
     setChallengeMaxMarks(100);
     setChallengeDueDate('');
+    setChallengeTeams([]);
   };
 
   // Handle Challenge Deletion
@@ -353,6 +358,8 @@ export default function TeamManagement() {
     let matchesTrackAndBatch = false;
     if (newTeamTrack === 'Frontend') {
       matchesTrackAndBatch = student.track === 'Frontend';
+    } else if (newTeamTrack === 'SPL') {
+      matchesTrackAndBatch = student.track === 'SPL';
     } else {
       // Regular track: student must be Regular or SPL, and match the selected team batch
       const isRegularOrSpl = student.track === 'Regular' || student.track === 'SPL';
@@ -375,7 +382,7 @@ export default function TeamManagement() {
   // Filtered teams list for Teams list view
   const filteredTeams = teams.filter(team => {
     const matchesTrack = filterTeamTrack === 'All' || team.track === filterTeamTrack;
-    const matchesBatch = filterTeamTrack === 'Frontend' || filterTeamBatch === 'All' || team.batch === filterTeamBatch;
+    const matchesBatch = filterTeamTrack === 'Frontend' || filterTeamTrack === 'SPL' || filterTeamBatch === 'All' || team.batch === filterTeamBatch;
     return matchesTrack && matchesBatch;
   });
 
@@ -457,7 +464,7 @@ export default function TeamManagement() {
                     value={filterTeamTrack}
                     onChange={(e) => {
                       setFilterTeamTrack(e.target.value);
-                      if (e.target.value === 'Frontend') {
+                      if (e.target.value === 'Frontend' || e.target.value === 'SPL') {
                         setFilterTeamBatch('All');
                       }
                     }}
@@ -466,10 +473,11 @@ export default function TeamManagement() {
                     <option value="All">All Tracks</option>
                     <option value="Regular">Regular</option>
                     <option value="Frontend">Frontend</option>
+                    <option value="SPL">SPL</option>
                   </select>
                 </div>
 
-                {filterTeamTrack !== 'Frontend' && (
+                {filterTeamTrack !== 'Frontend' && filterTeamTrack !== 'SPL' && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-slate-500">Filter Batch:</span>
                     <select
@@ -607,7 +615,7 @@ export default function TeamManagement() {
                         value={newTeamTrack}
                         onChange={(e) => {
                           setNewTeamTrack(e.target.value);
-                          if (e.target.value === 'Frontend') {
+                          if (e.target.value === 'Frontend' || e.target.value === 'SPL') {
                             setNewTeamBatch('');
                           }
                           setSelectedStudents([]);
@@ -616,6 +624,7 @@ export default function TeamManagement() {
                       >
                         <option value="Regular">Regular</option>
                         <option value="Frontend">Frontend</option>
+                        <option value="SPL">SPL</option>
                       </select>
                     </div>
 
@@ -860,6 +869,34 @@ export default function TeamManagement() {
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Associated Teams (Only these teams will see/do this task)</label>
+                  {teams.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">No teams available</p>
+                  ) : (
+                    <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-2 bg-slate-50/50">
+                      {teams.map(team => (
+                        <label key={team._id} className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:text-indigo-600 transition">
+                          <input
+                            type="checkbox"
+                            checked={challengeTeams.includes(team._id)}
+                            onChange={() => {
+                              if (challengeTeams.includes(team._id)) {
+                                setChallengeTeams(challengeTeams.filter(id => id !== team._id));
+                              } else {
+                                setChallengeTeams([...challengeTeams, team._id]);
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          />
+                          <span className="font-semibold">{team.name}</span>
+                          <span className="text-[10px] text-slate-400 font-normal">({team.track}{team.batch ? ` - Batch ${team.batch}` : ''})</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex gap-2 pt-2">
                   {editingChallengeId && (
                     <button
@@ -934,6 +971,20 @@ export default function TeamManagement() {
                     {chal.description && (
                       <p className="text-sm text-slate-600 mt-3 border-l-2 border-slate-200 pl-3 leading-relaxed whitespace-pre-wrap">{chal.description}</p>
                     )}
+
+                    {chal.associatedTeams && chal.associatedTeams.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1.5 items-center">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Assigned Teams:</span>
+                        {chal.associatedTeams.map(t => {
+                          const teamName = typeof t === 'object' ? t.name : (teams.find(team => team._id === t)?.name || 'Unknown');
+                          return (
+                            <span key={typeof t === 'object' ? t._id : t} className="text-[10px] font-semibold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md border border-indigo-100/50">
+                              {teamName}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </SurfaceCard>
                 ))}
               </div>
@@ -959,7 +1010,18 @@ export default function TeamManagement() {
                   <select
                     required
                     value={selectedGradeChallenge}
-                    onChange={(e) => setSelectedGradeChallenge(e.target.value)}
+                    onChange={(e) => {
+                      const chalId = e.target.value;
+                      setSelectedGradeChallenge(chalId);
+                      // Reset selected grade team if it's not associated with the new challenge
+                      const newChal = challenges.find(c => c._id === chalId);
+                      if (newChal && newChal.associatedTeams && newChal.associatedTeams.length > 0) {
+                        const associatedIds = newChal.associatedTeams.map(at => typeof at === 'object' ? at._id : at);
+                        if (!associatedIds.includes(selectedGradeTeam)) {
+                          setSelectedGradeTeam('');
+                        }
+                      }
+                    }}
                     className="w-full h-11 px-3 border border-slate-200 rounded-xl text-sm focus:border-indigo-600 outline-none transition"
                   >
                     <option value="">-- Choose Challenge --</option>
@@ -978,9 +1040,16 @@ export default function TeamManagement() {
                     className="w-full h-11 px-3 border border-slate-200 rounded-xl text-sm focus:border-indigo-600 outline-none transition"
                   >
                     <option value="">-- Choose Team --</option>
-                    {teams.map(t => (
-                      <option key={t._id} value={t._id}>{t.name} ({t.members.length} members)</option>
-                    ))}
+                    {(() => {
+                      const currentChal = challenges.find(c => c._id === selectedGradeChallenge);
+                      const displayTeams = currentChal && currentChal.associatedTeams && currentChal.associatedTeams.length > 0
+                        ? teams.filter(t => currentChal.associatedTeams.some(at => (typeof at === 'object' ? at._id : at) === t._id))
+                        : teams;
+                      
+                      return displayTeams.map(t => (
+                        <option key={t._id} value={t._id}>{t.name} ({t.members.length} members)</option>
+                      ));
+                    })()}
                   </select>
                 </div>
               </div>
@@ -1102,7 +1171,7 @@ export default function TeamManagement() {
                 value={filterLeaderboardTrack}
                 onChange={(e) => {
                   setFilterLeaderboardTrack(e.target.value);
-                  if (e.target.value === 'Frontend') {
+                  if (e.target.value === 'Frontend' || e.target.value === 'SPL') {
                     setFilterLeaderboardBatch('All');
                   }
                 }}
@@ -1111,10 +1180,11 @@ export default function TeamManagement() {
                 <option value="All">All Tracks</option>
                 <option value="Regular">Regular</option>
                 <option value="Frontend">Frontend</option>
+                <option value="SPL">SPL</option>
               </select>
             </div>
 
-            {filterLeaderboardTrack !== 'Frontend' && (
+            {filterLeaderboardTrack !== 'Frontend' && filterLeaderboardTrack !== 'SPL' && (
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-slate-500">Filter Batch:</span>
                 <select
@@ -1179,7 +1249,7 @@ export default function TeamManagement() {
           <SurfaceCard className="p-6 border border-slate-100">
             <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
               <Trophy className="text-indigo-600" />
-              Guild Standing Leaderboard
+              {filterLeaderboardTrack === 'All' ? 'Guild Standing' : `${filterLeaderboardTrack} Standing`} Leaderboard
             </h3>
 
             {leaderboard.length === 0 ? (

@@ -33,6 +33,7 @@ export default function FrontendStudentList() {
     candidateInfo: true,
     contact: true,
     degree: true,
+    grade: true,
     team: false,
     location: true,
     status: false,
@@ -404,6 +405,7 @@ export default function FrontendStudentList() {
                         <span>{col === 'candidateInfo' ? 'Candidate Info' : 
                                col === 'contact' ? 'Contact' : 
                                col === 'degree' ? 'Degree' : 
+                               col === 'grade' ? 'Grade' :
                                col === 'team' ? 'Team' :
                                col === 'location' ? 'Location' : 
                                col === 'status' ? 'Status' : col}</span>
@@ -430,6 +432,7 @@ export default function FrontendStudentList() {
                 {visibleColumns.candidateInfo && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Candidate Info</th>}
                 {visibleColumns.contact && <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact</th>}
                 {visibleColumns.degree && <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Degree</th>}
+                {visibleColumns.grade && <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">Grade</th>}
                 {visibleColumns.team && <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Team</th>}
                 {visibleColumns.location && <th className="hidden md:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Location</th>}
                 {visibleColumns.status && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>}
@@ -494,6 +497,18 @@ export default function FrontendStudentList() {
                           </div>
                           <span className="truncate max-w-[90px] block font-bold text-slate-700" title={student.degree || '—'}>{student.degree || '—'}</span>
                         </div>
+                      </td>
+                    )}
+
+                    {visibleColumns.grade && (
+                      <td className="px-3 py-2.5 text-center">
+                        {student.grade ? (
+                          <span className={`inline-flex items-center justify-center h-5 w-5 rounded-md text-[10px] font-bold ${student.grade === 'A' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100/30' : student.grade === 'B' ? 'bg-blue-50 text-blue-700 border border-blue-100/30' : 'bg-amber-50 text-amber-700 border border-amber-100/30'}`}>
+                            {student.grade}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 font-medium text-[10px]">—</span>
+                        )}
                       </td>
                     )}
 
@@ -641,6 +656,7 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
     passedOutYear: student?.passedOutYear || '',
     city: student?.city || '',
     currentStatus: student?.currentStatus || 'Job Seeker',
+    grade: student?.grade || '',
     studentType: 'Frontend',
     isFrontend: true
   });
@@ -765,6 +781,16 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
             </div>
           </div>
 
+          <div>
+            <label className="crm-label">Student Grade</label>
+            <select value={formData.grade} onChange={e => setFormData({...formData, grade: e.target.value})} className="crm-input">
+              <option value="">Unassigned</option>
+              <option value="A">Grade A</option>
+              <option value="B">Grade B</option>
+              <option value="C">Grade C</option>
+            </select>
+          </div>
+
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <button type="button" onClick={onClose} className="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
               Cancel
@@ -825,6 +851,10 @@ function FrontendStudentDetailModal({ onClose, student }) {
             <div className="flex justify-between text-sm">
               <span className="text-slate-400 font-medium">City</span>
               <span className="text-slate-800 font-semibold">{student.city || 'N/A'}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400 font-medium">Grade</span>
+              <span className="text-slate-800 font-semibold">{student.grade || 'Unassigned'}</span>
             </div>
           </div>
 

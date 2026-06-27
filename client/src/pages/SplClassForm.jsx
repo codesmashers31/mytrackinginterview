@@ -46,12 +46,6 @@ export default function SplClassForm() {
     if (form.batch && !/^\d{4}$/.test(form.batch)) newErrors.batch = 'Enter a valid 4-digit year';
     if (!form.stack) newErrors.stack = 'Please select a tech stack';
     if (form.stack === 'Other' && !customStack.trim()) newErrors.stack = 'Please specify your tech stack';
-    if (!form.willing30Days) newErrors.willing30Days = 'Please choose an option';
-    if (!form.acceptOffer) newErrors.acceptOffer = 'Please choose an option';
-    if (!form.fullEffort) newErrors.fullEffort = 'Please choose an option';
-    // `issues` and `needMost` are optional; validate only when provided
-    if (form.issues.trim() && form.issues.trim().length < 5) newErrors.issues = 'Please provide more details';
-    if (form.needMost.trim() && form.needMost.trim().length < 3) newErrors.needMost = 'Please be more specific';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
@@ -63,12 +57,12 @@ export default function SplClassForm() {
       degree: form.degree || 'Not Provided',
       batch: form.batch || '',
       stack: form.stack === 'Other' ? customStack.trim() : form.stack,
-      willingCompanyProcess: form.willingCompanyProcess,
-      willing30Days: form.willing30Days,
-      acceptOffer: form.acceptOffer,
-      fullEffort: form.fullEffort,
-      issues: form.issues,
-      needMost: form.needMost,
+      willingCompanyProcess: false,
+      willing30Days: '',
+      acceptOffer: '',
+      fullEffort: '',
+      issues: '',
+      needMost: '',
     };
 
     console.log('Submitting SPL form', payload);
@@ -269,78 +263,18 @@ export default function SplClassForm() {
           </label>
         </div>
 
-        <div>
-          <h4 className="text-md font-semibold text-slate-800">Assessment</h4>
-          <p className="text-sm text-slate-500 mb-2">Answer the questions below. The full process is required to complete this registration.</p>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            Please fill all fields in this section before submitting.
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <label className="block">
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-sm">Are you willing to come 30 days?</span>
-              <select name="willing30Days" value={form.willing30Days} onChange={handleChange} aria-invalid={errors.willing30Days ? 'true' : 'false'} className="mt-1 w-40 rounded-md border px-3 py-2">
-                <option value="">Select</option>
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
-              </select>
-            </div>
-            {errors.willing30Days && <p className="mt-1 text-rose-600 text-sm">{errors.willing30Days}</p>}
-          </label>
-
-          <label className="block">
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-sm">Are you accept this Offer?</span>
-              <select name="acceptOffer" value={form.acceptOffer} onChange={handleChange} aria-invalid={errors.acceptOffer ? 'true' : 'false'} className="mt-1 w-40 rounded-md border px-3 py-2">
-                <option value="">Select</option>
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
-              </select>
-            </div>
-            {errors.acceptOffer && <p className="mt-1 text-rose-600 text-sm">{errors.acceptOffer}</p>}
-          </label>
-
-          <label className="block">
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-sm">Did you give your full effort?</span>
-              <select name="fullEffort" value={form.fullEffort} onChange={handleChange} aria-invalid={errors.fullEffort ? 'true' : 'false'} className="mt-1 w-40 rounded-md border px-3 py-2">
-                <option value="">Select</option>
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
-              </select>
-            </div>
-            {errors.fullEffort && <p className="mt-1 text-rose-600 text-sm">{errors.fullEffort}</p>}
-          </label>
-        </div>
-
-        <div className="flex items-center gap-3 text-sm text-slate-700">
-          <input type="checkbox" name="willingCompanyProcess" checked={form.willingCompanyProcess} onChange={handleChange} className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-          <span className="font-medium">Willing to join the Company Process</span>
-        </div>
-
-        <label className="block">
-          <span className="text-sm">Did you have any issues? Tell me</span>
-          <textarea name="issues" value={form.issues} onChange={handleChange} aria-invalid={errors.issues ? 'true' : 'false'} className="mt-1 w-full rounded-md border px-3 py-2" rows={3} placeholder="Describe any blockers, environment issues, or support needed" />
-          {errors.issues && <p className="mt-1 text-rose-600 text-sm">{errors.issues}</p>}
-        </label>
-
-        <label className="block">
-          <span className="text-sm">What do you need the most?</span>
-          <textarea name="needMost" value={form.needMost} onChange={handleChange} aria-invalid={errors.needMost ? 'true' : 'false'} className="mt-1 w-full rounded-md border px-3 py-2" rows={3} placeholder="E.g., mentorship, placement help, study material" />
-          {errors.needMost && <p className="mt-1 text-rose-600 text-sm">{errors.needMost}</p>}
-        </label>
-
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-end gap-3 pt-4">
           <button
             type="button"
-            onClick={() => setForm({ name: '', email: '', mobile: '', degree: '', batch: '', willingCompanyProcess: false, willing30Days: '', acceptOffer: '', fullEffort: '', issues: '', needMost: '' })}
-            className="rounded-md border px-4 py-2 hover:bg-slate-50"
+            onClick={() => {
+              setForm({ name: '', email: '', mobile: '', degree: '', batch: '', stack: '', willingCompanyProcess: false, willing30Days: '', acceptOffer: '', fullEffort: '', issues: '', needMost: '' });
+              setCustomStack('');
+            }}
+            className="rounded-md border px-4 py-2 hover:bg-slate-50 text-xs font-semibold text-slate-600"
           >
             Reset
           </button>
-          <button type="submit" disabled={loading} className={`rounded-md px-4 py-2 text-white shadow ${loading ? 'bg-slate-400 cursor-not-allowed' : 'bg-linear-to-r from-blue-600 to-violet-600 hover:opacity-95'}`}>
+          <button type="submit" disabled={loading} className={`rounded-md px-4 py-2 text-white text-xs font-semibold shadow ${loading ? 'bg-slate-400 cursor-not-allowed' : 'bg-linear-to-r from-blue-600 to-violet-600 hover:opacity-95'}`}>
             {loading ? 'Submitting...' : 'Submit'}
           </button>
         </div>

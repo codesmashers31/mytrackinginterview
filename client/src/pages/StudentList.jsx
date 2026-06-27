@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, Download, Upload, Plus, Edit, Eye, Trash2, X, ChevronLeft, ChevronRight, ClipboardList,
@@ -26,6 +26,7 @@ export default function StudentList() {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const searchTimerRef = useRef(null);
   const [statusFilter, setStatusFilter] = useState('All');
   const [enrollmentFilter, setEnrollmentFilter] = useState('All');
   const [batchFilter, setBatchFilter] = useState('All');
@@ -101,11 +102,27 @@ export default function StudentList() {
     fetchStudents();
   }, [statusFilter, enrollmentFilter]);
 
+  const handleSearchSubmit = () => {
+    setCurrentPage(1);
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
+    fetchStudents();
+  };
+
   useEffect(() => {
-    const timer = setTimeout(() => {
+    setCurrentPage(1);
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
+    searchTimerRef.current = setTimeout(() => {
       fetchStudents();
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+    };
   }, [searchTerm]);
 
   const handleToggleSelect = (id) => {
@@ -289,6 +306,18 @@ export default function StudentList() {
       if (batchFilter === 'All') return true;
       return String(student.batch || '').trim() === batchFilter;
     })
+    .filter(student => {
+      if (!searchTerm) return true;
+      const term = searchTerm.toLowerCase().trim();
+      return (
+        student.name?.toLowerCase().includes(term) ||
+        student.mobile?.toLowerCase().includes(term) ||
+        student.email?.toLowerCase().includes(term) ||
+        student.batch?.toLowerCase().includes(term) ||
+        student.passedOutYear?.toString().includes(term) ||
+        student.city?.toLowerCase().includes(term)
+      );
+    })
     .sort((a, b) => {
       if (sortBy === 'name-asc') {
         return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
@@ -328,6 +357,7 @@ export default function StudentList() {
       searchPlaceholder="Search students, mobile number, company, or institute batch"
       searchValue={searchTerm}
       onSearchChange={setSearchTerm}
+      onSearchSubmit={handleSearchSubmit}
     >
             <SectionTabs
               items={[
@@ -399,6 +429,11 @@ export default function StudentList() {
                       placeholder="Search candidates, mobile, company..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSearchSubmit();
+                        }
+                      }}
                       className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none focus:border-[#4338ca] focus:ring-2 focus:ring-[#4338ca]/10"
                     />
                  </div>

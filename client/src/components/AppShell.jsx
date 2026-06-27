@@ -137,6 +137,7 @@ export function AppShell({
   searchPlaceholder = 'Search',
   searchValue = '',
   onSearchChange = null,
+  onSearchSubmit = null,
   headerActions = null,
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -467,6 +468,11 @@ export function AppShell({
                       placeholder={searchPlaceholder}
                       value={searchValue}
                       onChange={(e) => onSearchChange(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && onSearchSubmit) {
+                          onSearchSubmit();
+                        }
+                      }}
                       className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3.5 text-xs text-slate-700 outline-none transition focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary-soft)] font-medium"
                     />
                   </label>

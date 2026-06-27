@@ -657,6 +657,11 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
     city: student?.city || '',
     currentStatus: student?.currentStatus || 'Job Seeker',
     grade: student?.grade || '',
+    statusReason: student?.statusReason || '',
+    others: student?.others || '',
+    companyName: student?.companyName || '',
+    packageLpa: student?.packageLpa || '',
+    jobGetMode: student?.jobGetMode || '',
     studentType: 'Frontend',
     isFrontend: true
   });
@@ -667,6 +672,8 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
     { value: 'Need to filled', label: 'Needs Updates' },
     { value: 'Inactive/Suspend', label: 'Inactive/Suspend' }
   ];
+
+  const hasCurrentStatusFallback = formData.currentStatus && !statusOptions.some(option => option.value === formData.currentStatus);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -791,6 +798,71 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
             </select>
           </div>
 
+          <div className="pt-4 border-t border-slate-100">
+            <h4 className="text-[13px] md:text-[14px] font-extrabold text-[#1e293b] mb-3">Pipeline Metrics</h4>
+            <div className="space-y-4">
+              <div>
+                <label className="crm-label">Active State</label>
+                <select required value={formData.currentStatus} onChange={e => setFormData({...formData, currentStatus: e.target.value})} className="crm-input bg-slate-50">
+                  {hasCurrentStatusFallback && (
+                    <option value={formData.currentStatus}>{formData.currentStatus}</option>
+                  )}
+                  {statusOptions.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {['inactive', 'suspended/inactive', 'inactive/suspend'].includes(formData.currentStatus.toLowerCase()) && (
+                <div>
+                  <label className="crm-label">Suspend / Inactive Reason</label>
+                  <textarea
+                    value={formData.statusReason}
+                    onChange={e => setFormData({...formData, statusReason: e.target.value})}
+                    className="crm-input min-h-[6rem] resize-none"
+                    placeholder="Enter the reason for inactive or suspended status"
+                    required
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="crm-label">Other Notes</label>
+                <input
+                  value={formData.others}
+                  onChange={e => setFormData({...formData, others: e.target.value})}
+                  className="crm-input"
+                  placeholder="Add any additional notes or remarks"
+                />
+              </div>
+
+              {formData.currentStatus.toLowerCase() === 'placed' && (
+                <div>
+                  <label className="crm-label">Deployment Vector</label>
+                  <select value={formData.jobGetMode} onChange={e => setFormData({...formData, jobGetMode: e.target.value})} className="crm-input bg-indigo-50 border-indigo-200 text-[#4338ca]">
+                    <option value="">Select Vector</option>
+                    <option value="Self Placed">Self Placed</option>
+                    <option value="SLA">SLA Origin</option>
+                    <option value="On Campus">On Campus Drive</option>
+                  </select>
+                </div>
+              )}
+
+              {formData.currentStatus.toLowerCase() === 'placed' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="crm-label">Acquiring Architecture (Company)</label>
+                    <input value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} className="crm-input bg-[#dcfce7] border-[#bbf7d0]" />
+                  </div>
+                  <div>
+                    <label className="crm-label">Value Remuneration (LPA)</label>
+                    <input value={formData.packageLpa} onChange={e => setFormData({...formData, packageLpa: e.target.value})} className="crm-input bg-[#dcfce7] border-[#bbf7d0]" />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <button type="button" onClick={onClose} className="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
               Cancel
@@ -816,7 +888,7 @@ function FrontendStudentDetailModal({ onClose, student }) {
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 bg-blue-100 text-blue-600 font-bold rounded-2xl flex items-center justify-center text-lg">
               {student.name.slice(0, 2).toUpperCase()}
@@ -825,6 +897,11 @@ function FrontendStudentDetailModal({ onClose, student }) {
               <h4 className="font-extrabold text-slate-800">{student.name}</h4>
               <p className="text-xs text-slate-400">Track: Frontend Student</p>
             </div>
+          </div>
+
+          <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-[14px]">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Active State</span>
+              <StatusBadge status={student.currentStatus} />
           </div>
 
           <div className="border-t border-slate-100 pt-4 space-y-3">
@@ -856,6 +933,37 @@ function FrontendStudentDetailModal({ onClose, student }) {
               <span className="text-slate-400 font-medium">Grade</span>
               <span className="text-slate-800 font-semibold">{student.grade || 'Unassigned'}</span>
             </div>
+            {student.statusReason && (
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400 font-medium">Status Reason</span>
+                <span className="text-slate-800 font-semibold text-right max-w-[200px] break-words">{student.statusReason}</span>
+              </div>
+            )}
+            {student.others && (
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400 font-medium">Other Notes</span>
+                <span className="text-slate-800 font-semibold text-right max-w-[200px] break-words">{student.others}</span>
+              </div>
+            )}
+            {student.currentStatus?.toLowerCase() === 'placed' && (
+              <div className="pt-4 mt-4 border-t border-slate-100 space-y-3">
+                 <p className="text-[11px] font-extrabold text-emerald-600 uppercase tracking-widest mb-2">Placement Telemetry</p>
+                 <div className="flex justify-between text-sm">
+                   <span className="text-slate-400 font-medium">Corporate Entity</span>
+                   <span className="text-slate-800 font-semibold">{student.companyName || 'Classified'}</span>
+                 </div>
+                 <div className="flex justify-between text-sm">
+                   <span className="text-slate-400 font-medium">Value Compensation</span>
+                   <span className="text-slate-800 font-semibold">{student.packageLpa ? `${student.packageLpa} LPA` : 'Undisclosed'}</span>
+                 </div>
+                 {student.jobGetMode && (
+                   <div className="flex justify-between text-sm">
+                     <span className="text-slate-400 font-medium">Acquisition Vector</span>
+                     <span className="text-slate-800 font-semibold">{student.jobGetMode}</span>
+                   </div>
+                 )}
+              </div>
+            )}
           </div>
 
           <div className="pt-4 border-t border-slate-100 flex justify-end">

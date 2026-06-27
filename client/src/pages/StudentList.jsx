@@ -1013,44 +1013,18 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
                    <div className="md:col-span-2 pt-5 md:pt-6 border-t border-slate-100 mt-4">
                       <h4 className="text-[13px] md:text-[14px] font-extrabold text-[#1e293b] mb-3 md:mb-4">SPL Candidate Telemetry</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
-                         <div>
-                            <label className="crm-label">Tech Stack</label>
-                            <select value={formData.stack} onChange={e => setFormData({...formData, stack: e.target.value})} className="crm-input">
-                               <option value="">Select Stack</option>
-                               <option value="MERN Stack">MERN Stack</option>
-                               <option value="Java Full Stack">Java Full Stack</option>
-                               <option value="Python Full Stack">Python Full Stack</option>
-                               <option value="Frontend Development">Frontend Development</option>
-                               <option value="QA / Testing">QA / Testing</option>
-                               <option value="Data Science / AI">Data Science / AI</option>
-                            </select>
-                         </div>
-                         <div className="flex items-center pt-6">
-                            <label className="flex items-center space-x-2.5 cursor-pointer">
-                               <input type="checkbox" checked={formData.willingCompanyProcess} onChange={e => setFormData({...formData, willingCompanyProcess: e.target.checked})} className="h-4.5 w-4.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" />
-                               <span className="text-xs font-bold text-slate-700">Willing to join company process?</span>
-                            </label>
-                         </div>
-                         <div>
-                            <label className="crm-label">Willingness for 30 Days Dedication</label>
-                            <input value={formData.willing30Days} onChange={e => setFormData({...formData, willing30Days: e.target.value})} className="crm-input" placeholder="e.g. Yes, fully committed" />
-                         </div>
-                         <div>
-                            <label className="crm-label">Will you accept offer if placed?</label>
-                            <input value={formData.acceptOffer} onChange={e => setFormData({...formData, acceptOffer: e.target.value})} className="crm-input" placeholder="e.g. Yes" />
-                         </div>
-                         <div>
-                            <label className="crm-label">Will you put full effort?</label>
-                            <input value={formData.fullEffort} onChange={e => setFormData({...formData, fullEffort: e.target.value})} className="crm-input" placeholder="e.g. Yes, 100%" />
-                         </div>
-                         <div>
-                            <label className="crm-label">Any current issues?</label>
-                            <input value={formData.issues} onChange={e => setFormData({...formData, issues: e.target.value})} className="crm-input" placeholder="e.g. None" />
-                         </div>
-                         <div className="md:col-span-2">
-                            <label className="crm-label">What do you need support in the most?</label>
-                            <textarea value={formData.needMost} onChange={e => setFormData({...formData, needMost: e.target.value})} className="crm-input min-h-[4rem] resize-none" placeholder="e.g. Coding mock practice" />
-                         </div>
+                          <div className="md:col-span-2">
+                             <label className="crm-label">Tech Stack</label>
+                             <select value={formData.stack} onChange={e => setFormData({...formData, stack: e.target.value})} className="crm-input">
+                                <option value="">Select Stack</option>
+                                <option value="MERN Stack">MERN Stack</option>
+                                <option value="Java Full Stack">Java Full Stack</option>
+                                <option value="Python Full Stack">Python Full Stack</option>
+                                <option value="Frontend Development">Frontend Development</option>
+                                <option value="QA / Testing">QA / Testing</option>
+                                <option value="Data Science / AI">Data Science / AI</option>
+                             </select>
+                          </div>
                       </div>
                    </div>
                  )}
@@ -1120,12 +1094,6 @@ function StudentDetailModal({ onClose, student }) {
                   <div className="pt-5 mt-5 border-t border-slate-100 space-y-3">
                      <p className="text-[11px] md:text-[13px] font-extrabold text-[#4338ca] uppercase tracking-widest mb-3">SPL Telemetry</p>
                      <DetailRow label="Technical Stack" val={student.stack || 'Not Specified'} />
-                     <DetailRow label="Company Process Willingness" val={student.willingCompanyProcess ? 'Yes' : 'No'} />
-                     <DetailRow label="Willing to join in 30 Days" val={student.willing30Days || 'Not Specified'} />
-                     <DetailRow label="Accept Offer" val={student.acceptOffer || 'Not Specified'} />
-                     <DetailRow label="Full Effort" val={student.fullEffort || 'Not Specified'} />
-                     <DetailRow label="Current Issues" val={student.issues || 'None'} />
-                     <DetailRow label="Support Needed Most" val={student.needMost || 'None'} />
                   </div>
                 )}
              </div>

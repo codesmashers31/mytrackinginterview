@@ -90,3 +90,5 @@ mongoose.connect(process.env.MONGODB_URI)
 app.listen(PORT, () => {
   console.log(`PlaceX Gateway active on port ${PORT}`);
 });
+
+export default app;

@@ -28,42 +28,49 @@ const QuestionItem = ({ task, question, index, onUpdate }) => {
   };
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-      <div className="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <p className="font-semibold text-slate-900">Question {index + 1}</p>
-          <p className="text-sm text-slate-600">{question.question}</p>
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs hover:border-blue-300 transition-all duration-200">
+      <div className="flex items-start gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-sm font-bold text-blue-700 select-none border border-blue-100 shadow-2xs">
+          {index + 1}
         </div>
-        <StatusBadge status={question.status} tone={question.status === 'Completed' ? 'success' : ['Blocked', 'Not Completed', 'Doubt'].includes(question.status) ? 'error' : question.status === 'In Progress' ? 'warning' : 'info'} />
+        <div className="flex-1 min-w-0 pt-1.5">
+          <p className="font-semibold text-slate-800 text-sm leading-relaxed whitespace-pre-wrap">{question.question}</p>
+        </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-[200px_1fr_auto] mt-4">
-        <div>
-          <label className="crm-label">Update status</label>
-          <select
-            className="crm-input w-full"
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-          >
-            {STATUS_OPTIONS.map(opt => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
-          </select>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-t border-slate-100 pt-3 mt-4">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Status:</span>
+          <StatusBadge status={question.status} tone={question.status === 'Completed' ? 'success' : ['Blocked', 'Not Completed', 'Doubt'].includes(question.status) ? 'error' : question.status === 'In Progress' ? 'warning' : 'info'} />
         </div>
-        <div>
-          <label className="crm-label">Link / Reason {['Completed', 'Not Completed', 'Doubt'].includes(status) && <span className="text-red-500">*</span>}</label>
-          <input
-            type="text"
-            className="crm-input w-full"
-            placeholder={status === 'Completed' ? "Paste link to work..." : "Enter reason/link..."}
-            value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
-          />
-        </div>
-        <div className="flex items-end">
+
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-1.5 w-full sm:w-auto">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0">Update Status:</span>
+            <select
+              className="crm-input text-xs py-1 px-2.5 h-9 bg-slate-50 cursor-pointer min-w-[130px]"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              {STATUS_OPTIONS.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex-1 min-w-[180px] w-full sm:w-auto">
+            <input
+              type="text"
+              className="crm-input text-xs py-1 px-3 h-9 bg-slate-50 w-full"
+              placeholder={status === 'Completed' ? "Paste link to work..." : "Enter reason/link..."}
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+            />
+          </div>
+
           <button 
             onClick={handleSave}
-            className="crm-btn-primary w-full md:w-auto px-6 py-2 text-sm h-[42px]"
+            className="crm-btn-primary px-4 py-1.5 text-xs font-bold h-9 flex items-center justify-center shrink-0 w-full sm:w-auto shadow-xs"
           >
             Save Update
           </button>

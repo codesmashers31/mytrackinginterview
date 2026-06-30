@@ -35,6 +35,7 @@ export default function FrontendStudentList() {
     contact: true,
     degree: true,
     grade: true,
+    stack: true,
     team: false,
     location: true,
     status: false,
@@ -441,6 +442,7 @@ export default function FrontendStudentList() {
                                col === 'contact' ? 'Contact' : 
                                col === 'degree' ? 'Degree' : 
                                col === 'grade' ? 'Grade' :
+                               col === 'stack' ? 'Tech Stack' :
                                col === 'team' ? 'Team' :
                                col === 'location' ? 'Location' : 
                                col === 'status' ? 'Status' : col}</span>
@@ -468,6 +470,7 @@ export default function FrontendStudentList() {
                 {visibleColumns.contact && <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact</th>}
                 {visibleColumns.degree && <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Degree</th>}
                 {visibleColumns.grade && <th className="px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">Grade</th>}
+                {visibleColumns.stack && <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Tech Stack</th>}
                 {visibleColumns.team && <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Team</th>}
                 {visibleColumns.location && <th className="hidden md:table-cell px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Location</th>}
                 {visibleColumns.status && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>}
@@ -544,6 +547,14 @@ export default function FrontendStudentList() {
                         ) : (
                           <span className="text-slate-400 font-medium text-[10px]">—</span>
                         )}
+                      </td>
+                    )}
+
+                    {visibleColumns.stack && (
+                      <td className="hidden sm:table-cell px-3 py-2.5 text-xs text-slate-650">
+                        <span className="font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 text-[10px]">
+                          {student.stack || 'Not Specified'}
+                        </span>
                       </td>
                     )}
 
@@ -692,6 +703,7 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
     city: student?.city || '',
     currentStatus: student?.currentStatus || 'Job Seeker',
     grade: student?.grade || '',
+    stack: student?.stack || '',
     statusReason: student?.statusReason || '',
     others: student?.others || '',
     companyName: student?.companyName || '',
@@ -823,14 +835,25 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
             </div>
           </div>
 
-          <div>
-            <label className="crm-label">Student Grade</label>
-            <select value={formData.grade} onChange={e => setFormData({...formData, grade: e.target.value})} className="crm-input">
-              <option value="">Unassigned</option>
-              <option value="A">Grade A</option>
-              <option value="B">Grade B</option>
-              <option value="C">Grade C</option>
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="crm-label">Student Grade</label>
+              <select value={formData.grade} onChange={e => setFormData({...formData, grade: e.target.value})} className="crm-input">
+                <option value="">Unassigned</option>
+                <option value="A">Grade A</option>
+                <option value="B">Grade B</option>
+                <option value="C">Grade C</option>
+              </select>
+            </div>
+            <div>
+              <label className="crm-label">Tech Stack</label>
+              <select value={formData.stack} onChange={e => setFormData({...formData, stack: e.target.value})} className="crm-input">
+                <option value="">Select Stack</option>
+                <option value="MERN Stack">MERN Stack</option>
+                <option value="Java Full Stack">Java Full Stack</option>
+                <option value="Python Full Stack">Python Full Stack</option>
+              </select>
+            </div>
           </div>
 
           <div className="pt-4 border-t border-slate-100">
@@ -967,6 +990,10 @@ function FrontendStudentDetailModal({ onClose, student }) {
             <div className="flex justify-between text-sm">
               <span className="text-slate-400 font-medium">Grade</span>
               <span className="text-slate-800 font-semibold">{student.grade || 'Unassigned'}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400 font-medium">Tech Stack</span>
+              <span className="text-slate-800 font-semibold">{student.stack || 'Not Specified'}</span>
             </div>
             {student.statusReason && (
               <div className="flex justify-between text-sm">

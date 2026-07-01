@@ -20,6 +20,7 @@ import mockInterviewRoutes from './routes/mockInterviewRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import leaveRoutes from './routes/leaveRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 import { runStudentMigration, runTeamMigration } from './utils/migration.js';
 
@@ -50,6 +51,7 @@ app.use('/api/mock-interviews', mockInterviewRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/leaves', leaveRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/ai', aiRoutes);
 app.use(errorHandler);
 
 // Database Connection

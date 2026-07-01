@@ -28,6 +28,8 @@ import TeamManagement from './pages/TeamManagement';
 import StudentTeams from './pages/StudentTeams';
 import FrontendStudentList from './pages/FrontendStudentList';
 import SplRegistrations from './pages/SplRegistrations';
+import StudentAiMentorship from './pages/StudentAiMentorship';
+import AdminAiMentorship from './pages/AdminAiMentorship';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
 import { isAuthenticated } from './utils/auth';
@@ -86,6 +88,8 @@ function App() {
         <Route path="/student/mock-interviews" element={<Navigate to="/student/tasks" replace />} />
         <Route path="/admin/teams" element={<RoleRoute roles={[ 'admin' ]}><TeamManagement /></RoleRoute>} />
         <Route path="/student/teams" element={<RoleRoute roles={[ 'student' ]}><StudentTeams /></RoleRoute>} />
+        <Route path="/student/ai-mentorship" element={<RoleRoute roles={[ 'student' ]}><StudentAiMentorship /></RoleRoute>} />
+        <Route path="/admin/ai-mentorship" element={<RoleRoute roles={[ 'admin', 'coordinator', 'placement' ]}><AdminAiMentorship /></RoleRoute>} />
       </Routes>
     </BrowserRouter>
   );

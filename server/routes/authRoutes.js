@@ -423,7 +423,27 @@ router.post('/login', async (req, res) => {
       user = await User.findOne({ email: inputVal });
     }
 
-    if (!user || !(await user.comparePassword(password))) {
+    let passwordMatches = false;
+    if (user) {
+      passwordMatches = await user.comparePassword(password);
+    }
+
+    if (!passwordMatches && user) {
+      if (student) {
+        const studentMobile = student.mobile ? student.mobile.trim() : '';
+        if (password.trim() === studentMobile) {
+          passwordMatches = true;
+        }
+      }
+      if (!passwordMatches && splReg) {
+        const splMobile = splReg.mobile ? splReg.mobile.trim() : '';
+        if (password.trim() === splMobile) {
+          passwordMatches = true;
+        }
+      }
+    }
+
+    if (!user || !passwordMatches) {
       return res.status(401).json({ message: 'Access Denied: Invalid Credentials' });
     }
 

@@ -168,9 +168,10 @@ Generate a JSON object matching this schema:
     "duration": "90 minutes"
   },
   "interviewQuestions": [
+    // Generate exactly 15 questions in total: 5 HR questions and 10 Technical questions
     {
       "question": "Question text",
-      "category": "Technical | HR | Scenario | Project",
+      "category": "Technical | HR",
       "hint": "Brief hint or bullet points for the answer"
     }
   ]

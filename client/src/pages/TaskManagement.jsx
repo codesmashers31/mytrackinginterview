@@ -31,9 +31,9 @@ export default function TaskManagement() {
   const [cooldownTime, setCooldownTime] = useState(0);
 
   const filteredStudents = students.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          student.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (student.mobile && student.mobile.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesSearch = (student.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (student.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (student.mobile || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesGrade = gradeFilter ? student.grade === gradeFilter : true;
     const matchesType = typeFilter ? student.type === typeFilter : true;
     const matchesBatch = batchFilter ? student.batch === batchFilter : true;

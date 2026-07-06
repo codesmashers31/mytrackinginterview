@@ -344,9 +344,9 @@ export default function TeamManagement() {
     // 1. Search Query
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch = 
-      student.name.toLowerCase().includes(searchLower) ||
+      (student.name || '').toLowerCase().includes(searchLower) ||
       (student.email && student.email.toLowerCase().includes(searchLower)) ||
-      student.mobile.includes(searchLower);
+      (student.mobile || '').includes(searchLower);
 
     // 2. Degree Filter
     const matchesDegree = selectedDegree === 'All' || student.degree === selectedDegree;

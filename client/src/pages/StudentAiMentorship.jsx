@@ -30,31 +30,23 @@ const TRACK_SKILLS = {
 };
 
 export default function StudentAiMentorship() {
-  const [activeTab, setActiveTab] = useState('study'); // 'study' | 'roadmap' | 'readiness' | 'mocks'
+  const [activeTab, setActiveTab] = useState('roadmap'); // default to 'roadmap'
   const [loading, setLoading] = useState(true);
   const [isOnboarded, setIsOnboarded] = useState(false);
   const [profile, setProfile] = useState(null);
   const [roadmap, setRoadmap] = useState(null);
+  const [studentDetails, setStudentDetails] = useState(null);
+  const [languageInput, setLanguageInput] = useState('English');
+  const [expandStep1, setExpandStep1] = useState(true);
+  const [expandStep2, setExpandStep2] = useState(false);
+  const [expandStep3, setExpandStep3] = useState(false);
+  const [expandStep4, setExpandStep4] = useState(false);
+  const [revealedQuestions, setRevealedQuestions] = useState({});
   
   // Onboarding Wizard State
   const [onboardStep, setOnboardStep] = useState(1);
-  const [onboardForm, setOnboardForm] = useState({
-    name: '',
-    mobile: '',
-    email: '',
-    degree: '',
-    department: '',
-    passedOutYear: '',
-    experience: 'Fresher',
-    language: 'English',
-    techTrack: 'MERN Stack',
-    skillLevel: {},
-    commLevel: { speaking: 3, listening: 3, reading: 3, writing: 3 },
-    aptitudeLevel: { logical: 3, quantitative: 3, verbal: 3 },
-    dailyAvailability: '4 Hours',
-    targetRole: '',
-    targetPackage: '5 LPA'
-  });
+  const [dailyHours, setDailyHours] = useState(4);
+  const [skillRatings, setSkillRatings] = useState({});
   const [onboardSubmit, setOnboardSubmit] = useState(false);
 
   // Active Day Progress State
@@ -85,6 +77,7 @@ export default function StudentAiMentorship() {
       const res = await fetch(buildApiUrl('/ai/profile'), { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
+        setStudentDetails(data.studentDetails || null);
         if (data.onboarded) {
           setIsOnboarded(true);
           setProfile(data.profile);
@@ -93,26 +86,16 @@ export default function StudentAiMentorship() {
             fetchReadiness(),
             fetchMocks()
           ]);
-        } else if (data.prefilledData) {
-          const track = data.prefilledData.techTrack || 'MERN Stack';
-          const defaultSkills = {};
-          (TRACK_SKILLS[track] || TRACK_SKILLS['MERN Stack']).forEach(skill => {
-            defaultSkills[skill] = 3;
+        } else {
+          setIsOnboarded(false);
+          // Initialize default skill ratings based on stack
+          const track = data.studentDetails?.techStack || 'MERN Stack';
+          const skills = TRACK_SKILLS[track] || TRACK_SKILLS['MERN Stack'];
+          const initialRatings = {};
+          skills.forEach(s => {
+            initialRatings[s] = 3;
           });
-
-          setOnboardForm(prev => ({
-            ...prev,
-            name: localStorage.getItem('userName') || '',
-            email: data.prefilledData.email || localStorage.getItem('userEmail') || '',
-            mobile: data.prefilledData.mobile || '',
-            degree: data.prefilledData.degree || prev.degree,
-            passedOutYear: data.prefilledData.passedOutYear || prev.passedOutYear,
-            experience: data.prefilledData.experience || prev.experience,
-            currentStatus: data.prefilledData.currentStatus || prev.currentStatus,
-            techTrack: track,
-            skillLevel: defaultSkills,
-            targetRole: data.prefilledData.targetRole || prev.targetRole
-          }));
+          setSkillRatings(initialRatings);
         }
       }
     } catch (err) {
@@ -194,18 +177,22 @@ export default function StudentAiMentorship() {
   }, [isOnboarded, selectedDay]);
 
   const handleOnboardSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setOnboardSubmit(true);
-    const loadToast = toast.loading('Compiling career roadmap & setting up daily tasks...');
+    const loadToast = toast.loading('Analyzing profile & compiling personalized learning journey...');
     try {
       const res = await fetch(buildApiUrl('/ai/onboard'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify(onboardForm)
+        body: JSON.stringify({ 
+          language: languageInput, 
+          dailyAvailability: dailyHours, 
+          skillLevel: skillRatings 
+        })
       });
       if (res.ok) {
         toast.dismiss(loadToast);
-        toast.success('Onboarding complete! Your personalized roadmap is ready.');
+        toast.success('Your AI Mentorship & Career Journey has been successfully initialized!');
         const data = await res.json();
         setIsOnboarded(true);
         setProfile(data.profile);
@@ -220,11 +207,11 @@ export default function StudentAiMentorship() {
       } else {
         toast.dismiss(loadToast);
         const err = await res.json();
-        toast.error(err.message || 'Roadmap compilation failed.');
+        toast.error(err.message || 'Learning roadmap generation failed.');
       }
     } catch (err) {
       toast.dismiss(loadToast);
-      toast.error('Network failure during onboarding.');
+      toast.error('Network failure during initialization.');
     } finally {
       setOnboardSubmit(false);
     }
@@ -271,6 +258,70 @@ export default function StudentAiMentorship() {
       toast.error('Network disconnect during submission.');
     } finally {
       setSubmittingAssignment(false);
+    }
+  };
+
+  const handleCompleteTopicStep = async () => {
+    try {
+      await fetch(buildApiUrl('/ai/toggle-task'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ dayNumber: selectedDay, taskKey: 'reading', status: 'Completed' })
+      });
+      const res = await fetch(buildApiUrl('/ai/toggle-task'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ dayNumber: selectedDay, taskKey: 'tech', status: 'Completed' })
+      });
+      if (res.ok) {
+        toast.success('Topic study notes completed!');
+        const data = await res.json();
+        setDayProgress(data.progress);
+        fetchReadiness();
+      }
+    } catch (err) {
+      toast.error('Failed to complete topic step.');
+    }
+  };
+
+  const handleCompleteTaskStep = async () => {
+    try {
+      await fetch(buildApiUrl('/ai/toggle-task'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ dayNumber: selectedDay, taskKey: 'coding', status: 'Completed' })
+      });
+      const res = await fetch(buildApiUrl('/ai/toggle-task'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ dayNumber: selectedDay, taskKey: 'logical', status: 'Completed' })
+      });
+      if (res.ok) {
+        toast.success('Practice tasks completed!');
+        const data = await res.json();
+        setDayProgress(data.progress);
+        fetchReadiness();
+      }
+    } catch (err) {
+      toast.error('Failed to complete practice task step.');
+    }
+  };
+
+  const handleCompleteInterviewStep = async () => {
+    try {
+      const res = await fetch(buildApiUrl('/ai/toggle-task'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ dayNumber: selectedDay, taskKey: 'comm', status: 'Completed' })
+      });
+      if (res.ok) {
+        toast.success('Interview preparation completed!');
+        const data = await res.json();
+        setDayProgress(data.progress);
+        fetchReadiness();
+      }
+    } catch (err) {
+      toast.error('Failed to complete interview preparation.');
     }
   };
 
@@ -357,389 +408,204 @@ export default function StudentAiMentorship() {
     );
   }
 
-  // ONBOARDING WIZARD INTERFACE
   if (!isOnboarded) {
-    const isEditing = !!profile;
+    const studentName = studentDetails?.name || localStorage.getItem('userName') || 'Student';
+    const techStack = studentDetails?.techStack || 'MERN Stack';
+
     return (
-      <AppShell 
-        title={isEditing ? "Re-configure AI Learning Profile" : "AI Learning Onboarding Wizard"} 
-        subtitle="Let our AI coordinator map your customized day-by-day learning journey."
-        headerActions={isEditing ? (
-          <button 
-            onClick={() => setIsOnboarded(true)}
-            className="px-3.5 py-1.5 text-xs font-bold bg-slate-100 border border-slate-200 rounded-xl text-slate-700 hover:bg-slate-200 transition"
-          >
-            Cancel Edit
-          </button>
-        ) : null}
+      <AppShell
+        title="AI Mentorship & Placement Readiness System"
+        subtitle="Embark on a customized, day-by-day learning journey mapped to your career goals."
       >
-        <div className="max-w-2xl mx-auto py-4">
-          <SurfaceCard className="p-8 border border-slate-200">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2.5 rounded-2xl bg-blue-50 text-blue-600">
-                <Sparkles size={24} />
+        <div className="max-w-4xl mx-auto space-y-8 py-6">
+          {/* Welcome Dashboard Card */}
+          <SurfaceCard className="p-8 border border-slate-200 bg-gradient-to-br from-slate-900 to-indigo-950 text-white relative overflow-hidden rounded-3xl shadow-xl">
+            {/* Ambient gradients */}
+            <div className="absolute top-[-20%] right-[-10%] h-[300px] w-[300px] rounded-full bg-blue-500/10 blur-[80px] pointer-events-none" />
+            <div className="absolute bottom-[-20%] left-[-10%] h-[300px] w-[300px] rounded-full bg-indigo-50/10 blur-[80px] pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full text-xs font-bold w-fit">
+                  <Sparkles size={12} className="animate-pulse" />
+                  Premium AI Mentorship
+                </div>
+                <h2 className="text-3xl font-extrabold tracking-tight">Welcome back, {studentName}</h2>
+                <p className="text-sm text-slate-350">
+                  Current Track Stack: <span className="font-bold text-white bg-white/10 px-2 py-0.5 rounded-md">{techStack}</span>
+                </p>
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-slate-900">{isEditing ? "Modify Learning Journey Inputs" : "AI Learning Assessment"}</h3>
-                <p className="text-xs text-slate-500">Step {onboardStep} of 3</p>
+
+              {/* Progress metrics */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-950/40 p-5 rounded-2xl border border-slate-800 w-full md:w-auto">
+                <div className="text-center px-2">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Progress</p>
+                  <p className="text-lg font-black text-emerald-400">0%</p>
+                </div>
+                <div className="text-center px-2 border-l border-slate-800">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Week / Day</p>
+                  <p className="text-lg font-black text-blue-400">Week 1 / Day 1</p>
+                </div>
+                <div className="text-center px-2 border-l border-slate-800">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Streak</p>
+                  <p className="text-lg font-black text-amber-400">🔥 0 Days</p>
+                </div>
+                <div className="text-center px-2 border-l border-slate-800">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Readiness</p>
+                  <p className="text-lg font-black text-indigo-400">0%</p>
+                </div>
               </div>
             </div>
+          </SurfaceCard>
 
-            <form onSubmit={handleOnboardSubmit}>
-              {onboardStep === 1 && (
-                <div className="space-y-4">
-                  <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-2">Personal & Department Details</h4>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="crm-label">Full Name</label>
-                      <input 
-                        required 
-                        value={onboardForm.name} 
-                        onChange={e => setOnboardForm({...onboardForm, name: e.target.value})} 
-                        className="crm-input" 
-                        placeholder="e.g. Saritha" 
-                      />
+          {/* Setup / Onboarding Input */}
+          <div className="max-w-xl mx-auto">
+            <SurfaceCard className="p-8 border border-slate-200 rounded-3xl bg-white shadow-md space-y-6">
+              {onboardStep === 1 ? (
+                <>
+                  <div className="text-center space-y-2">
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl w-fit mx-auto">
+                      <Globe size={24} />
                     </div>
-                    <div>
-                      <label className="crm-label">Department / Stream</label>
-                      <input 
-                        required 
-                        value={onboardForm.department} 
-                        onChange={e => setOnboardForm({...onboardForm, department: e.target.value})} 
-                        className="crm-input" 
-                        placeholder="e.g. Information Technology" 
-                      />
-                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 font-sans">Preferred Learning Language</h3>
+                    <p className="text-xs text-slate-500">
+                      Your AI Mentor will explain topics, write notes, and formulate exercises in this language.
+                    </p>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-6">
                     <div>
-                      <label className="crm-label">Degree</label>
-                      <input 
-                        required 
-                        value={onboardForm.degree} 
-                        onChange={e => setOnboardForm({...onboardForm, degree: e.target.value})} 
-                        className="crm-input" 
-                        placeholder="e.g. B.Tech" 
+                      <input
+                        type="text"
+                        value={languageInput}
+                        onChange={e => setLanguageInput(e.target.value)}
+                        className="crm-input text-center font-bold text-sm tracking-wide bg-slate-50 border border-slate-200 py-3.5 focus:bg-white transition-all rounded-xl w-full"
+                        placeholder="e.g. Tamil + English, Hindi, Telugu"
                       />
-                    </div>
-                    <div>
-                      <label className="crm-label">Passed Out Year</label>
-                      <input 
-                        required 
-                        value={onboardForm.passedOutYear} 
-                        onChange={e => setOnboardForm({...onboardForm, passedOutYear: e.target.value})} 
-                        className="crm-input" 
-                        placeholder="e.g. 2024" 
-                      />
-                    </div>
-                    <div>
-                      <label className="crm-label">Academic CGPA / %</label>
-                      <input 
-                        required 
-                        value={onboardForm.cgpa} 
-                        onChange={e => setOnboardForm({...onboardForm, cgpa: e.target.value})} 
-                        className="crm-input" 
-                        placeholder="e.g. 8.5 CGPA or 85%" 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="crm-label">Email Address</label>
-                      <input 
-                        required 
-                        type="email"
-                        value={onboardForm.email} 
-                        onChange={e => setOnboardForm({...onboardForm, email: e.target.value})} 
-                        className="crm-input" 
-                        placeholder="e.g. student@domain.com" 
-                      />
-                    </div>
-                    <div>
-                      <label className="crm-label">Mobile Number</label>
-                      <input 
-                        required 
-                        value={onboardForm.mobile} 
-                        onChange={e => setOnboardForm({...onboardForm, mobile: e.target.value})} 
-                        className="crm-input" 
-                        placeholder="e.g. 9876543210" 
-                      />
-                    </div>
-                    <div>
-                      <label className="crm-label">Preferred Language</label>
-                      <select 
-                        value={onboardForm.language} 
-                        onChange={e => setOnboardForm({...onboardForm, language: e.target.value})} 
-                        className="crm-input bg-white"
-                      >
-                        {LANGUAGES.map(lang => (
-                          <option key={lang.value} value={lang.value}>{lang.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end pt-4">
-                    <button 
-                      type="button" 
-                      onClick={() => setOnboardStep(2)} 
-                      className="crm-btn-primary px-6 py-2.5 flex items-center gap-2"
-                    >
-                      Next Step <ArrowRight size={16} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {onboardStep === 2 && (
-                <div className="space-y-4">
-                  <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-2">Track & Skill Assessment</h4>
-                  
-                  <div>
-                    <label className="crm-label">Target Technology Track</label>
-                    <select 
-                      value={onboardForm.techTrack} 
-                      onChange={e => {
-                        const newTrack = e.target.value;
-                        const defaultSkills = {};
-                        (TRACK_SKILLS[newTrack] || []).forEach(skill => {
-                          defaultSkills[skill] = 3;
-                        });
-                        setOnboardForm({
-                          ...onboardForm, 
-                          techTrack: newTrack,
-                          skillLevel: defaultSkills
-                        });
-                      }} 
-                      className="crm-input bg-white"
-                    >
-                      {TRACKS.map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="crm-label mb-2 block">Rate technical skills (1 = Beginner, 5 = Expert)</label>
-                    <div className="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                      {(TRACK_SKILLS[onboardForm.techTrack] || []).map(skill => (
-                        <div key={skill} className="space-y-1">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{skill}</label>
-                          <select 
-                            value={onboardForm.skillLevel[skill] || 3} 
-                            onChange={e => setOnboardForm({
-                              ...onboardForm, 
-                              skillLevel: { ...onboardForm.skillLevel, [skill]: Number(e.target.value) }
-                            })} 
-                            className="crm-input bg-white text-xs py-1 h-8"
+                      <div className="flex flex-wrap justify-center gap-1.5 mt-2.5">
+                        {['English', 'Tamil', 'Tamil + English', 'Hindi', 'Telugu'].map(lang => (
+                          <button
+                            type="button"
+                            key={lang}
+                            onClick={() => setLanguageInput(lang)}
+                            className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition ${
+                              languageInput === lang 
+                                ? 'bg-blue-600 border-blue-600 text-white shadow-xs' 
+                                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                            }`}
                           >
-                            {[1, 2, 3, 4, 5].map(v => (
-                              <option key={v} value={v}>{v}/5</option>
-                            ))}
-                          </select>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="crm-label">Coding Projects Experience</label>
-                      <select 
-                        value={onboardForm.codingProjectsExperience || 'None'} 
-                        onChange={e => setOnboardForm({...onboardForm, codingProjectsExperience: e.target.value})} 
-                        className="crm-input bg-white"
-                      >
-                        <option value="None">None (Just starting)</option>
-                        <option value="1-2 Small Projects">1-2 Small Projects</option>
-                        <option value="3+ Structured Projects">3+ Structured Projects</option>
-                      </select>
+                            {lang}
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="crm-label">Problem Solving Experience</label>
-                      <select 
-                        value={onboardForm.problemSolvingExperience || 'Never practiced'} 
-                        onChange={e => setOnboardForm({...onboardForm, problemSolvingExperience: e.target.value})} 
-                        className="crm-input bg-white"
-                      >
-                        <option value="Never practiced">Never practiced</option>
-                        <option value="Solved basic puzzles">Solved basic puzzles</option>
-                        <option value="LeetCode/HackerRank regular">LeetCode/HackerRank regular</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="crm-label">Certifications Completed</label>
-                      <input 
-                        value={onboardForm.certifications || ''} 
-                        onChange={e => setOnboardForm({...onboardForm, certifications: e.target.value})} 
-                        className="crm-input" 
-                        placeholder="e.g. AWS Certified, Udemy Course" 
-                      />
-                    </div>
-
-                    <div>
-                      <label className="crm-label">Familiar Databases</label>
-                      <div className="flex flex-wrap gap-2.5 mt-1">
-                        {['MySQL', 'MongoDB', 'PostgreSQL', 'SQLite'].map(db => {
-                          const hasDb = (onboardForm.familiarDatabases || []).includes(db);
+                    <div className="border-t border-slate-100 pt-6">
+                      <label className="crm-label text-center block mb-3 font-sans text-sm font-bold text-slate-900">
+                        Daily Available Study Hours (1 to 10 Hours)
+                      </label>
+                      <div className="flex flex-wrap justify-between gap-1.5 max-w-md mx-auto">
+                        {Array.from({ length: 10 }).map((_, idx) => {
+                          const val = idx + 1;
+                          const isSelected = dailyHours === val;
                           return (
                             <button
                               type="button"
-                              key={db}
-                              onClick={() => {
-                                const current = onboardForm.familiarDatabases || [];
-                                const next = current.includes(db) 
-                                  ? current.filter(x => x !== db)
-                                  : [...current, db];
-                                setOnboardForm({ ...onboardForm, familiarDatabases: next });
-                              }}
-                              className={`px-3 py-1 text-xs font-bold rounded-xl border transition-all ${
-                                hasDb ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-600'
+                              key={val}
+                              onClick={() => setDailyHours(val)}
+                              className={`h-9 w-9 text-xs font-black rounded-full border transition flex items-center justify-center ${
+                                isSelected 
+                                  ? 'bg-blue-600 border-blue-600 text-white shadow-md scale-110' 
+                                  : 'bg-white border-slate-200 text-slate-650 hover:bg-slate-50'
                               }`}
                             >
-                              {db}
+                              {val}
                             </button>
                           );
                         })}
                       </div>
+                      <p className="text-[10px] text-center text-slate-400 mt-2 font-semibold">
+                        Target commitment: <span className="text-blue-600 font-extrabold">{dailyHours} hours per day</span>
+                      </p>
                     </div>
-                  </div>
 
-                  <div className="flex justify-between pt-4">
-                    <button 
-                      type="button" 
-                      onClick={() => setOnboardStep(1)} 
-                      className="px-6 py-2.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl transition font-semibold"
+                    <button
+                      type="button"
+                      onClick={() => setOnboardStep(2)}
+                      className="crm-btn-primary w-full py-3.5 font-bold flex items-center justify-center gap-2 text-sm shadow-md bg-gradient-to-r from-blue-650 to-indigo-650 rounded-xl"
                     >
-                      Back
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={() => setOnboardStep(3)} 
-                      className="crm-btn-primary px-6 py-2.5 flex items-center gap-2"
-                    >
-                      Next Step <ArrowRight size={16} />
+                      Continue to Skill Ratings <ArrowRight size={16} />
                     </button>
                   </div>
-                </div>
-              )}
-
-              {onboardStep === 3 && (
-                <div className="space-y-4">
-                  <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-2">Communication, Aptitude & Target Goals</h4>
-                  
-                  <div>
-                    <label className="crm-label mb-2 block">Rate Communication (Speaking, Listening, Reading, Writing)</label>
-                    <div className="grid grid-cols-4 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                      {['speaking', 'listening', 'reading', 'writing'].map(field => (
-                        <div key={field} className="space-y-1">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{field}</label>
-                          <select 
-                            value={onboardForm.commLevel[field]} 
-                            onChange={e => setOnboardForm({
-                              ...onboardForm,
-                              commLevel: { ...onboardForm.commLevel, [field]: Number(e.target.value) }
-                            })} 
-                            className="crm-input bg-white text-xs py-1 h-8"
-                          >
-                            {[1, 2, 3, 4, 5].map(v => (
-                              <option key={v} value={v}>{v}/5</option>
-                            ))}
-                          </select>
-                        </div>
-                      ))}
+                </>
+              ) : (
+                <>
+                  <div className="text-center space-y-2">
+                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl w-fit mx-auto">
+                      <Award size={24} />
                     </div>
+                    <h3 className="text-lg font-bold text-slate-900 font-sans">Rate Your Technical Skills</h3>
+                    <p className="text-xs text-slate-500">
+                      Rate your level in key core competencies of <span className="font-bold text-indigo-600">{techStack}</span> (1 = Beginner, 5 = Expert).
+                    </p>
                   </div>
 
-                  <div>
-                    <label className="crm-label mb-2 block">Rate Aptitude (Logical, Quantitative, Verbal)</label>
-                    <div className="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                      {['logical', 'quantitative', 'verbal'].map(field => (
-                        <div key={field} className="space-y-1">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{field}</label>
-                          <select 
-                            value={onboardForm.aptitudeLevel[field]} 
-                            onChange={e => setOnboardForm({
-                              ...onboardForm,
-                              aptitudeLevel: { ...onboardForm.aptitudeLevel, [field]: Number(e.target.value) }
-                            })} 
-                            className="crm-input bg-white text-xs py-1 h-8"
-                          >
-                            {[1, 2, 3, 4, 5].map(v => (
-                              <option key={v} value={v}>{v}/5</option>
-                            ))}
-                          </select>
-                        </div>
-                      ))}
+                  <div className="space-y-5">
+                    <div className="max-h-72 overflow-y-auto pr-1 space-y-4 custom-scrollbar">
+                      {(TRACK_SKILLS[techStack] || TRACK_SKILLS['MERN Stack']).map(skill => {
+                        const currentVal = skillRatings[skill] || 3;
+                        return (
+                          <div key={skill} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-slate-100 p-3 bg-slate-50/55 rounded-2xl">
+                            <span className="text-xs font-bold text-slate-700">{skill}</span>
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map(starVal => (
+                                <button
+                                  type="button"
+                                  key={starVal}
+                                  onClick={() => setSkillRatings({ ...skillRatings, [skill]: starVal })}
+                                  className={`h-7 w-7 text-[10px] font-black rounded-lg border transition ${
+                                    currentVal >= starVal 
+                                      ? 'bg-amber-500 border-amber-500 text-white shadow-xs' 
+                                      : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  {starVal}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="crm-label">Daily Available Hours</label>
-                      <select 
-                        value={onboardForm.dailyAvailability} 
-                        onChange={e => setOnboardForm({...onboardForm, dailyAvailability: e.target.value})} 
-                        className="crm-input bg-white"
+                    <div className="flex justify-between gap-3 border-t border-slate-100 pt-6">
+                      <button
+                        type="button"
+                        onClick={() => setOnboardStep(1)}
+                        className="px-6 py-3.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl transition text-xs font-bold"
                       >
-                        <option value="2 Hours">2 Hours</option>
-                        <option value="4 Hours">4 Hours</option>
-                        <option value="6 Hours">6 Hours</option>
-                        <option value="8 Hours">8 Hours</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="crm-label">Target Role</label>
-                      <input 
-                        required 
-                        value={onboardForm.targetRole} 
-                        onChange={e => setOnboardForm({...onboardForm, targetRole: e.target.value})} 
-                        className="crm-input" 
-                        placeholder="e.g. MERN Stack Developer" 
-                      />
-                    </div>
-                    <div>
-                      <label className="crm-label">Target Package</label>
-                      <select 
-                        value={onboardForm.targetPackage} 
-                        onChange={e => setOnboardForm({...onboardForm, targetPackage: e.target.value})} 
-                        className="crm-input bg-white"
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleOnboardSubmit}
+                        disabled={onboardSubmit}
+                        className="crm-btn-primary flex-1 py-3.5 font-bold flex items-center justify-center gap-2 text-sm shadow-md bg-gradient-to-r from-blue-650 to-indigo-650 rounded-xl"
                       >
-                        <option value="3 LPA">3 LPA</option>
-                        <option value="5 LPA">5 LPA</option>
-                        <option value="8 LPA">8 LPA</option>
-                        <option value="10+ LPA">10+ LPA</option>
-                      </select>
+                        {onboardSubmit ? (
+                          'Initializing AI Journey...'
+                        ) : (
+                          <>
+                            Start AI Journey <ArrowRight size={16} />
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex justify-between pt-4">
-                    <button 
-                      type="button" 
-                      onClick={() => setOnboardStep(2)} 
-                      className="px-6 py-2.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl transition font-semibold"
-                    >
-                      Back
-                    </button>
-                    <button 
-                      type="submit" 
-                      disabled={onboardSubmit}
-                      className={`crm-btn-primary px-8 py-2.5 font-bold ${onboardSubmit ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      {onboardSubmit ? 'Compiling Journey...' : 'Create Career Journey'}
-                    </button>
-                  </div>
-                </div>
+                </>
               )}
-            </form>
-          </SurfaceCard>
+            </SurfaceCard>
+          </div>
         </div>
       </AppShell>
     );
@@ -748,50 +614,26 @@ export default function StudentAiMentorship() {
   return (
     <AppShell 
       title="AI Learning Journey & Mentorship" 
-      subtitle={`Active Level: ${roadmap?.level || 'Beginner'} | Track: ${profile?.techTrack}`}
+      subtitle={`Track Stack: ${studentDetails?.techStack || 'MERN Stack'} | Student: ${studentDetails?.name || 'User'}`}
       headerActions={(
         <button 
           onClick={() => {
-            setOnboardForm({
-              name: profile.name || '',
-              mobile: profile.mobile || '',
-              email: profile.email || '',
-              degree: profile.degree || '',
-              department: profile.department || '',
-              passedOutYear: profile.passedOutYear || '',
-              experience: profile.experience || 'Fresher',
-              language: profile.language || 'English',
-              techTrack: profile.techTrack || 'MERN Stack',
-              skillLevel: profile.skillLevel || {},
-              commLevel: profile.commLevel || { speaking: 3, listening: 3, reading: 3, writing: 3 },
-              aptitudeLevel: profile.aptitudeLevel || { logical: 3, quantitative: 3, verbal: 3 },
-              dailyAvailability: profile.dailyAvailability || '4 Hours',
-              targetRole: profile.targetRole || '',
-              targetPackage: profile.targetPackage || '5 LPA',
-              cgpa: profile.cgpa || '',
-              codingProjectsExperience: profile.codingProjectsExperience || 'None',
-              familiarDatabases: profile.familiarDatabases || [],
-              problemSolvingExperience: profile.problemSolvingExperience || 'Never practiced',
-              certifications: profile.certifications || ''
-            });
-            setOnboardStep(1);
+            setLanguageInput(profile?.language || 'English');
             setIsOnboarded(false);
           }}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition shadow-2xs font-medium"
         >
           <Edit2 size={12} className="text-slate-500" />
-          Edit profile
+          Language Settings
         </button>
       )}
     >
       {/* TIMELINE DAY SELECTOR WIDGET */}
-      <div className="flex gap-2.5 overflow-x-auto pb-3 mb-6 bg-white p-3 rounded-2xl border border-slate-200 scrollbar-none">
-        {Array.from({ length: 30 }).map((_, idx) => {
+      <div className="flex gap-2.5 overflow-x-auto pb-3 mb-6 bg-white p-3 rounded-2xl border border-slate-200 scrollbar-none"> {Array.from({ length: 30 }).map((_, idx) => {
           const dayNum = idx + 1;
           const isCurrent = dayNum === currentDay;
           const isSelected = dayNum === selectedDay;
           const isCompleted = dayNum < currentDay;
-          const isLocked = dayNum > currentDay;
 
           return (
             <button
@@ -822,7 +664,6 @@ export default function StudentAiMentorship() {
         items={[
           { label: 'Today\'s Learning Plan', active: activeTab === 'study', onClick: () => setActiveTab('study') },
           { label: 'Career Roadmap', active: activeTab === 'roadmap', onClick: () => setActiveTab('roadmap') },
-          { label: 'Interview Mock Board', active: activeTab === 'mocks', onClick: () => setActiveTab('mocks') },
           { label: 'Readiness Metrics', active: activeTab === 'readiness', onClick: () => setActiveTab('readiness') }
         ]}
       />
@@ -830,313 +671,456 @@ export default function StudentAiMentorship() {
       <div className="mt-6">
         {activeTab === 'study' && (
           <div className="grid gap-6 lg:grid-cols-3">
-            {/* STUDY PLAN PANEL */}
             <div className="lg:col-span-2 space-y-6">
               {dailyPlanError ? (
                 <SurfaceCard className="p-8 text-center border-rose-350 bg-rose-50/20">
                   <div className="mb-4 text-3xl">⚠️</div>
                   <p className="text-lg font-bold text-rose-800">Plan Generation Error</p>
-                  <p className="mt-2 text-xs text-slate-600">{dailyPlanError}</p>
+                  <p className="mt-2 text-xs text-slate-655">{dailyPlanError}</p>
                   <button onClick={() => fetchDailyPlanForDay(selectedDay)} className="crm-btn-primary mt-4 px-6 py-2 text-xs font-bold">Retry Generation</button>
                 </SurfaceCard>
-              ) : dailyPlan ? (
-                <>
-
-                  {/* Day 6 weekend assessment trigger */}
-                  {dailyPlan.isAssessmentDay ? (
-                    <SurfaceCard className="p-8 text-center border-blue-200 bg-blue-50/10">
-                      <div className="mb-4 text-3xl">🏁</div>
-                      <p className="text-lg font-bold text-slate-800">Weekly Learning Review</p>
-                      <p className="mt-2 text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                        Congratulations on completing 5 full technical and aptitude study days. Please complete the assessment test to unlock next week's track.
-                      </p>
-                      
-                      <div className="mt-6 max-w-sm mx-auto p-4 border border-blue-100 rounded-2xl bg-white shadow-xs">
-                        <label className="crm-label text-left text-[11px]">Input Mock Assessment Score (0-100)</label>
-                        <input 
-                          type="number" 
-                          min="0" 
-                          max="100"
-                          className="crm-input h-10 py-1.5" 
-                          placeholder="e.g. 85"
-                          onChange={e => setAssessmentScore(Number(e.target.value))}
-                        />
-                        <button
-                          onClick={() => handleAssessmentSubmit(assessmentScore)}
-                          disabled={submittingAssessment}
-                          className="crm-btn-primary w-full mt-3 py-2.5 font-bold"
-                        >
-                          {submittingAssessment ? 'Submitting...' : 'Submit Assessment'}
-                        </button>
-                      </div>
-                    </SurfaceCard>
-                  ) : (
-                    <>
-                      {/* Reading section */}
-                      <SurfaceCard className="p-6 border border-slate-200">
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-4">
-                          <div className="flex items-center gap-2">
-                            <BookOpen className="text-blue-600" size={18} />
-                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">1. Communication & Reading Practice</h3>
-                          </div>
-                          <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2.5 py-0.5 rounded-full">{dailyPlan.readingTopic.duration}</span>
-                        </div>
-                        <h4 className="text-xs font-bold text-slate-800 mb-2">{dailyPlan.readingTopic.title}</h4>
-                        <p className="text-xs text-slate-500 leading-relaxed">{dailyPlan.readingTopic.description}</p>
-                      </SurfaceCard>
-
-                      {/* Technical study notes */}
-                      <SurfaceCard className="p-6 border border-slate-200">
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-4">
-                          <div className="flex items-center gap-2">
-                            <CheckIcon className="text-blue-600" size={18} />
-                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">2. Technical Topic Complete Notes</h3>
-                          </div>
-                          <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2.5 py-0.5 rounded-full">{dailyPlan.techTopic.duration}</span>
-                        </div>
-
-                        <div className="space-y-4 text-xs text-slate-650 leading-relaxed">
-                          <div>
-                            <h4 className="font-bold text-slate-800 mb-1">{dailyPlan.techTopic.title}</h4>
-                            <p>{dailyPlan.techTopic.explanation}</p>
-                          </div>
-
-                          {dailyPlan.techTopic.syntax && (
-                            <div>
-                              <p className="font-extrabold text-slate-400 uppercase tracking-wider text-[9px] mb-1.5">Code Syntax Structure</p>
-                              <pre className="bg-slate-950 text-slate-100 rounded-xl p-3.5 font-mono overflow-x-auto">{dailyPlan.techTopic.syntax}</pre>
-                            </div>
-                          )}
-
-                          {dailyPlan.techTopic.examples && dailyPlan.techTopic.examples.map((ex, i) => (
-                            <div key={i} className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 p-3">
-                              <pre className="bg-slate-900 text-slate-100 p-2.5 rounded-lg font-mono">{ex.code}</pre>
-                              <div className="mt-2 text-slate-500 font-mono">Output: {ex.output}</div>
-                              <div className="mt-1.5 text-slate-650 italic">Details: {ex.explanation}</div>
-                            </div>
-                          ))}
-
-                          {dailyPlan.techTopic.revisionNotes && (
-                            <div className="bg-blue-50/40 border border-blue-100/50 rounded-2xl p-4">
-                              <h5 className="font-bold text-blue-900 mb-1.5">Revision Summary</h5>
-                              <p className="text-[11px] text-blue-700 leading-relaxed">{dailyPlan.techTopic.revisionNotes}</p>
-                            </div>
-                          )}
-
-                          {dailyPlan.techTopic.commonMistakes && dailyPlan.techTopic.commonMistakes.length > 0 && (
-                            <div className="bg-rose-50/40 border border-rose-100/50 rounded-2xl p-4">
-                              <h5 className="font-bold text-rose-900 mb-2">Common Mistakes & Pitfalls</h5>
-                              <div className="space-y-2">
-                                {dailyPlan.techTopic.commonMistakes.map((m, i) => (
-                                  <div key={i}>
-                                    <p className="font-bold text-rose-700">❌ Error: {m.mistake}</p>
-                                    <p className="text-slate-600 font-medium ml-4">✔️ Correct: {m.fix}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </SurfaceCard>
-
-                      {/* Daily Coding Module */}
-                      <SurfaceCard className="p-6 border border-slate-200">
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-4">
-                          <div className="flex items-center gap-2">
-                            <Code className="text-blue-600" size={18} />
-                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">3. Daily Coding Challenge</h3>
-                          </div>
-                          <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2.5 py-0.5 rounded-full">{dailyPlan.codingTask.duration}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4 className="text-xs font-bold text-slate-800">{dailyPlan.codingTask.title}</h4>
-                          <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded bg-blue-100 text-blue-800`}>
-                            {dailyPlan.codingTask.difficulty}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 leading-relaxed">{dailyPlan.codingTask.description}</p>
-                      </SurfaceCard>
-
-                      {/* Logical Thinking Module */}
-                      <SurfaceCard className="p-6 border border-slate-200">
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-4">
-                          <div className="flex items-center gap-2">
-                            <Award className="text-blue-600" size={18} />
-                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">4. Logical Reasoning Challenge</h3>
-                          </div>
-                          <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2.5 py-0.5 rounded-full">{dailyPlan.logicalTask.duration}</span>
-                        </div>
-                        <h4 className="text-xs font-bold text-slate-800 mb-2">{dailyPlan.logicalTask.title}</h4>
-                        <p className="text-xs text-slate-500 leading-relaxed mb-3">{dailyPlan.logicalTask.description}</p>
-                        {dailyPlan.logicalTask.inputOutput && (
-                          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-250 font-mono text-[10px] text-slate-500">
-                            {dailyPlan.logicalTask.inputOutput}
-                          </div>
-                        )}
-                      </SurfaceCard>
-
-                      {/* Task list summary progress check list */}
-                      {dayProgress && (
-                        <SurfaceCard className="p-5 border border-slate-200 bg-slate-50/30">
-                          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Daily Task Completion checklist</h4>
-                          
-                          <div className="grid gap-3 sm:grid-cols-3">
-                            {[
-                              { key: 'reading', label: '1. Reading Practice' },
-                              { key: 'comm', label: '2. Comm Practice' },
-                              { key: 'tech', label: '3. Technical Notes' },
-                              { key: 'coding', label: '4. Coding Task' },
-                              { key: 'logical', label: '5. Logical Puzzles' }
-                            ].map(t => {
-                              const isDone = dayProgress.tasks[t.key] === 'Completed';
-                              return (
-                                <button
-                                  key={t.key}
-                                  onClick={() => handleToggleTask(t.key, dayProgress.tasks[t.key])}
-                                  className={`flex items-center justify-between p-3 rounded-xl border text-xs font-bold transition-all ${
-                                    isDone ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                                  }`}
-                                >
-                                  <span>{t.label}</span>
-                                  <CheckCircle2 size={14} className={isDone ? 'text-emerald-600' : 'text-slate-300'} />
-                                </button>
-                              );
-                            })}
-                            
-                            <div className={`flex items-center justify-between p-3 rounded-xl border text-xs font-bold ${
-                              ['Submitted', 'Completed', 'Reviewed'].includes(dayProgress.tasks.assignment)
-                                ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                                : 'bg-white border-slate-200 text-slate-600'
-                            }`}>
-                              <span>6. Assignment Submission</span>
-                              <StatusBadge status={dayProgress.tasks.assignment} />
-                            </div>
-                          </div>
-
-                          {/* LOCK BUTTON POPUP GATES */}
-                          {dayProgress.tasks.reading === 'Completed' &&
-                           dayProgress.tasks.comm === 'Completed' &&
-                           dayProgress.tasks.tech === 'Completed' &&
-                           dayProgress.tasks.coding === 'Completed' &&
-                           dayProgress.tasks.logical === 'Completed' &&
-                           ['Submitted', 'Completed', 'Reviewed'].includes(dayProgress.tasks.assignment) && (
-                            <div className="mt-4 pt-4 border-t border-slate-200 flex justify-center">
-                              <button
-                                onClick={handleUnlockNextDay}
-                                className="crm-btn-primary px-8 py-3 bg-gradient-to-r from-blue-650 to-indigo-650 font-black shadow-md rounded-xl flex items-center gap-2 animate-bounce"
-                              >
-                                <ShieldCheck size={16} />
-                                Continue Learning Journey (Day {selectedDay + 1})
-                              </button>
-                            </div>
-                          )}
-                        </SurfaceCard>
-                      )}
-                    </>
-                  )}
-                </>
-              ) : (
-                <SurfaceCard className="p-8 text-center text-slate-600">
-                  <div className="mb-4 text-3xl">📝</div>
-                  <p className="text-lg font-semibold text-slate-900">Compiling Journey Dashboard</p>
-                  <p className="mt-2 text-sm text-slate-400">Roadmap index details are updating...</p>
+              ) : !dailyPlan ? (
+                <SurfaceCard className="p-8 text-center border-slate-200 bg-white rounded-3xl shadow-sm space-y-6">
+                  <div className="text-center space-y-2">
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-full w-fit mx-auto animate-pulse">
+                      <Sparkles size={28} />
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-900">Today's Topic: {roadmap?.stages[0]?.weeks[0]?.topics[0] || 'Getting Started'}</h3>
+                    <p className="text-xs text-slate-500">
+                      Your AI Mentor is ready. Click below to compile today's technical study notes, practice challenges, assignments, and interview questions.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => fetchDailyPlanForDay(selectedDay)}
+                    className="crm-btn-primary px-8 py-3 bg-gradient-to-r from-blue-650 to-indigo-650 font-bold rounded-xl flex items-center justify-center gap-2 mx-auto shadow-md"
+                  >
+                    <Play size={14} fill="currentColor" /> Generate Today's Topic
+                  </button>
                 </SurfaceCard>
-              )}
-            </div>
+              ) : dailyPlan.isAssessmentDay ? (
+                <SurfaceCard className="p-8 text-center border-blue-200 bg-blue-50/10 rounded-3xl shadow-sm">
+                  <div className="mb-4 text-3xl">🏁</div>
+                  <p className="text-lg font-bold text-slate-800">Weekly Learning Review</p>
+                  <p className="mt-2 text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                    Congratulations on completing 5 full technical and aptitude study days. Please complete the assessment test to unlock next week's track.
+                  </p>
+                  
+                  <div className="mt-6 max-w-sm mx-auto p-4 border border-blue-105 rounded-2xl bg-white shadow-xs">
+                    <label className="crm-label text-left text-[11px]">Input Mock Assessment Score (0-100)</label>
+                    <input 
+                      type="number" 
+                      min="0" 
+                      max="100"
+                      className="crm-input h-10 py-1.5" 
+                      placeholder="e.g. 85"
+                      onChange={e => setAssessmentScore(Number(e.target.value))}
+                    />
+                    <button
+                      onClick={() => handleAssessmentSubmit(assessmentScore)}
+                      disabled={submittingAssessment}
+                      className="crm-btn-primary w-full mt-3 py-2.5 font-bold"
+                    >
+                      {submittingAssessment ? 'Submitting...' : 'Submit Assessment'}
+                    </button>
+                  </div>
+                </SurfaceCard>
+              ) : (() => {
+                const step1Done = isPreviousDay || (dayProgress?.tasks?.reading === 'Completed' && dayProgress?.tasks?.tech === 'Completed');
+                const step2Done = isPreviousDay || (dayProgress?.tasks?.coding === 'Completed' && dayProgress?.tasks?.logical === 'Completed');
+                const step3Done = isPreviousDay || ['Submitted', 'Completed', 'Reviewed'].includes(dayProgress?.tasks?.assignment);
+                const step4Done = isPreviousDay || (dayProgress?.tasks?.comm === 'Completed');
+                
+                const currentStep = isPreviousDay ? 5 : activeStep;
 
-            {/* ASSIGNMENTS & COMMUNICATION PRACTICE (Right Column) */}
-            <div className="space-y-6">
-              {dailyPlan && !dailyPlan.isAssessmentDay && (
-                <>
-                  {/* Comm Practice details */}
-                  <SurfaceCard className="p-6 border border-slate-200">
-                    <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-4">
-                      <div className="flex items-center gap-2">
-                        <Globe className="text-blue-600" size={18} />
-                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Communication Practice</h3>
-                      </div>
-                      <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2.5 py-0.5 rounded-full">{dailyPlan.commPractice.duration}</span>
-                    </div>
-                    <span className="text-[9px] font-extrabold uppercase bg-indigo-150 text-indigo-850 px-2 py-0.5 rounded block w-fit mb-2">
-                      {dailyPlan.commPractice.type} Challenge
-                    </span>
-                    <h4 className="text-xs font-bold text-slate-800 mb-2">{dailyPlan.commPractice.title}</h4>
-                    <p className="text-xs text-slate-500 leading-relaxed">{dailyPlan.commPractice.description}</p>
-                  </SurfaceCard>
+                const questionsList = dailyPlan.interviewQuestions || [];
+                const hrQuestions = questionsList.slice(0, 5);
+                const techQuestions = questionsList.slice(5);
 
-                  {/* Assignment engine */}
-                  <SurfaceCard className="p-6 border border-slate-200">
-                    <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-4">
-                      <div className="flex items-center gap-2">
-                        <FileText className="text-blue-600" size={18} />
-                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Assignment Project</h3>
-                      </div>
-                      <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2.5 py-0.5 rounded-full">{dailyPlan.assignment.duration}</span>
-                    </div>
+                return (
+                  <div className="space-y-4">
+                    {/* STEP 1: TOPIC STUDY NOTES */}
+                    <div className={`border rounded-2xl overflow-hidden transition-all bg-white shadow-xs ${step1Done ? 'border-slate-200' : currentStep === 1 ? 'border-blue-400 ring-1 ring-blue-400' : 'border-slate-100 opacity-60'}`}>
+                      <button 
+                        type="button"
+                        onClick={() => setExpandStep1(!expandStep1)}
+                        className="w-full flex items-center justify-between p-5 text-left font-bold text-slate-800"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-black ${step1Done ? 'bg-emerald-100 text-emerald-800' : currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                            {step1Done ? '✓' : '1'}
+                          </span>
+                          <span className="text-sm">Phase 1: Explanation & Core Notes</span>
+                        </div>
+                        <span className="text-[10px] uppercase font-bold text-slate-450">{step1Done ? 'Completed' : 'Pending'}</span>
+                      </button>
 
-                    <div className="space-y-3.5 text-xs text-slate-650">
-                      <div>
-                        <h4 className="font-bold text-slate-800">{dailyPlan.assignment.title}</h4>
-                        <p className="text-slate-500 mt-1 leading-relaxed">{dailyPlan.assignment.description}</p>
-                      </div>
+                      {expandStep1 && (
+                        <div className="p-5 border-t border-slate-100 bg-slate-50/20 space-y-5 text-xs text-slate-650">
+                          <div className="border border-slate-200/60 rounded-xl bg-white p-4">
+                            <h4 className="font-bold text-slate-800 mb-2 flex items-center gap-1.5">
+                              <BookOpen size={14} className="text-blue-500" /> Reading Foundation: {dailyPlan.readingTopic?.title}
+                            </h4>
+                            <p className="leading-relaxed text-slate-500">{dailyPlan.readingTopic?.description}</p>
+                          </div>
 
-                      {dailyPlan.assignment.objectives && dailyPlan.assignment.objectives.length > 0 && (
-                        <div>
-                          <p className="font-bold text-slate-700">Project Objectives:</p>
-                          <ul className="list-disc pl-4 space-y-1 mt-1 text-slate-500">
-                            {dailyPlan.assignment.objectives.map((obj, idx) => (
-                              <li key={idx}>{obj}</li>
+                          <div className="space-y-4">
+                            <div>
+                              <h4 className="font-bold text-slate-800 mb-1">{dailyPlan.techTopic?.title}</h4>
+                              <p className="leading-relaxed">{dailyPlan.techTopic?.explanation}</p>
+                            </div>
+
+                            {dailyPlan.techTopic?.syntax && (
+                              <div>
+                                <p className="font-extrabold text-slate-400 uppercase tracking-wider text-[9px] mb-1.5">Code Syntax Structure</p>
+                                <pre className="bg-slate-950 text-slate-100 rounded-xl p-3.5 font-mono overflow-x-auto">{dailyPlan.techTopic.syntax}</pre>
+                              </div>
+                            )}
+
+                            {dailyPlan.techTopic?.examples && dailyPlan.techTopic.examples.map((ex, i) => (
+                              <div key={i} className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 p-3">
+                                <pre className="bg-slate-900 text-slate-100 p-2 rounded-lg font-mono overflow-x-auto">{ex.code}</pre>
+                                <div className="mt-2 text-slate-500 font-mono">Output: {ex.output}</div>
+                                <div className="mt-1 text-slate-650 italic">Details: {ex.explanation}</div>
+                              </div>
                             ))}
-                          </ul>
+
+                            {dailyPlan.techTopic?.revisionNotes && (
+                              <div className="bg-blue-50/40 border border-blue-100/50 rounded-xl p-4">
+                                <h5 className="font-bold text-blue-900 mb-1">Revision Summary</h5>
+                                <p className="text-[11px] text-blue-700 leading-relaxed">{dailyPlan.techTopic.revisionNotes}</p>
+                              </div>
+                            )}
+
+                            {dailyPlan.techTopic?.commonMistakes && dailyPlan.techTopic.commonMistakes.length > 0 && (
+                              <div className="bg-rose-50/40 border border-rose-100/50 rounded-xl p-4">
+                                <h5 className="font-bold text-rose-900 mb-2">Common Mistakes & Pitfalls</h5>
+                                <div className="space-y-2">
+                                  {dailyPlan.techTopic.commonMistakes.map((m, i) => (
+                                    <div key={i} className="text-[11px]">
+                                      <p className="font-bold text-rose-700">❌ Error: {m.mistake}</p>
+                                      <p className="text-slate-600 font-medium ml-4">✔️ Correct: {m.fix}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {currentStep === 1 && !isPreviousDay && (
+                            <button 
+                              type="button"
+                              onClick={handleCompleteTopicStep}
+                              className="crm-btn-primary w-full py-3 font-bold bg-blue-600 text-white rounded-xl shadow-xs"
+                            >
+                              Mark Topic Completed & Proceed
+                            </button>
+                          )}
                         </div>
                       )}
+                    </div>
 
-                      {dailyPlan.assignment.expectedOutput && (
-                        <div>
-                          <p className="font-bold text-slate-700">Expected Outputs:</p>
-                          <p className="text-slate-500 italic mt-0.5">{dailyPlan.assignment.expectedOutput}</p>
-                        </div>
-                      )}
+                    {/* STEP 2: DAILY PRACTICE TASKS */}
+                    {(currentStep >= 2 || isPreviousDay) && (
+                      <div className={`border rounded-2xl overflow-hidden transition-all bg-white shadow-xs ${step2Done ? 'border-slate-200' : currentStep === 2 ? 'border-blue-400 ring-1 ring-blue-400' : 'border-slate-100 opacity-60'}`}>
+                        <button 
+                          type="button"
+                          onClick={() => setExpandStep2(!expandStep2)}
+                          className="w-full flex items-center justify-between p-5 text-left font-bold text-slate-800"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-black ${step2Done ? 'bg-emerald-100 text-emerald-800' : currentStep === 2 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                              {step2Done ? '✓' : '2'}
+                            </span>
+                            <span className="text-sm">Phase 2: Practice Task & Analytical Puzzles</span>
+                          </div>
+                          <span className="text-[10px] uppercase font-bold text-slate-450">{step2Done ? 'Completed' : 'Pending'}</span>
+                        </button>
 
-                      <form onSubmit={handleAssignmentSubmit} className="pt-2 border-t border-slate-100">
-                        <label className="crm-label">Paste Submission URL (GitHub / Live Link)</label>
-                        <input 
-                          type="url"
-                          required
-                          value={submissionLink}
-                          onChange={e => setSubmissionLink(e.target.value)}
-                          className="crm-input py-2 text-xs" 
-                          placeholder="https://github.com/..." 
-                          disabled={dayProgress?.tasks?.assignment === 'Completed'}
-                        />
+                        {expandStep2 && (
+                          <div className="p-5 border-t border-slate-100 bg-slate-50/20 space-y-4 text-xs text-slate-650">
+                            <div className="border border-slate-200/60 rounded-xl bg-white p-4 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <h5 className="font-bold text-slate-800 flex items-center gap-1.5">
+                                  <Code size={14} className="text-blue-500" /> Coding Task: {dailyPlan.codingTask?.title}
+                                </h5>
+                                <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded bg-blue-50 text-blue-800">{dailyPlan.codingTask?.difficulty}</span>
+                              </div>
+                              <p className="leading-relaxed text-slate-500">{dailyPlan.codingTask?.description}</p>
+                            </div>
 
-                        {dayProgress && (
-                          <div className="mt-3 flex items-center justify-between">
-                            <StatusBadge status={dayProgress.tasks.assignment} />
-                            {dayProgress.tasks.assignment !== 'Completed' && (
+                            <div className="border border-slate-200/60 rounded-xl bg-white p-4 space-y-2">
+                              <h5 className="font-bold text-slate-800 flex items-center gap-1.5">
+                                <Award size={14} className="text-blue-500" /> Logical Puzzle: {dailyPlan.logicalTask?.title}
+                              </h5>
+                              <p className="leading-relaxed text-slate-500">{dailyPlan.logicalTask?.description}</p>
+                              {dailyPlan.logicalTask?.inputOutput && (
+                                <pre className="bg-slate-900 text-slate-200 p-3 rounded-lg font-mono text-[10px] overflow-x-auto mt-2">{dailyPlan.logicalTask.inputOutput}</pre>
+                              )}
+                            </div>
+
+                            {currentStep === 2 && !isPreviousDay && (
                               <button 
-                                type="submit" 
-                                disabled={submittingAssignment}
-                                className="crm-btn-primary px-4 py-1.5 text-xs font-bold"
+                                type="button"
+                                onClick={handleCompleteTaskStep}
+                                className="crm-btn-primary w-full py-3 font-bold bg-blue-600 text-white rounded-xl shadow-xs"
                               >
-                                {submittingAssignment ? 'Saving...' : 'Upload Link'}
+                                Submit Practice Tasks & Proceed
                               </button>
                             )}
                           </div>
                         )}
-                      </form>
+                      </div>
+                    )}
 
-                      {dayProgress && dayProgress.mentorFeedback && (
-                        <div className="mt-4 p-3.5 bg-indigo-50/50 border border-indigo-150 rounded-xl">
-                          <p className="font-bold text-indigo-900">Grader Evaluation Notes:</p>
-                          <p className="italic mt-1 leading-relaxed">{dayProgress.mentorFeedback}</p>
-                          <p className="font-extrabold text-indigo-700 mt-2">Grade Assigned: {dayProgress.grade || 'A'}</p>
-                        </div>
-                      )}
+                    {/* STEP 3: DAILY ASSIGNMENT */}
+                    {(currentStep >= 3 || isPreviousDay) && (
+                      <div className={`border rounded-2xl overflow-hidden transition-all bg-white shadow-xs ${step3Done ? 'border-slate-200' : currentStep === 3 ? 'border-blue-400 ring-1 ring-blue-400' : 'border-slate-100 opacity-60'}`}>
+                        <button 
+                          type="button"
+                          onClick={() => setExpandStep3(!expandStep3)}
+                          className="w-full flex items-center justify-between p-5 text-left font-bold text-slate-800"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-black ${step3Done ? 'bg-emerald-100 text-emerald-800' : currentStep === 3 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                              {step3Done ? '✓' : '3'}
+                            </span>
+                            <span className="text-sm">Phase 3: Daily Assignment Project</span>
+                          </div>
+                          <span className="text-[10px] uppercase font-bold text-slate-450">
+                            {dayProgress ? dayProgress.tasks.assignment : 'Pending'}
+                          </span>
+                        </button>
+
+                        {expandStep3 && (
+                          <div className="p-5 border-t border-slate-100 bg-slate-50/20 space-y-4 text-xs text-slate-650">
+                            <div className="border border-slate-200/60 rounded-xl bg-white p-4 space-y-3">
+                              <h5 className="font-bold text-slate-800">{dailyPlan.assignment?.title}</h5>
+                              <p className="leading-relaxed text-slate-500">{dailyPlan.assignment?.description}</p>
+                              
+                              {dailyPlan.assignment?.objectives && dailyPlan.assignment.objectives.length > 0 && (
+                                <div className="space-y-1 pt-1">
+                                  <p className="font-bold text-slate-700 text-[11px]">Core Deliverables:</p>
+                                  <ul className="list-disc pl-4 space-y-0.5 text-slate-500 text-[11px]">
+                                    {dailyPlan.assignment.objectives.map((obj, i) => <li key={i}>{obj}</li>)}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {dailyPlan.assignment?.expectedOutput && (
+                                <div className="pt-1">
+                                  <p className="font-bold text-slate-700 text-[11px]">Expected Output:</p>
+                                  <p className="text-slate-500 italic text-[11px]">{dailyPlan.assignment.expectedOutput}</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {currentStep === 3 && !isPreviousDay && (
+                              <form onSubmit={handleAssignmentSubmit} className="space-y-2">
+                                <label className="crm-label font-bold text-slate-700">Paste Submission URL (GitHub or Live URL)</label>
+                                <div className="flex gap-2">
+                                  <input 
+                                    type="url"
+                                    required
+                                    value={submissionLink}
+                                    onChange={e => setSubmissionLink(e.target.value)}
+                                    className="crm-input h-10 py-1"
+                                    placeholder="https://github.com/..."
+                                  />
+                                  <button
+                                    type="submit"
+                                    disabled={submittingAssignment}
+                                    className="crm-btn-primary px-6 h-10 font-bold flex-none"
+                                  >
+                                    {submittingAssignment ? 'Uploading...' : 'Submit Link'}
+                                  </button>
+                                </div>
+                              </form>
+                            )}
+
+                            {dayProgress && dayProgress.mentorFeedback && (
+                              <div className="p-4 bg-indigo-50/40 border border-indigo-100 rounded-xl space-y-1">
+                                <p className="font-bold text-indigo-950">Grader Evaluation Notes:</p>
+                                <p className="italic text-slate-650 leading-relaxed">{dayProgress.mentorFeedback}</p>
+                                <p className="font-extrabold text-indigo-700 mt-1">Grade Assigned: {dayProgress.grade || 'A'}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* STEP 4: DAILY INTERVIEW PREPARATION */}
+                    {(currentStep >= 4 || isPreviousDay) && (
+                      <div className={`border rounded-2xl overflow-hidden transition-all bg-white shadow-xs ${step4Done ? 'border-slate-200' : currentStep === 4 ? 'border-blue-400 ring-1 ring-blue-400' : 'border-slate-100 opacity-60'}`}>
+                        <button 
+                          type="button"
+                          onClick={() => setExpandStep4(!expandStep4)}
+                          className="w-full flex items-center justify-between p-5 text-left font-bold text-slate-800"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-black ${step4Done ? 'bg-emerald-100 text-emerald-800' : currentStep === 4 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                              {step4Done ? '✓' : '4'}
+                            </span>
+                            <span className="text-sm">Phase 4: Placement Preparation Questions (5 HR, 10 Tech)</span>
+                          </div>
+                          <span className="text-[10px] uppercase font-bold text-slate-450">{step4Done ? 'Completed' : 'Pending'}</span>
+                        </button>
+
+                        {expandStep4 && (
+                          <div className="p-5 border-t border-slate-100 bg-slate-50/20 space-y-4 text-xs text-slate-650">
+                            <div className="space-y-3">
+                              <h5 className="font-bold text-slate-900 uppercase tracking-widest text-[10px] text-indigo-650">Section A: HR/Behavioral Questions (5)</h5>
+                              {hrQuestions.map((q, idx) => {
+                                const globalIdx = idx;
+                                const isRevealed = !!revealedQuestions[globalIdx];
+                                return (
+                                  <div key={idx} className="border border-slate-200 rounded-xl bg-white p-3 space-y-2">
+                                    <p className="font-bold text-slate-800">Q: {q.question}</p>
+                                    {isRevealed ? (
+                                      <p className="text-indigo-700 bg-indigo-50/30 p-2.5 rounded-lg italic">Hint/Guidelines: {q.hint}</p>
+                                    ) : (
+                                      <button 
+                                        type="button"
+                                        onClick={() => toggleRevealQuestion(globalIdx)}
+                                        className="text-[10px] font-extrabold text-blue-600 hover:underline"
+                                      >
+                                        Reveal Answer Hint
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            <div className="space-y-3">
+                              <h5 className="font-bold text-slate-900 uppercase tracking-widest text-[10px] text-indigo-650">Section B: Core Technical Questions (10)</h5>
+                              {techQuestions.map((q, idx) => {
+                                const globalIdx = idx + 5;
+                                const isRevealed = !!revealedQuestions[globalIdx];
+                                return (
+                                  <div key={idx} className="border border-slate-200 rounded-xl bg-white p-3 space-y-2">
+                                    <p className="font-bold text-slate-800">Q: {q.question}</p>
+                                    {isRevealed ? (
+                                      <p className="text-indigo-700 bg-indigo-50/30 p-2.5 rounded-lg italic">Hint/Guidelines: {q.hint}</p>
+                                    ) : (
+                                      <button 
+                                        type="button"
+                                        onClick={() => toggleRevealQuestion(globalIdx)}
+                                        className="text-[10px] font-extrabold text-blue-600 hover:underline"
+                                      >
+                                        Reveal Answer Hint
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {currentStep === 4 && !isPreviousDay && (
+                              <button 
+                                type="button"
+                                onClick={handleCompleteInterviewStep}
+                                className="crm-btn-primary w-full py-3 font-bold bg-blue-600 text-white rounded-xl shadow-xs"
+                              >
+                                Mark Interview Preparation Completed
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* SUCCESS CELEBRATION CARD */}
+                    {currentStep === 5 && selectedDay === currentDay && (
+                      <SurfaceCard className="p-8 text-center border-emerald-300 bg-emerald-50/15 rounded-3xl shadow-sm space-y-4">
+                        <div className="text-4xl">🎉</div>
+                        <h4 className="text-lg font-black text-emerald-800">Day Completed Successfully!</h4>
+                        <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                          You have successfully completed today's explanation, practice tasks, assignment project, and mock interview questions. 
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleUnlockNextDay}
+                          className="crm-btn-primary px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-650 font-black shadow-md rounded-xl flex items-center justify-center gap-2 mx-auto animate-bounce"
+                        >
+                          <ShieldCheck size={16} /> Continue To Next Day
+                        </button>
+                      </SurfaceCard>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* AI JOURNEY DASHBOARD (Right Column) */}
+            <div className="space-y-6">
+              <SurfaceCard className="p-6 border border-slate-200 bg-slate-900 text-white rounded-3xl relative overflow-hidden shadow-lg">
+                <div className="absolute top-[-10%] right-[-10%] h-36 w-36 rounded-full bg-blue-600/20 blur-2xl pointer-events-none" />
+                <h3 className="text-sm font-bold tracking-widest text-slate-400 uppercase border-b border-slate-800 pb-3 mb-4 flex items-center gap-2">
+                  <Sparkles size={16} className="text-indigo-400" />
+                  AI Journey Dashboard
+                </h3>
+                
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400 font-medium">Current Week</span>
+                    <span className="font-bold text-white bg-indigo-500/20 px-3 py-1 rounded-full border border-indigo-500/30">Week {currentWeek}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400 font-medium">Current Day</span>
+                    <span className="font-bold text-white bg-blue-500/20 px-3 py-1 rounded-full border border-blue-500/30">Day {currentDay}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400 font-medium">Learning Streak</span>
+                    <span className="font-bold text-white bg-amber-500/20 px-3 py-1 rounded-full border border-amber-500/30">🔥 {roadmap?.dailyStreak || 0} Days</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400 font-medium">Placement Readiness</span>
+                    <span className="font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/25">
+                      {readiness?.overallScore !== undefined ? `${readiness.overallScore}%` : 'N/A'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-800 mt-5 pt-5 space-y-3.5">
+                  <div>
+                    <div className="flex justify-between text-[11px] mb-1">
+                      <span className="text-slate-400">Roadmap Progress</span>
+                      <span className="font-bold text-white">{roadmap?.overallProgress || 0}%</span>
                     </div>
-                  </SurfaceCard>
-                </>
-              )}
+                    <div className="w-full bg-slate-850 h-2 rounded-full overflow-hidden">
+                      <div className="bg-indigo-50 h-full rounded-full transition-all duration-500" style={{ width: `${roadmap?.overallProgress || 0}%` }} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-2 text-[10px]">
+                    <div className="bg-slate-850/50 p-2.5 rounded-xl border border-slate-800">
+                      <p className="text-slate-450 uppercase font-bold tracking-wider">Topics</p>
+                      <p className="text-lg font-black text-white mt-0.5">
+                        {dayProgress && (dayProgress.tasks.reading === 'Completed' ? 1 : 0) + (dayProgress.tasks.tech === 'Completed' ? 1 : 0)} Completed
+                      </p>
+                    </div>
+                    <div className="bg-slate-850/50 p-2.5 rounded-xl border border-slate-800">
+                      <p className="text-slate-450 uppercase font-bold tracking-wider">Tasks</p>
+                      <p className="text-lg font-black text-white mt-0.5">
+                        {dayProgress && (dayProgress.tasks.coding === 'Completed' ? 1 : 0) + (dayProgress.tasks.logical === 'Completed' ? 1 : 0)} Completed
+                      </p>
+                    </div>
+                    <div className="bg-slate-850/50 p-2.5 rounded-xl border border-slate-800">
+                      <p className="text-slate-450 uppercase font-bold tracking-wider">Assignments</p>
+                      <p className="text-lg font-black text-white mt-0.5">
+                        {dayProgress && ['Submitted', 'Completed', 'Reviewed'].includes(dayProgress.tasks.assignment) ? '1' : '0'} Completed
+                      </p>
+                    </div>
+                    <div className="bg-slate-850/50 p-2.5 rounded-xl border border-slate-800">
+                      <p className="text-slate-450 uppercase font-bold tracking-wider">Interview Prep</p>
+                      <p className="text-lg font-black text-white mt-0.5">
+                        {dayProgress && dayProgress.tasks.comm === 'Completed' ? 'Completed' : 'Pending'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </SurfaceCard>
             </div>
           </div>
         )}
@@ -1145,55 +1129,62 @@ export default function StudentAiMentorship() {
         {activeTab === 'roadmap' && (
           <SurfaceCard className="p-6 border border-slate-200">
             <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 mb-6">Structured Career Roadmap</h3>
-            {roadmap ? (
-              <div className="space-y-8 relative before:absolute before:left-6 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-150">
-                {roadmap.stages.map((stage, idx) => (
-                  <div key={idx} className="relative pl-12">
-                    <div className="absolute left-3.5 top-0.5 flex h-5.5 w-5.5 items-center justify-center rounded-full bg-blue-50 border-2 border-blue-600 text-blue-700 font-extrabold text-[10px] shadow-xs">
-                      {idx + 1}
+            
+            <div className="space-y-6 relative before:absolute before:left-8 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+              {[
+                { week: 1, title: 'HTML', desc: 'Structure & Web Semantics', icon: '🌐', topics: ['HTML Document Structure', 'Semantic tags & Metadata', 'Forms & validations', 'DOM element relationships'] },
+                { week: 2, title: 'CSS', desc: 'Layouts & Design Systems', icon: '🎨', topics: ['CSS Selectors & Box model', 'Flexbox & CSS Grid layouts', 'Responsive design & Media queries', 'CSS Variables & Animation basics'] },
+                { week: 3, title: 'JavaScript', desc: 'Logic & Programming Foundation', icon: '⚡', topics: ['Data types, scopes & closures', 'ES6+ Features & arrow functions', 'Asynchronous JS (Promises & async/await)', 'Callbacks & Event loops'] },
+                { week: 4, title: 'DOM', desc: 'Interactive Browser UIs', icon: '🖱️', topics: ['DOM manipulation & Event listeners', 'Event bubbling & capturing', 'Browser Web APIs', 'Local storage & fetch operations'] },
+                { week: 5, title: 'React', desc: 'Modern Web Apps', icon: '⚛️', topics: ['Components, JSX & props', 'State management & Hooks', 'React Router & page navigation', 'REST API integrations'] },
+                { week: 6, title: 'Projects', desc: 'Real-world Work Portfolio', icon: '🚀', topics: ['Frontend portfolio setup', 'Integrating backend data services', 'Interactive UI project release', 'Testing and debugging apps'] },
+                { week: 7, title: 'Interview Preparation', desc: 'Coding & HR Interviews', icon: '🎓', topics: ['DSA interview question patterns', 'React architecture conceptual prep', 'System design basics', 'HR behavioral case prep'] },
+                { week: 8, title: 'Placement Readiness', desc: 'Job Applications & Mocks', icon: '💼', topics: ['Technical Mock Interviews', 'Resume optimization & Github review', 'Mock Board evaluations', 'Direct recruiter matchings'] }
+              ].map(stage => {
+                const isActive = currentWeek === stage.week;
+                const isPassed = currentWeek > stage.week;
+                return (
+                  <div key={stage.week} className="relative pl-16">
+                    <div className={`absolute left-4 top-1 flex h-9 w-9 items-center justify-center rounded-full border-2 transition shadow-sm text-base z-10 ${
+                      isActive ? 'bg-blue-600 border-blue-600 text-white animate-pulse' :
+                      isPassed ? 'bg-emerald-100 border-emerald-500 text-emerald-800' :
+                      'bg-slate-50 border-slate-350 text-slate-400'
+                    }`}>
+                      {isPassed ? '✓' : stage.icon}
                     </div>
 
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-sm">{stage.title}</h4>
-                      <p className="text-xs text-slate-500 mt-1">{stage.description}</p>
-                      
-                      <div className="mt-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-                        {stage.weeks.map(week => {
-                          const isActive = currentWeek === week.weekNumber;
-                          const isPassed = currentWeek > week.weekNumber;
-                          return (
-                            <div 
-                              key={week.weekNumber} 
-                              className={`p-4 rounded-xl border ${isActive ? 'bg-blue-50/30 border-blue-400 shadow-xs' : isPassed ? 'bg-slate-50/50 border-slate-200 opacity-70' : 'bg-white border-slate-200'} transition-all`}
-                            >
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="text-[10px] font-extrabold text-slate-450 uppercase tracking-widest">Week {week.weekNumber}</span>
-                                {isPassed ? (
-                                  <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">Completed</span>
-                                ) : isActive ? (
-                                  <span className="text-[9px] font-bold bg-blue-600 text-white px-2.5 py-0.5 rounded-full">Active</span>
-                                ) : null}
-                              </div>
-                              <h5 className="text-xs font-bold text-slate-800 leading-tight">{week.title}</h5>
-                              <ul className="mt-2.5 space-y-1 text-[11px] text-slate-500">
-                                {week.topics.map((t, idx) => (
-                                  <li key={idx} className="flex items-center gap-1.5">
-                                    <ChevronRight size={10} className="text-slate-400" />
-                                    <span className="truncate">{t}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          );
-                        })}
+                    <div className={`p-5 rounded-2xl border transition ${
+                      isActive ? 'bg-blue-50/30 border-blue-400 shadow-sm' :
+                      isPassed ? 'bg-slate-50/50 border-slate-200 opacity-80' :
+                      'bg-white border-slate-200'
+                    }`}>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-[10px] font-extrabold text-slate-450 uppercase tracking-widest">Week {stage.week}</span>
+                        {isPassed ? (
+                          <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">Completed</span>
+                        ) : isActive ? (
+                          <span className="text-[9px] font-bold bg-blue-600 text-white px-2.5 py-0.5 rounded-full">Current Week</span>
+                        ) : (
+                          <span className="text-[9px] font-bold bg-slate-100 text-slate-450 px-2.5 py-0.5 rounded-full">Locked</span>
+                        )}
                       </div>
+                      
+                      <h4 className="font-extrabold text-slate-900 text-sm">{stage.title}</h4>
+                      <p className="text-xs text-slate-500 mt-1">{stage.desc}</p>
+                      
+                      <ul className="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-4 text-[11px] text-slate-650">
+                        {stage.topics.map((t, i) => (
+                          <li key={i} className="flex items-center gap-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100/50">
+                            <span className="text-slate-450">•</span>
+                            <span className="truncate">{t}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-slate-500 text-xs">Loading roadmap indices...</p>
-            )}
+                );
+              })}
+            </div>
           </SurfaceCard>
         )}
 

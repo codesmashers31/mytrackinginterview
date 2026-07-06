@@ -132,15 +132,77 @@ const isAiEnabled = async () => {
 router.post('/onboard', authMiddleware, async (req, res) => {
   try {
     const studentId = req.user.id;
-    const {
-      degree, passedOutYear, experience, currentStatus, language,
-      techTrack, skillLevel, commLevel, aptitudeLevel, dailyAvailability, 
-      targetRole, targetPackage, department, mobile, email,
-      cgpa, codingProjectsExperience, familiarDatabases, problemSolvingExperience, certifications
-    } = req.body;
+    const { language, dailyAvailability, skillLevel: inputSkillLevel } = req.body;
 
     const user = await User.findById(studentId);
     if (!user) return res.status(404).json({ message: 'Student account not found' });
+
+    let studentRec = null;
+    if (user.studentId) {
+      studentRec = await Student.findById(user.studentId);
+      if (!studentRec) {
+        studentRec = await SplRegistration.findById(user.studentId);
+      }
+    }
+
+    const degree = studentRec?.degree || 'B.E (CSE)';
+    const passedOutYear = studentRec?.passedOutYear === 'Need to filled' ? 2025 : (Number(studentRec?.passedOutYear) || 2025);
+    const experience = 'Fresher';
+    const currentStatus = studentRec?.currentStatus || 'Job Seeker';
+    const department = '';
+    const mobile = studentRec?.mobile || user.mobile || '';
+    const email = studentRec?.email || user.email || '';
+
+    let techTrack = 'MERN Stack';
+    if (studentRec && studentRec.stack) {
+      const stackLower = studentRec.stack.toLowerCase();
+      if (stackLower.includes('mern') || stackLower.includes('node') || stackLower.includes('react')) {
+        techTrack = 'MERN Stack';
+      } else if (stackLower.includes('java')) {
+        techTrack = 'Java Full Stack';
+      } else if (stackLower.includes('python')) {
+        techTrack = 'Python Full Stack';
+      } else if (stackLower.includes('data') || stackLower.includes('analyt')) {
+        techTrack = 'Data Analytics';
+      } else if (stackLower.includes('test') || stackLower.includes('qa')) {
+        techTrack = 'Testing';
+      } else if (stackLower.includes('design') || stackLower.includes('ux') || stackLower.includes('ui')) {
+        techTrack = 'UI/UX';
+      }
+    }
+
+    const skillLevel = inputSkillLevel || { HTML: 3, CSS: 3, JavaScript: 3, React: 3 };
+    const commLevel = { speaking: 3, listening: 3, reading: 3, writing: 3 };
+    const aptitudeLevel = { logical: 3, quantitative: 3, verbal: 3 };
+    const dailyAvailabilityValue = dailyAvailability ? `${dailyAvailability} Hours` : '4 Hours';
+    const targetRole = techTrack;
+    const targetPackage = '3 LPA';
+
+    let cgpa = '';
+    let codingProjectsExperience = 'None';
+    let familiarDatabases = [];
+    let problemSolvingExperience = 'Never practiced';
+    let certifications = '';
+
+    if (studentRec && studentRec.resumeData) {
+      const rd = studentRec.resumeData;
+      if (rd.education && rd.education[0] && rd.education[0].score) {
+        cgpa = rd.education[0].score;
+      }
+      if (rd.projects && rd.projects.length > 0) {
+        codingProjectsExperience = rd.projects.length >= 3 ? '3+ Structured Projects' : '1-2 Small Projects';
+      }
+      if (rd.skills && rd.skills.length > 0) {
+        const skillsText = rd.skills.join(' ').toLowerCase();
+        if (skillsText.includes('mongo')) familiarDatabases.push('MongoDB');
+        if (skillsText.includes('mysql') || skillsText.includes('sql ')) familiarDatabases.push('MySQL');
+        if (skillsText.includes('postgres')) familiarDatabases.push('PostgreSQL');
+        if (skillsText.includes('sqlite')) familiarDatabases.push('SQLite');
+      }
+      if (rd.certifications && rd.certifications.length > 0) {
+        certifications = rd.certifications.join(', ');
+      }
+    }
 
     // 1. Save learning profile
     const profile = await LearningProfile.findOneAndUpdate(
@@ -148,26 +210,26 @@ router.post('/onboard', authMiddleware, async (req, res) => {
       {
         studentId,
         name: user.name,
-        mobile: mobile || user.mobile || '',
-        email: email || user.email || '',
+        mobile,
+        email,
         degree,
-        department: department || '',
+        department,
         passedOutYear,
         experience,
         currentStatus,
-        language,
+        language: language || 'English',
         techTrack,
         skillLevel,
-        commLevel: commLevel || { speaking: 3, listening: 3, reading: 3, writing: 3 },
-        aptitudeLevel: aptitudeLevel || { logical: 3, quantitative: 3, verbal: 3 },
-        dailyAvailability,
+        commLevel,
+        aptitudeLevel,
+        dailyAvailability: dailyAvailabilityValue,
         targetRole,
         targetPackage,
-        cgpa: cgpa || '',
-        codingProjectsExperience: codingProjectsExperience || 'None',
-        familiarDatabases: familiarDatabases || [],
-        problemSolvingExperience: problemSolvingExperience || 'Never practiced',
-        certifications: certifications || ''
+        cgpa,
+        codingProjectsExperience,
+        familiarDatabases,
+        problemSolvingExperience,
+        certifications
       },
       { new: true, upsert: true }
     );
@@ -212,63 +274,38 @@ router.post('/onboard', authMiddleware, async (req, res) => {
  */
 router.get('/profile', authMiddleware, async (req, res) => {
   try {
-    const profile = await LearningProfile.findOne({ studentId: req.user.id });
-    if (!profile) {
-      // Look up existing Student or SplRegistration data
-      const user = await User.findById(req.user.id);
-      let prefilledData = {
-        degree: '',
-        passedOutYear: '',
-        experience: 'Fresher',
-        currentStatus: 'Job Seeker',
-        techTrack: 'MERN Stack',
-        targetRole: '',
-        department: '',
-        mobile: '',
-        email: ''
-      };
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-      if (user) {
-        prefilledData.email = user.email || '';
-        prefilledData.mobile = user.mobile || '';
-        
-        if (user.studentId) {
-          let studentRec = await Student.findById(user.studentId);
-          if (!studentRec) {
-            studentRec = await SplRegistration.findById(user.studentId);
-          }
-
-          if (studentRec) {
-            prefilledData.degree = studentRec.degree || '';
-            prefilledData.passedOutYear = studentRec.passedOutYear === 'Need to filled' ? '' : (studentRec.passedOutYear || '');
-            prefilledData.currentStatus = studentRec.currentStatus === 'Need to filled' ? 'Job Seeker' : (studentRec.currentStatus || 'Job Seeker');
-            
-            // Map stack string to enum
-            if (studentRec.stack) {
-              const stackLower = studentRec.stack.toLowerCase();
-              if (stackLower.includes('mern') || stackLower.includes('node') || stackLower.includes('react')) {
-                prefilledData.techTrack = 'MERN Stack';
-              } else if (stackLower.includes('java')) {
-                prefilledData.techTrack = 'Java Full Stack';
-              } else if (stackLower.includes('python')) {
-                prefilledData.techTrack = 'Python Full Stack';
-              } else if (stackLower.includes('data') || stackLower.includes('analyt')) {
-                prefilledData.techTrack = 'Data Analytics';
-              } else if (stackLower.includes('test') || stackLower.includes('qa')) {
-                prefilledData.techTrack = 'Testing';
-              } else if (stackLower.includes('design') || stackLower.includes('ux') || stackLower.includes('ui')) {
-                prefilledData.techTrack = 'UI/UX';
-              }
-            }
-          }
-        }
+    let studentRec = null;
+    if (user.studentId) {
+      studentRec = await Student.findById(user.studentId);
+      if (!studentRec) {
+        studentRec = await SplRegistration.findById(user.studentId);
       }
-
-      return res.status(200).json({ onboarded: false, prefilledData });
     }
-    res.status(200).json({ onboarded: true, profile });
+
+    const studentDetails = {
+      name: studentRec?.name || user.name || '',
+      email: studentRec?.email || user.email || '',
+      mobile: studentRec?.mobile || user.mobile || '',
+      degree: studentRec?.degree || '',
+      batch: studentRec?.batch || 'Regular Batch',
+      techStack: studentRec?.stack || 'MERN Stack',
+      grade: studentRec?.grade || 'N/A',
+      studentType: studentRec?.studentType || 'Regular',
+      currentStatus: studentRec?.currentStatus || 'Job Seeker'
+    };
+
+    const profile = await LearningProfile.findOne({ studentId: req.user.id });
+    
+    res.status(200).json({
+      onboarded: !!profile,
+      profile,
+      studentDetails
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Server error loading profile', error: err.message });
+    res.status(500).json({ message: 'Server error retrieving profile', error: err.message });
   }
 });
 

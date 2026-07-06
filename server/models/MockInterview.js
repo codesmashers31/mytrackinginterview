@@ -2,8 +2,8 @@ import mongoose from 'mongoose';
 
 const mockInterviewSchema = new mongoose.Schema({
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  type: { type: String, enum: ['HR', 'Technical', 'Project', 'Managerial', 'Company-Specific'], required: true },
-  scheduledAt: { type: Date, required: true },
+  type: { type: String, enum: ['HR', 'Technical', 'Project', 'Managerial', 'Company-Specific'] },
+  scheduledAt: { type: Date },
   status: { type: String, enum: ['Scheduled', 'Completed', 'Cancelled'], default: 'Scheduled' },
   questions: [{
     question: { type: String },

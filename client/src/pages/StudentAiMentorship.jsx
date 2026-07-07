@@ -634,6 +634,7 @@ export default function StudentAiMentorship() {
           const isCurrent = dayNum === currentDay;
           const isSelected = dayNum === selectedDay;
           const isCompleted = dayNum < currentDay;
+          const isLocked = dayNum > currentDay;
 
           return (
             <button

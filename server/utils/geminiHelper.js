@@ -152,8 +152,8 @@ Generate a JSON object matching this schema:
     "duration": "60 minutes"
   },
   "logicalTask": {
-    "title": "Logical reasoning or programming puzzle",
-    "description": "Analytical problem description (logical reasoning, quantitative aptitude, or problem solving code puzzle) in ${profile.language}",
+    "title": "Logical reasoning or programming puzzle related to ${topicName}",
+    "description": "Analytical problem description in ${profile.language}. Note: If the Topic is frontend (like HTML, CSS, DOM, UI/UX), this puzzle MUST be strictly oriented around that topic (e.g. selector specificity calculation, DOM tree traversal logic, CSS layout puzzle, or HTML nesting rules) rather than unrelated quantitative math/aptitude puzzles.",
     "inputOutput": "Sample inputs and expected outputs",
     "duration": "30 minutes"
   },

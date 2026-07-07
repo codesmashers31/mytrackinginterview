@@ -487,48 +487,8 @@ export default function StudentAiMentorship() {
         subtitle="Embark on a customized, day-by-day learning journey mapped to your career goals."
       >
         <div className="max-w-4xl mx-auto space-y-8 py-6">
-          {/* Welcome Dashboard Card */}
-          <SurfaceCard className="p-8 border border-slate-200 bg-gradient-to-br from-slate-900 to-indigo-950 text-white relative overflow-hidden rounded-3xl shadow-xl">
-            {/* Ambient gradients */}
-            <div className="absolute top-[-20%] right-[-10%] h-[300px] w-[300px] rounded-full bg-blue-500/10 blur-[80px] pointer-events-none" />
-            <div className="absolute bottom-[-20%] left-[-10%] h-[300px] w-[300px] rounded-full bg-indigo-50/10 blur-[80px] pointer-events-none" />
-
-            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full text-xs font-bold w-fit">
-                  <Sparkles size={12} className="animate-pulse" />
-                  Premium AI Mentorship
-                </div>
-                <h2 className="text-3xl font-extrabold tracking-tight">Welcome back, {studentName}</h2>
-                <p className="text-sm text-slate-350">
-                  Current Track Stack: <span className="font-bold text-white bg-white/10 px-2 py-0.5 rounded-md">{techStack}</span>
-                </p>
-              </div>
-
-              {/* Progress metrics */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-950/40 p-5 rounded-2xl border border-slate-800 w-full md:w-auto">
-                <div className="text-center px-2">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Progress</p>
-                  <p className="text-lg font-black text-emerald-400">0%</p>
-                </div>
-                <div className="text-center px-2 border-l border-slate-800">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Week / Day</p>
-                  <p className="text-lg font-black text-blue-400">Week 1 / Day 1</p>
-                </div>
-                <div className="text-center px-2 border-l border-slate-800">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Streak</p>
-                  <p className="text-lg font-black text-amber-400">🔥 0 Days</p>
-                </div>
-                <div className="text-center px-2 border-l border-slate-800">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Readiness</p>
-                  <p className="text-lg font-black text-indigo-400">0%</p>
-                </div>
-              </div>
-            </div>
-          </SurfaceCard>
-
           {/* Setup / Onboarding Input */}
-          <div className="max-w-xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <SurfaceCard className="p-8 border border-slate-200 rounded-3xl bg-white shadow-md space-y-6">
               {profile && (
                 <button

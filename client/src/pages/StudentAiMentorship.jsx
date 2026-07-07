@@ -45,6 +45,8 @@ export default function StudentAiMentorship() {
   
   // Onboarding Wizard State
   const [onboardStep, setOnboardStep] = useState(1);
+  const [selectedTrack, setSelectedTrack] = useState('MERN Stack');
+  const [selectedSkills, setSelectedSkills] = useState([]);
   const [dailyHours, setDailyHours] = useState(4);
   const [skillRatings, setSkillRatings] = useState({});
   const [onboardSubmit, setOnboardSubmit] = useState(false);
@@ -88,9 +90,10 @@ export default function StudentAiMentorship() {
           ]);
         } else {
           setIsOnboarded(false);
-          // Initialize default skill ratings based on stack
           const track = data.studentDetails?.techStack || 'MERN Stack';
+          setSelectedTrack(track);
           const skills = TRACK_SKILLS[track] || TRACK_SKILLS['MERN Stack'];
+          setSelectedSkills(skills);
           const initialRatings = {};
           skills.forEach(s => {
             initialRatings[s] = 3;
@@ -176,18 +179,38 @@ export default function StudentAiMentorship() {
     }
   }, [isOnboarded, selectedDay]);
 
+  const handleTrackChange = (track) => {
+    setSelectedTrack(track);
+    const skills = TRACK_SKILLS[track] || [];
+    setSelectedSkills(skills);
+    
+    const newRatings = { ...skillRatings };
+    skills.forEach(s => {
+      if (newRatings[s] === undefined) {
+        newRatings[s] = 3;
+      }
+    });
+    setSkillRatings(newRatings);
+  };
+
   const handleOnboardSubmit = async (e) => {
     if (e) e.preventDefault();
     setOnboardSubmit(true);
     const loadToast = toast.loading('Analyzing profile & compiling personalized learning journey...');
     try {
+      const filteredSkillRatings = {};
+      selectedSkills.forEach(s => {
+        filteredSkillRatings[s] = skillRatings[s] !== undefined ? skillRatings[s] : 3;
+      });
+
       const res = await fetch(buildApiUrl('/ai/onboard'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ 
           language: languageInput, 
           dailyAvailability: dailyHours, 
-          skillLevel: skillRatings 
+          skillLevel: filteredSkillRatings,
+          techTrack: selectedTrack
         })
       });
       if (res.ok) {
@@ -461,7 +484,153 @@ export default function StudentAiMentorship() {
           {/* Setup / Onboarding Input */}
           <div className="max-w-xl mx-auto">
             <SurfaceCard className="p-8 border border-slate-200 rounded-3xl bg-white shadow-md space-y-6">
-              {onboardStep === 1 ? (
+              {onboardStep === 1 && (
+                <>
+                  <div className="text-center space-y-2">
+                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl w-fit mx-auto animate-pulse">
+                      <Sparkles size={24} />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 font-sans">Choose Your Target Tech Track</h3>
+                    <p className="text-xs text-slate-500">
+                      Select your target track to filter related core skills and projects.
+                    </p>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {TRACKS.map(track => {
+                        const isSelected = selectedTrack === track;
+                        return (
+                          <button
+                            type="button"
+                            key={track}
+                            onClick={() => handleTrackChange(track)}
+                            className={`p-4 rounded-2xl border transition-all text-left flex flex-col justify-between h-20 ${
+                              isSelected 
+                                ? 'bg-indigo-50/50 border-indigo-500 text-indigo-950 font-bold shadow-xs scale-[1.02]' 
+                                : 'bg-white border-slate-200 text-slate-650 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-500">Track</span>
+                            <span className="text-xs font-black">{track}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-6">
+                      <label className="crm-label text-slate-900 font-sans font-bold block mb-3 text-sm">
+                        Select Familiar Skills
+                      </label>
+                      <p className="text-[11px] text-slate-500 mb-4 leading-relaxed">
+                        Toggle skills you have some prior knowledge or basic understanding in. Unselected skills will not need rating.
+                      </p>
+                      
+                      <div className="flex flex-wrap gap-2">
+                        {(TRACK_SKILLS[selectedTrack] || []).map(skill => {
+                          const isSelected = selectedSkills.includes(skill);
+                          return (
+                            <button
+                              type="button"
+                              key={skill}
+                              onClick={() => {
+                                if (isSelected) {
+                                  setSelectedSkills(selectedSkills.filter(s => s !== skill));
+                                } else {
+                                  setSelectedSkills([...selectedSkills, skill]);
+                                }
+                              }}
+                              className={`px-3.5 py-2 text-xs font-bold rounded-xl border transition-all ${
+                                isSelected 
+                                  ? 'bg-blue-650 border-blue-600 text-white shadow-xs' 
+                                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                              }`}
+                            >
+                              {skill} {isSelected ? '✓' : ''}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (selectedSkills.length === 0) {
+                          toast.error('Please select at least one familiar skill to continue.');
+                        } else {
+                          setOnboardStep(2);
+                        }
+                      }}
+                      className="crm-btn-primary w-full py-3.5 font-bold flex items-center justify-center gap-2 text-sm shadow-md bg-gradient-to-r from-blue-650 to-indigo-650 rounded-xl"
+                    >
+                      Continue to Skill Ratings <ArrowRight size={16} />
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {onboardStep === 2 && (
+                <>
+                  <div className="text-center space-y-2">
+                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl w-fit mx-auto">
+                      <Award size={24} />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 font-sans">Rate Your Technical Skills</h3>
+                    <p className="text-xs text-slate-500">
+                      Rate your level in key core competencies of <span className="font-bold text-indigo-600">{selectedTrack}</span> (1 = Beginner, 5 = Expert).
+                    </p>
+                  </div>
+
+                  <div className="space-y-5">
+                    <div className="max-h-72 overflow-y-auto pr-1 space-y-4 custom-scrollbar">
+                      {selectedSkills.map(skill => {
+                        const currentVal = skillRatings[skill] || 3;
+                        return (
+                          <div key={skill} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-slate-100 p-3 bg-slate-50/55 rounded-2xl">
+                            <span className="text-xs font-bold text-slate-700">{skill}</span>
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map(starVal => (
+                                <button
+                                  type="button"
+                                  key={starVal}
+                                  onClick={() => setSkillRatings({ ...skillRatings, [skill]: starVal })}
+                                  className={`h-7 w-7 text-[10px] font-black rounded-lg border transition ${
+                                    currentVal >= starVal 
+                                      ? 'bg-amber-500 border-amber-500 text-white shadow-xs' 
+                                      : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  {starVal}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex justify-between gap-3 border-t border-slate-100 pt-6">
+                      <button
+                        type="button"
+                        onClick={() => setOnboardStep(1)}
+                        className="px-6 py-3.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl transition text-xs font-bold"
+                      >
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOnboardStep(3)}
+                        className="crm-btn-primary flex-1 py-3.5 font-bold flex items-center justify-center gap-2 text-sm shadow-md bg-gradient-to-r from-blue-650 to-indigo-650 rounded-xl"
+                      >
+                        Continue to Settings <ArrowRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {onboardStep === 3 && (
                 <>
                   <div className="text-center space-y-2">
                     <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl w-fit mx-auto">
@@ -529,59 +698,10 @@ export default function StudentAiMentorship() {
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setOnboardStep(2)}
-                      className="crm-btn-primary w-full py-3.5 font-bold flex items-center justify-center gap-2 text-sm shadow-md bg-gradient-to-r from-blue-650 to-indigo-650 rounded-xl"
-                    >
-                      Continue to Skill Ratings <ArrowRight size={16} />
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="text-center space-y-2">
-                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl w-fit mx-auto">
-                      <Award size={24} />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-900 font-sans">Rate Your Technical Skills</h3>
-                    <p className="text-xs text-slate-500">
-                      Rate your level in key core competencies of <span className="font-bold text-indigo-600">{techStack}</span> (1 = Beginner, 5 = Expert).
-                    </p>
-                  </div>
-
-                  <div className="space-y-5">
-                    <div className="max-h-72 overflow-y-auto pr-1 space-y-4 custom-scrollbar">
-                      {(TRACK_SKILLS[techStack] || TRACK_SKILLS['MERN Stack']).map(skill => {
-                        const currentVal = skillRatings[skill] || 3;
-                        return (
-                          <div key={skill} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-slate-100 p-3 bg-slate-50/55 rounded-2xl">
-                            <span className="text-xs font-bold text-slate-700">{skill}</span>
-                            <div className="flex items-center gap-1">
-                              {[1, 2, 3, 4, 5].map(starVal => (
-                                <button
-                                  type="button"
-                                  key={starVal}
-                                  onClick={() => setSkillRatings({ ...skillRatings, [skill]: starVal })}
-                                  className={`h-7 w-7 text-[10px] font-black rounded-lg border transition ${
-                                    currentVal >= starVal 
-                                      ? 'bg-amber-500 border-amber-500 text-white shadow-xs' 
-                                      : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'
-                                  }`}
-                                >
-                                  {starVal}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
                     <div className="flex justify-between gap-3 border-t border-slate-100 pt-6">
                       <button
                         type="button"
-                        onClick={() => setOnboardStep(1)}
+                        onClick={() => setOnboardStep(2)}
                         className="px-6 py-3.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl transition text-xs font-bold"
                       >
                         Back

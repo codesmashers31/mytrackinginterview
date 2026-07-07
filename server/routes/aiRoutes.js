@@ -132,7 +132,7 @@ const isAiEnabled = async () => {
 router.post('/onboard', authMiddleware, async (req, res) => {
   try {
     const studentId = req.user.id;
-    const { language, dailyAvailability, skillLevel: inputSkillLevel } = req.body;
+    const { language, dailyAvailability, skillLevel: inputSkillLevel, techTrack: inputTechTrack } = req.body;
 
     const user = await User.findById(studentId);
     if (!user) return res.status(404).json({ message: 'Student account not found' });
@@ -153,8 +153,8 @@ router.post('/onboard', authMiddleware, async (req, res) => {
     const mobile = studentRec?.mobile || user.mobile || '';
     const email = studentRec?.email || user.email || '';
 
-    let techTrack = 'MERN Stack';
-    if (studentRec && studentRec.stack) {
+    let techTrack = inputTechTrack || 'MERN Stack';
+    if (!inputTechTrack && studentRec && studentRec.stack) {
       const stackLower = studentRec.stack.toLowerCase();
       if (stackLower.includes('mern') || stackLower.includes('node') || stackLower.includes('react')) {
         techTrack = 'MERN Stack';

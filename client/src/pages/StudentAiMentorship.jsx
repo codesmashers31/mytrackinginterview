@@ -862,8 +862,8 @@ export default function StudentAiMentorship() {
 
       <SectionTabs
         items={[
-          { label: 'Today\'s Learning Plan', active: activeTab === 'study', onClick: () => setActiveTab('study') },
           { label: 'Career Roadmap', active: activeTab === 'roadmap', onClick: () => setActiveTab('roadmap') },
+          { label: 'Today\'s Learning Plan', active: activeTab === 'study', onClick: () => setActiveTab('study') },
           { label: 'Readiness Metrics', active: activeTab === 'readiness', onClick: () => setActiveTab('readiness') }
         ]}
       />

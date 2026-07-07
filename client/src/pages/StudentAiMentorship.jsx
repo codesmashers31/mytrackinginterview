@@ -960,13 +960,13 @@ export default function StudentAiMentorship() {
                             <h4 className="font-bold text-slate-800 mb-2 flex items-center gap-1.5">
                               <BookOpen size={14} className="text-blue-500" /> Reading Foundation: {dailyPlan.readingTopic?.title}
                             </h4>
-                            <p className="leading-relaxed text-slate-500">{dailyPlan.readingTopic?.description}</p>
+                            <div className="leading-relaxed text-slate-500">{renderMarkdown(dailyPlan.readingTopic?.description)}</div>
                           </div>
 
                           <div className="space-y-4">
                             <div>
                               <h4 className="font-bold text-slate-800 mb-1">{dailyPlan.techTopic?.title}</h4>
-                              <p className="leading-relaxed">{dailyPlan.techTopic?.explanation}</p>
+                              <div className="leading-relaxed space-y-1">{renderMarkdown(dailyPlan.techTopic?.explanation)}</div>
                             </div>
 
                             {dailyPlan.techTopic?.syntax && (
@@ -987,7 +987,7 @@ export default function StudentAiMentorship() {
                             {dailyPlan.techTopic?.revisionNotes && (
                               <div className="bg-blue-50/40 border border-blue-100/50 rounded-xl p-4">
                                 <h5 className="font-bold text-blue-900 mb-1">Revision Summary</h5>
-                                <p className="text-[11px] text-blue-700 leading-relaxed">{dailyPlan.techTopic.revisionNotes}</p>
+                                <div className="text-[11px] text-blue-700 leading-relaxed space-y-1">{renderMarkdown(dailyPlan.techTopic.revisionNotes)}</div>
                               </div>
                             )}
 
@@ -1452,3 +1452,93 @@ export default function StudentAiMentorship() {
     </AppShell>
   );
 }
+
+// HELPER FUNCTIONS FOR RENDERING MARKDOWN CONTENT
+const renderMarkdown = (text) => {
+  if (!text) return null;
+  
+  const lines = text.split('\n');
+  const elements = [];
+  let currentList = [];
+  let listKey = 0;
+  
+  const flushList = () => {
+    if (currentList.length > 0) {
+      elements.push(
+        <ul key={`list-${listKey++}`} className="list-disc pl-5 my-3.5 space-y-2 text-xs text-slate-750 font-sans">
+          {currentList.map((item, idx) => (
+            <li key={idx} className="leading-relaxed">{parseInlineStyles(item)}</li>
+          ))}
+        </ul>
+      );
+      currentList = [];
+    }
+  };
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    
+    if (!trimmed) {
+      flushList();
+      continue;
+    }
+    
+    // Check if line is heading
+    if (trimmed.startsWith('### ')) {
+      flushList();
+      elements.push(<h4 key={i} className="text-sm font-bold text-slate-900 mt-5 mb-2.5 font-sans">{parseInlineStyles(trimmed.slice(4))}</h4>);
+    } else if (trimmed.startsWith('## ')) {
+      flushList();
+      elements.push(<h3 key={i} className="text-base font-black text-slate-900 mt-6 mb-3 font-sans">{parseInlineStyles(trimmed.slice(3))}</h3>);
+    } else if (trimmed.startsWith('# ')) {
+      flushList();
+      elements.push(<h2 key={i} className="text-lg font-black text-slate-900 mt-7 mb-4 font-sans">{parseInlineStyles(trimmed.slice(2))}</h2>);
+    } 
+    // Check if bullet point or numbered item
+    else if (trimmed.startsWith('* ') || trimmed.startsWith('- ') || /^\d+\.\s+/.test(trimmed)) {
+      const cleanLine = trimmed.replace(/^([\*\-]|(\d+\.))\s+/, '');
+      currentList.push(cleanLine);
+    } 
+    // Normal paragraph line
+    else {
+      flushList();
+      elements.push(<p key={i} className="leading-relaxed text-xs text-slate-700 my-2.5 font-sans">{parseInlineStyles(trimmed)}</p>);
+    }
+  }
+  
+  flushList();
+  return elements;
+};
+
+const parseInlineStyles = (text) => {
+  if (!text) return '';
+  
+  const tokens = [];
+  let currentIndex = 0;
+  const regex = /(\*\*.*?\*\*|`.*?`)/g;
+  let match;
+  
+  while ((match = regex.exec(text)) !== null) {
+    const matchIndex = match.index;
+    const matchText = match[0];
+    
+    if (matchIndex > currentIndex) {
+      tokens.push(text.slice(currentIndex, matchIndex));
+    }
+    
+    if (matchText.startsWith('**') && matchText.endsWith('**')) {
+      tokens.push(<strong key={matchIndex} className="font-extrabold text-slate-900">{matchText.slice(2, -2)}</strong>);
+    } else if (matchText.startsWith('`') && matchText.endsWith('`')) {
+      tokens.push(<code key={matchIndex} className="bg-slate-100 text-rose-600 px-1.5 py-0.5 rounded font-mono text-[11px]">{matchText.slice(1, -1)}</code>);
+    }
+    
+    currentIndex = regex.lastIndex;
+  }
+  
+  if (currentIndex < text.length) {
+    tokens.push(text.slice(currentIndex));
+  }
+  
+  return tokens.length > 0 ? tokens : text;
+};

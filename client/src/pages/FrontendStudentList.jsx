@@ -553,7 +553,7 @@ export default function FrontendStudentList() {
                     {visibleColumns.stack && (
                       <td className="hidden sm:table-cell px-3 py-2.5 text-xs text-slate-650">
                         <span className="font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 text-[10px]">
-                          {student.stack || 'Not Specified'}
+                          {student.stack || 'Frontend Development'}
                         </span>
                       </td>
                     )}
@@ -992,7 +992,7 @@ function FrontendStudentDetailModal({ onClose, student }) {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-slate-400 font-medium">Tech Stack</span>
-              <span className="text-slate-800 font-semibold">{student.stack || 'Not Specified'}</span>
+              <span className="text-slate-800 font-semibold">{student.stack || 'Frontend Development'}</span>
             </div>
             {student.statusReason && (
               <div className="flex justify-between text-sm">

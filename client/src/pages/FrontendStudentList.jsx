@@ -851,6 +851,12 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
                 <option value="">Select Stack</option>
                 <option value="MERN Stack">MERN Stack</option>
                 <option value="Frontend Development">Frontend Development</option>
+                <option value="React.js">React.js</option>
+                <option value="Angular">Angular</option>
+                <option value="Vue.js">Vue.js</option>
+                <option value="Next.js">Next.js</option>
+                <option value="UI/UX Design">UI/UX Design</option>
+                <option value="HTML / CSS / JavaScript">HTML / CSS / JavaScript</option>
               </select>
             </div>
           </div>

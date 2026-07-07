@@ -209,18 +209,20 @@ export default function StudentAiMentorship() {
     const trimmed = customSkillInput.trim();
     if (!trimmed) return;
     
+    const formatted = formatSkillName(trimmed);
+    
     const trackSkillsList = TRACK_SKILLS[selectedTrack] || [];
-    if (trackSkillsList.some(s => s.toLowerCase() === trimmed.toLowerCase()) || customSkills.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
+    if (trackSkillsList.some(s => s.toLowerCase() === formatted.toLowerCase()) || customSkills.some(s => s.toLowerCase() === formatted.toLowerCase())) {
       toast.error('Skill is already in the list.');
       return;
     }
     
-    setCustomSkills([...customSkills, trimmed]);
-    setSelectedSkills([...selectedSkills, trimmed]);
+    setCustomSkills([...customSkills, formatted]);
+    setSelectedSkills([...selectedSkills, formatted]);
     
     setSkillRatings({
       ...skillRatings,
-      [trimmed]: 3
+      [formatted]: 3
     });
     
     setCustomSkillInput('');
@@ -561,7 +563,7 @@ export default function StudentAiMentorship() {
                                   : 'bg-slate-100 border-transparent text-slate-650 hover:bg-slate-200'
                               }`}
                             >
-                              {skill} {isSelected ? '✓' : ''}
+                              {formatSkillName(skill)} {isSelected ? '✓' : ''}
                             </button>
                           );
                         })}
@@ -627,7 +629,7 @@ export default function StudentAiMentorship() {
                         const currentVal = skillRatings[skill] || 3;
                         return (
                           <div key={skill} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-slate-100 p-3 bg-slate-50/55 rounded-2xl">
-                            <span className="text-xs font-bold text-slate-700">{skill}</span>
+                             <span className="text-xs font-bold text-slate-700">{formatSkillName(skill)}</span>
                             <div className="flex items-center gap-1">
                               {[1, 2, 3, 4, 5].map(starVal => (
                                 <button
@@ -1522,4 +1524,23 @@ const parseInlineStyles = (text) => {
   }
   
   return tokens.length > 0 ? tokens : text;
+};
+
+const formatSkillName = (name) => {
+  if (!name) return '';
+  return name.split(' ').map(word => {
+    const lower = word.toLowerCase();
+    if (['sql', 'api', 'rest', 'db', 'html5', 'css3', 'mern', 'git', 'github'].includes(lower)) {
+      return word.toUpperCase();
+    }
+    if (lower === 'javascript') return 'JavaScript';
+    if (lower === 'typescript') return 'TypeScript';
+    if (lower === 'react.js') return 'React.js';
+    if (lower === 'node.js') return 'Node.js';
+    if (lower === 'express.js') return 'Express.js';
+    if (lower === 'mongodb') return 'MongoDB';
+    if (lower === 'postgresql') return 'PostgreSQL';
+    
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  }).join(' ');
 };

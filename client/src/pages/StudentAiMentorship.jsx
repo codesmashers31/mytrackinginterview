@@ -513,6 +513,15 @@ export default function StudentAiMentorship() {
           {/* Setup / Onboarding Input */}
           <div className="max-w-xl mx-auto">
             <SurfaceCard className="p-8 border border-slate-200 rounded-3xl bg-white shadow-md space-y-6">
+              {profile && (
+                <button
+                  type="button"
+                  onClick={() => setIsOnboarded(true)}
+                  className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-xl text-xs transition duration-200"
+                >
+                  ← Cancel & Back to Study Plan
+                </button>
+              )}
               {onboardStep === 1 && (
                 <>
                   <div className="text-center space-y-2">
@@ -599,7 +608,7 @@ export default function StudentAiMentorship() {
                         <button
                           type="button"
                           onClick={handleAddCustomSkill}
-                          className="px-4 py-2 bg-indigo-650 hover:bg-indigo-750 text-white rounded-xl text-xs font-bold transition shadow-sm h-10 flex items-center justify-center"
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-sm h-10 flex items-center justify-center"
                         >
                           + Add Skill
                         </button>
@@ -615,7 +624,7 @@ export default function StudentAiMentorship() {
                           setOnboardStep(2);
                         }
                       }}
-                      className="crm-btn-primary w-full py-3.5 font-bold flex items-center justify-center gap-2 text-sm shadow-md bg-gradient-to-r from-blue-650 to-indigo-650 rounded-xl"
+                      className="crm-btn-primary w-full py-3.5 font-bold flex items-center justify-center gap-2 text-sm shadow-md bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl"
                     >
                       Continue to Skill Ratings <ArrowRight size={16} />
                     </button>
@@ -674,7 +683,7 @@ export default function StudentAiMentorship() {
                       <button
                         type="button"
                         onClick={() => setOnboardStep(3)}
-                        className="crm-btn-primary flex-1 py-3.5 font-bold flex items-center justify-center gap-2 text-sm shadow-md bg-gradient-to-r from-blue-650 to-indigo-650 rounded-xl"
+                        className="crm-btn-primary flex-1 py-3.5 font-bold flex items-center justify-center gap-2 text-sm shadow-md bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl"
                       >
                         Continue to Settings <ArrowRight size={16} />
                       </button>
@@ -763,7 +772,7 @@ export default function StudentAiMentorship() {
                         type="button"
                         onClick={handleOnboardSubmit}
                         disabled={onboardSubmit}
-                        className="crm-btn-primary flex-1 py-3.5 font-bold flex items-center justify-center gap-2 text-sm shadow-md bg-gradient-to-r from-blue-650 to-indigo-650 rounded-xl"
+                        className="crm-btn-primary flex-1 py-3.5 font-bold flex items-center justify-center gap-2 text-sm shadow-md bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl"
                       >
                         {onboardSubmit ? (
                           'Initializing AI Journey...'
@@ -844,8 +853,7 @@ export default function StudentAiMentorship() {
 
       <div className="mt-6">
         {activeTab === 'study' && (
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2 space-y-6">
+          <div className="max-w-3xl mx-auto space-y-6">
               {dailyPlanError ? (
                 <SurfaceCard className="p-8 text-center border-rose-350 bg-rose-50/20">
                   <div className="mb-4 text-3xl">⚠️</div>
@@ -876,7 +884,7 @@ export default function StudentAiMentorship() {
                       </div>
                       <button
                         onClick={() => fetchDailyPlanForDay(selectedDay)}
-                        className="crm-btn-primary px-8 py-3 bg-gradient-to-r from-blue-650 to-indigo-650 font-bold rounded-xl flex items-center justify-center gap-2 mx-auto shadow-md"
+                        className="crm-btn-primary px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 font-bold rounded-xl flex items-center justify-center gap-2 mx-auto shadow-md"
                       >
                         <Play size={14} fill="currentColor" /> Generate Today's Topic
                       </button>
@@ -1251,78 +1259,6 @@ export default function StudentAiMentorship() {
                 );
               })()}
             </div>
-
-            {/* AI JOURNEY DASHBOARD (Right Column) */}
-            <div className="space-y-6">
-              <SurfaceCard className="p-6 border border-slate-200 bg-slate-900 text-white rounded-3xl relative overflow-hidden shadow-lg">
-                <div className="absolute top-[-10%] right-[-10%] h-36 w-36 rounded-full bg-blue-600/20 blur-2xl pointer-events-none" />
-                <h3 className="text-sm font-bold tracking-widest text-slate-400 uppercase border-b border-slate-800 pb-3 mb-4 flex items-center gap-2">
-                  <Sparkles size={16} className="text-indigo-400" />
-                  AI Journey Dashboard
-                </h3>
-                
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400 font-medium">Current Week</span>
-                    <span className="font-bold text-white bg-indigo-500/20 px-3 py-1 rounded-full border border-indigo-500/30">Week {currentWeek}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400 font-medium">Current Day</span>
-                    <span className="font-bold text-white bg-blue-500/20 px-3 py-1 rounded-full border border-blue-500/30">Day {currentDay}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400 font-medium">Learning Streak</span>
-                    <span className="font-bold text-white bg-amber-500/20 px-3 py-1 rounded-full border border-amber-500/30">🔥 {roadmap?.dailyStreak || 0} Days</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400 font-medium">Placement Readiness</span>
-                    <span className="font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/25">
-                      {readiness?.overallScore !== undefined ? `${readiness.overallScore}%` : 'N/A'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="border-t border-slate-800 mt-5 pt-5 space-y-3.5">
-                  <div>
-                    <div className="flex justify-between text-[11px] mb-1">
-                      <span className="text-slate-400">Roadmap Progress</span>
-                      <span className="font-bold text-white">{roadmap?.overallProgress || 0}%</span>
-                    </div>
-                    <div className="w-full bg-slate-850 h-2 rounded-full overflow-hidden">
-                      <div className="bg-indigo-50 h-full rounded-full transition-all duration-500" style={{ width: `${roadmap?.overallProgress || 0}%` }} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 pt-2 text-[10px]">
-                    <div className="bg-slate-850/50 p-2.5 rounded-xl border border-slate-800">
-                      <p className="text-slate-450 uppercase font-bold tracking-wider">Topics</p>
-                      <p className="text-lg font-black text-white mt-0.5">
-                        {dayProgress && (dayProgress.tasks.reading === 'Completed' ? 1 : 0) + (dayProgress.tasks.tech === 'Completed' ? 1 : 0)} Completed
-                      </p>
-                    </div>
-                    <div className="bg-slate-850/50 p-2.5 rounded-xl border border-slate-800">
-                      <p className="text-slate-450 uppercase font-bold tracking-wider">Tasks</p>
-                      <p className="text-lg font-black text-white mt-0.5">
-                        {dayProgress && (dayProgress.tasks.coding === 'Completed' ? 1 : 0) + (dayProgress.tasks.logical === 'Completed' ? 1 : 0)} Completed
-                      </p>
-                    </div>
-                    <div className="bg-slate-850/50 p-2.5 rounded-xl border border-slate-800">
-                      <p className="text-slate-450 uppercase font-bold tracking-wider">Assignments</p>
-                      <p className="text-lg font-black text-white mt-0.5">
-                        {dayProgress && ['Submitted', 'Completed', 'Reviewed'].includes(dayProgress.tasks.assignment) ? '1' : '0'} Completed
-                      </p>
-                    </div>
-                    <div className="bg-slate-850/50 p-2.5 rounded-xl border border-slate-800">
-                      <p className="text-slate-450 uppercase font-bold tracking-wider">Interview Prep</p>
-                      <p className="text-lg font-black text-white mt-0.5">
-                        {dayProgress && dayProgress.tasks.comm === 'Completed' ? 'Completed' : 'Pending'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </SurfaceCard>
-            </div>
-          </div>
         )}
 
         {/* ROADMAP TIMELINE VIEW */}

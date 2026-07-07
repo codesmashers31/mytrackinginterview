@@ -179,7 +179,7 @@ export default function TaskManagement() {
         )}
 
         {activeTab === 'assign' && (
-          <div className="max-w-4xl mx-auto">
+          <div className="w-full">
             <SurfaceCard className="p-8">
           <div className="mb-8 flex items-center gap-3">
             <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">

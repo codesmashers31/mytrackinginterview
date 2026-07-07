@@ -12,7 +12,7 @@ import {
   ChevronDown, ChevronUp
 } from 'lucide-react';
 
-const TRACKS = ['MERN Stack', 'Java Full Stack', 'Python Full Stack', 'Testing', 'Data Analytics', 'UI/UX'];
+const TRACKS = ['MERN Stack', 'Java Full Stack', 'Python Full Stack', 'Testing', 'Data Analytics', 'UI/UX', 'Frontend Development'];
 const LANGUAGES = [
   { value: 'English', label: 'English' },
   { value: 'Tamil', label: 'தமிழ் (Tamil)' },
@@ -27,7 +27,8 @@ const TRACK_SKILLS = {
   'Python Full Stack': ['HTML5', 'CSS3', 'JavaScript', 'Core Python', 'Django Framework', 'Flask Framework', 'SQL Database', 'PostgreSQL / MySQL', 'REST APIs', 'Git & GitHub', 'Data Structures & Algorithms'],
   'Data Analytics': ['SQL Database', 'Python Programming', 'Microsoft Excel (Advanced)', 'Tableau', 'Power BI', 'Statistics & Probability', 'Data Wrangling', 'Pandas & NumPy', 'Machine Learning Basics', 'Git'],
   'Testing': ['Manual Testing', 'Automation Testing', 'Selenium WebDriver', 'Java / Python Core', 'SQL Queries', 'API Testing (Postman)', 'TestNG / JUnit', 'Defect Tracking (Jira)', 'Git & GitHub'],
-  'UI/UX': ['User Research', 'User Persona Creation', 'Wireframing', 'Figma', 'Adobe XD', 'Interactive Prototyping', 'UI Design Patterns', 'Information Architecture', 'Usability Testing', 'Design Systems']
+  'UI/UX': ['User Research', 'User Persona Creation', 'Wireframing', 'Figma', 'Adobe XD', 'Interactive Prototyping', 'UI Design Patterns', 'Information Architecture', 'Usability Testing', 'Design Systems'],
+  'Frontend Development': ['HTML5', 'CSS3', 'JavaScript (ES6+)', 'React.js', 'Vue.js', 'TypeScript', 'REST APIs', 'Redux / State Management', 'Git & GitHub', 'Tailwind CSS / Bootstrap', 'Web Performance & SEO', 'Responsive Design']
 };
 
 export default function StudentAiMentorship() {

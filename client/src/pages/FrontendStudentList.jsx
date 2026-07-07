@@ -850,8 +850,7 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
               <select value={formData.stack} onChange={e => setFormData({...formData, stack: e.target.value})} className="crm-input">
                 <option value="">Select Stack</option>
                 <option value="MERN Stack">MERN Stack</option>
-                <option value="Java Full Stack">Java Full Stack</option>
-                <option value="Python Full Stack">Python Full Stack</option>
+                <option value="Frontend Development">Frontend Development</option>
               </select>
             </div>
           </div>

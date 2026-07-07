@@ -8,7 +8,8 @@ import { buildApiUrl } from '../utils/api';
 import { 
   BookOpen, Code, FileText, CheckSquare, Calendar, Award, 
   ChevronRight, Sparkles, CheckCircle2, Clock, Globe, ArrowRight, 
-  Edit2, Lock, User, Key, CheckSquare as CheckIcon, ShieldCheck, Play
+  Edit2, Lock, User, Key, CheckSquare as CheckIcon, ShieldCheck, Play,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 
 const TRACKS = ['MERN Stack', 'Java Full Stack', 'Python Full Stack', 'Testing', 'Data Analytics', 'UI/UX'];
@@ -63,6 +64,10 @@ export default function StudentAiMentorship() {
   const [dayProgress, setDayProgress] = useState(null);
   const [submissionLink, setSubmissionLink] = useState('');
   const [submittingAssignment, setSubmittingAssignment] = useState(false);
+  const [completingTopic, setCompletingTopic] = useState(false);
+  const [completingTask, setCompletingTask] = useState(false);
+  const [completingInterview, setCompletingInterview] = useState(false);
+  const [unlockingNextDay, setUnlockingNextDay] = useState(false);
 
   // Weekly Assessment State
   const [assessmentScore, setAssessmentScore] = useState(null);
@@ -314,6 +319,7 @@ export default function StudentAiMentorship() {
   };
 
   const handleCompleteTopicStep = async () => {
+    setCompletingTopic(true);
     try {
       await fetch(buildApiUrl('/ai/toggle-task'), {
         method: 'POST',
@@ -333,10 +339,13 @@ export default function StudentAiMentorship() {
       }
     } catch (err) {
       toast.error('Failed to complete topic step.');
+    } finally {
+      setCompletingTopic(false);
     }
   };
 
   const handleCompleteTaskStep = async () => {
+    setCompletingTask(true);
     try {
       await fetch(buildApiUrl('/ai/toggle-task'), {
         method: 'POST',
@@ -356,10 +365,13 @@ export default function StudentAiMentorship() {
       }
     } catch (err) {
       toast.error('Failed to complete practice task step.');
+    } finally {
+      setCompletingTask(false);
     }
   };
 
   const handleCompleteInterviewStep = async () => {
+    setCompletingInterview(true);
     try {
       const res = await fetch(buildApiUrl('/ai/toggle-task'), {
         method: 'POST',
@@ -374,10 +386,13 @@ export default function StudentAiMentorship() {
       }
     } catch (err) {
       toast.error('Failed to complete interview preparation.');
+    } finally {
+      setCompletingInterview(false);
     }
   };
 
   const handleUnlockNextDay = async () => {
+    setUnlockingNextDay(true);
     try {
       const res = await fetch(buildApiUrl('/ai/unlock-next-day'), {
         method: 'POST',
@@ -396,6 +411,8 @@ export default function StudentAiMentorship() {
       }
     } catch (err) {
       toast.error('Failed to unlock next day.');
+    } finally {
+      setUnlockingNextDay(false);
     }
   };
 
@@ -853,7 +870,7 @@ export default function StudentAiMentorship() {
 
       <div className="mt-6">
         {activeTab === 'study' && (
-          <div className="max-w-3xl mx-auto space-y-6">
+          <div className="space-y-6">
               {dailyPlanError ? (
                 <SurfaceCard className="p-8 text-center border-rose-350 bg-rose-50/20">
                   <div className="mb-4 text-3xl">⚠️</div>
@@ -959,7 +976,10 @@ export default function StudentAiMentorship() {
                           </span>
                           <span className="text-sm">Phase 1: Explanation & Core Notes</span>
                         </div>
-                        <span className="text-[10px] uppercase font-bold text-slate-450">{step1Done ? 'Completed' : 'Pending'}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] uppercase font-bold text-slate-450">{step1Done ? 'Completed' : 'Pending'}</span>
+                          {expandStep1 ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+                        </div>
                       </button>
 
                       {expandStep1 && (
@@ -1017,10 +1037,21 @@ export default function StudentAiMentorship() {
                           {currentStep === 1 && !isPreviousDay && (
                             <button 
                               type="button"
+                              disabled={completingTopic}
                               onClick={handleCompleteTopicStep}
-                              className="crm-btn-primary w-full py-3 font-bold bg-blue-600 text-white rounded-xl shadow-xs"
+                              className="crm-btn-primary w-full py-3 font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
-                              Mark Topic Completed & Proceed
+                              {completingTopic ? (
+                                <>
+                                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                  </svg>
+                                  Saving...
+                                </>
+                              ) : (
+                                'Mark Topic Completed & Proceed'
+                              )}
                             </button>
                           )}
                         </div>
@@ -1041,7 +1072,10 @@ export default function StudentAiMentorship() {
                             </span>
                             <span className="text-sm">Phase 2: Practice Task & Analytical Puzzles</span>
                           </div>
-                          <span className="text-[10px] uppercase font-bold text-slate-450">{step2Done ? 'Completed' : 'Pending'}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] uppercase font-bold text-slate-450">{step2Done ? 'Completed' : 'Pending'}</span>
+                            {expandStep2 ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+                          </div>
                         </button>
 
                         {expandStep2 && (
@@ -1069,10 +1103,21 @@ export default function StudentAiMentorship() {
                             {currentStep === 2 && !isPreviousDay && (
                               <button 
                                 type="button"
+                                disabled={completingTask}
                                 onClick={handleCompleteTaskStep}
-                                className="crm-btn-primary w-full py-3 font-bold bg-blue-600 text-white rounded-xl shadow-xs"
+                                className="crm-btn-primary w-full py-3 font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                               >
-                                Submit Practice Tasks & Proceed
+                                {completingTask ? (
+                                  <>
+                                    <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                    </svg>
+                                    Saving...
+                                  </>
+                                ) : (
+                                  'Submit Practice Tasks & Proceed'
+                                )}
                               </button>
                             )}
                           </div>
@@ -1094,9 +1139,12 @@ export default function StudentAiMentorship() {
                             </span>
                             <span className="text-sm">Phase 3: Daily Assignment Project</span>
                           </div>
-                          <span className="text-[10px] uppercase font-bold text-slate-450">
-                            {dayProgress ? dayProgress.tasks.assignment : 'Pending'}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] uppercase font-bold text-slate-450">
+                              {dayProgress ? dayProgress.tasks.assignment : 'Pending'}
+                            </span>
+                            {expandStep3 ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+                          </div>
                         </button>
 
                         {expandStep3 && (
@@ -1137,9 +1185,19 @@ export default function StudentAiMentorship() {
                                   <button
                                     type="submit"
                                     disabled={submittingAssignment}
-                                    className="crm-btn-primary px-6 h-10 font-bold flex-none"
+                                    className="crm-btn-primary px-6 h-10 font-bold flex-none flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
-                                    {submittingAssignment ? 'Uploading...' : 'Submit Link'}
+                                    {submittingAssignment ? (
+                                      <>
+                                        <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                        </svg>
+                                        Uploading...
+                                      </>
+                                    ) : (
+                                      'Submit Link'
+                                    )}
                                   </button>
                                 </div>
                               </form>
@@ -1171,7 +1229,10 @@ export default function StudentAiMentorship() {
                             </span>
                             <span className="text-sm">Phase 4: Placement Preparation Questions (5 HR, 10 Tech)</span>
                           </div>
-                          <span className="text-[10px] uppercase font-bold text-slate-450">{step4Done ? 'Completed' : 'Pending'}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] uppercase font-bold text-slate-450">{step4Done ? 'Completed' : 'Pending'}</span>
+                            {expandStep4 ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+                          </div>
                         </button>
 
                         {expandStep4 && (
@@ -1227,10 +1288,21 @@ export default function StudentAiMentorship() {
                             {currentStep === 4 && !isPreviousDay && (
                               <button 
                                 type="button"
+                                disabled={completingInterview}
                                 onClick={handleCompleteInterviewStep}
-                                className="crm-btn-primary w-full py-3 font-bold bg-blue-600 text-white rounded-xl shadow-xs"
+                                className="crm-btn-primary w-full py-3 font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                               >
-                                Mark Interview Preparation Completed
+                                {completingInterview ? (
+                                  <>
+                                    <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                    </svg>
+                                    Saving...
+                                  </>
+                                ) : (
+                                  'Mark Interview Preparation Completed'
+                                )}
                               </button>
                             )}
                           </div>
@@ -1248,10 +1320,23 @@ export default function StudentAiMentorship() {
                         </p>
                         <button
                           type="button"
+                          disabled={unlockingNextDay}
                           onClick={handleUnlockNextDay}
-                          className="crm-btn-primary px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-650 font-black shadow-md rounded-xl flex items-center justify-center gap-2 mx-auto animate-bounce"
+                          className="crm-btn-primary px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-650 font-black shadow-md rounded-xl flex items-center justify-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <ShieldCheck size={16} /> Continue To Next Day
+                          {unlockingNextDay ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                              Unlocking...
+                            </>
+                          ) : (
+                            <>
+                              <ShieldCheck size={16} /> Continue To Next Day
+                            </>
+                          )}
                         </button>
                       </SurfaceCard>
                     )}

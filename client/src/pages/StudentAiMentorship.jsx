@@ -1053,14 +1053,14 @@ export default function StudentAiMentorship() {
                                 </h5>
                                 <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded bg-blue-50 text-blue-800">{dailyPlan.codingTask?.difficulty}</span>
                               </div>
-                              <p className="leading-relaxed text-slate-500">{dailyPlan.codingTask?.description}</p>
+                              <div className="leading-relaxed text-slate-500 space-y-1">{renderMarkdown(dailyPlan.codingTask?.description)}</div>
                             </div>
 
                             <div className="border border-slate-200/60 rounded-xl bg-white p-4 space-y-2">
                               <h5 className="font-bold text-slate-800 flex items-center gap-1.5">
                                 <Award size={14} className="text-blue-500" /> Logical Puzzle: {dailyPlan.logicalTask?.title}
                               </h5>
-                              <p className="leading-relaxed text-slate-500">{dailyPlan.logicalTask?.description}</p>
+                              <div className="leading-relaxed text-slate-500 space-y-1">{renderMarkdown(dailyPlan.logicalTask?.description)}</div>
                               {dailyPlan.logicalTask?.inputOutput && (
                                 <pre className="bg-slate-900 text-slate-200 p-3 rounded-lg font-mono text-[10px] overflow-x-auto mt-2">{dailyPlan.logicalTask.inputOutput}</pre>
                               )}
@@ -1103,13 +1103,13 @@ export default function StudentAiMentorship() {
                           <div className="p-5 border-t border-slate-100 bg-slate-50/20 space-y-4 text-xs text-slate-650">
                             <div className="border border-slate-200/60 rounded-xl bg-white p-4 space-y-3">
                               <h5 className="font-bold text-slate-800">{dailyPlan.assignment?.title}</h5>
-                              <p className="leading-relaxed text-slate-500">{dailyPlan.assignment?.description}</p>
+                              <div className="leading-relaxed text-slate-500 space-y-1">{renderMarkdown(dailyPlan.assignment?.description)}</div>
                               
                               {dailyPlan.assignment?.objectives && dailyPlan.assignment.objectives.length > 0 && (
                                 <div className="space-y-1 pt-1">
                                   <p className="font-bold text-slate-700 text-[11px]">Core Deliverables:</p>
                                   <ul className="list-disc pl-4 space-y-0.5 text-slate-500 text-[11px]">
-                                    {dailyPlan.assignment.objectives.map((obj, i) => <li key={i}>{obj}</li>)}
+                                    {dailyPlan.assignment.objectives.map((obj, i) => <li key={i}>{parseInlineStyles(obj)}</li>)}
                                   </ul>
                                 </div>
                               )}
@@ -1117,7 +1117,7 @@ export default function StudentAiMentorship() {
                               {dailyPlan.assignment?.expectedOutput && (
                                 <div className="pt-1">
                                   <p className="font-bold text-slate-700 text-[11px]">Expected Output:</p>
-                                  <p className="text-slate-500 italic text-[11px]">{dailyPlan.assignment.expectedOutput}</p>
+                                  <div className="text-slate-500 italic text-[11px] space-y-1">{renderMarkdown(dailyPlan.assignment.expectedOutput)}</div>
                                 </div>
                               )}
                             </div>
@@ -1185,7 +1185,7 @@ export default function StudentAiMentorship() {
                                   <div key={idx} className="border border-slate-200 rounded-xl bg-white p-3 space-y-2">
                                     <p className="font-bold text-slate-800">Q: {q.question}</p>
                                     {isRevealed ? (
-                                      <p className="text-indigo-700 bg-indigo-50/30 p-2.5 rounded-lg italic">Hint/Guidelines: {q.hint}</p>
+                                      <div className="text-indigo-700 bg-indigo-50/30 p-2.5 rounded-lg italic space-y-1">Hint/Guidelines: {renderMarkdown(q.hint)}</div>
                                     ) : (
                                       <button 
                                         type="button"
@@ -1209,7 +1209,7 @@ export default function StudentAiMentorship() {
                                   <div key={idx} className="border border-slate-200 rounded-xl bg-white p-3 space-y-2">
                                     <p className="font-bold text-slate-800">Q: {q.question}</p>
                                     {isRevealed ? (
-                                      <p className="text-indigo-700 bg-indigo-50/30 p-2.5 rounded-lg italic">Hint/Guidelines: {q.hint}</p>
+                                      <div className="text-indigo-700 bg-indigo-50/30 p-2.5 rounded-lg italic space-y-1">Hint/Guidelines: {renderMarkdown(q.hint)}</div>
                                     ) : (
                                       <button 
                                         type="button"

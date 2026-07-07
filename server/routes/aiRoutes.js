@@ -424,7 +424,7 @@ router.get('/daily-plan', authMiddleware, async (req, res) => {
             duration: plan.assignment.expectedDuration || '90 minutes',
             deadline
           },
-          interviewQuestions: plan.interviewPrep || []
+          interviewQuestions: plan.interviewQuestions || plan.interviewPrep || []
         });
 
         await dailyTopic.save();

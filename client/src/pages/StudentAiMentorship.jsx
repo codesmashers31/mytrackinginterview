@@ -21,12 +21,12 @@ const LANGUAGES = [
 ];
 
 const TRACK_SKILLS = {
-  'MERN Stack': ['HTML', 'CSS', 'JavaScript', 'React', 'Node.js', 'MongoDB', 'SQL', 'Git'],
-  'Java Full Stack': ['HTML', 'CSS', 'JavaScript', 'Java Core', 'Spring Boot', 'Hibernate or SQL', 'Git'],
-  'Python Full Stack': ['HTML', 'CSS', 'JavaScript', 'Python Core', 'Django or Flask', 'SQL Database', 'Git'],
-  'Data Analytics': ['SQL Database', 'Python Programming', 'Microsoft Excel', 'Tableau or PowerBI', 'Statistics', 'Git'],
-  'Testing': ['Manual Testing', 'Automation Testing', 'Selenium WebDriver', 'SQL Queries', 'Java or Python', 'Git'],
-  'UI/UX': ['User Research', 'Wireframing', 'Figma or Adobe XD', 'Prototyping', 'UI Design Patterns', 'Information Architecture', 'Git']
+  'MERN Stack': ['HTML5', 'CSS3', 'JavaScript (ES6+)', 'React.js', 'Node.js', 'Express.js', 'MongoDB', 'SQL Database', 'REST APIs', 'Redux / Context API', 'Git & GitHub', 'Tailwind CSS / Bootstrap'],
+  'Java Full Stack': ['HTML5', 'CSS3', 'JavaScript', 'Core Java', 'Advanced Java', 'Spring Boot', 'Spring MVC', 'Hibernate ORM', 'SQL / MySQL', 'RESTful Web Services', 'Microservices', 'Git & GitHub', 'Maven / Gradle'],
+  'Python Full Stack': ['HTML5', 'CSS3', 'JavaScript', 'Core Python', 'Django Framework', 'Flask Framework', 'SQL Database', 'PostgreSQL / MySQL', 'REST APIs', 'Git & GitHub', 'Data Structures & Algorithms'],
+  'Data Analytics': ['SQL Database', 'Python Programming', 'Microsoft Excel (Advanced)', 'Tableau', 'Power BI', 'Statistics & Probability', 'Data Wrangling', 'Pandas & NumPy', 'Machine Learning Basics', 'Git'],
+  'Testing': ['Manual Testing', 'Automation Testing', 'Selenium WebDriver', 'Java / Python Core', 'SQL Queries', 'API Testing (Postman)', 'TestNG / JUnit', 'Defect Tracking (Jira)', 'Git & GitHub'],
+  'UI/UX': ['User Research', 'User Persona Creation', 'Wireframing', 'Figma', 'Adobe XD', 'Interactive Prototyping', 'UI Design Patterns', 'Information Architecture', 'Usability Testing', 'Design Systems']
 };
 
 export default function StudentAiMentorship() {
@@ -47,9 +47,12 @@ export default function StudentAiMentorship() {
   const [onboardStep, setOnboardStep] = useState(1);
   const [selectedTrack, setSelectedTrack] = useState('MERN Stack');
   const [selectedSkills, setSelectedSkills] = useState([]);
+  const [customSkills, setCustomSkills] = useState([]);
+  const [customSkillInput, setCustomSkillInput] = useState('');
   const [dailyHours, setDailyHours] = useState(4);
   const [skillRatings, setSkillRatings] = useState({});
   const [onboardSubmit, setOnboardSubmit] = useState(false);
+  const [generatingPlan, setGeneratingPlan] = useState(false);
 
   // Active Day Progress State
   const [selectedDay, setSelectedDay] = useState(1);
@@ -127,6 +130,7 @@ export default function StudentAiMentorship() {
     setDailyPlanError(null);
     setDailyPlan(null);
     setDayProgress(null);
+    setGeneratingPlan(true);
     try {
       const res = await fetch(buildApiUrl(`/ai/daily-plan?day=${day}`), { headers: authHeaders() });
       if (res.ok) {
@@ -144,6 +148,8 @@ export default function StudentAiMentorship() {
       }
     } catch (err) {
       setDailyPlanError('Network error loading study plan.');
+    } finally {
+      setGeneratingPlan(false);
     }
   };
 
@@ -181,6 +187,7 @@ export default function StudentAiMentorship() {
 
   const handleTrackChange = (track) => {
     setSelectedTrack(track);
+    setCustomSkills([]);
     const skills = TRACK_SKILLS[track] || [];
     setSelectedSkills(skills);
     
@@ -191,6 +198,28 @@ export default function StudentAiMentorship() {
       }
     });
     setSkillRatings(newRatings);
+  };
+
+  const handleAddCustomSkill = () => {
+    const trimmed = customSkillInput.trim();
+    if (!trimmed) return;
+    
+    const trackSkillsList = TRACK_SKILLS[selectedTrack] || [];
+    if (trackSkillsList.some(s => s.toLowerCase() === trimmed.toLowerCase()) || customSkills.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error('Skill is already in the list.');
+      return;
+    }
+    
+    setCustomSkills([...customSkills, trimmed]);
+    setSelectedSkills([...selectedSkills, trimmed]);
+    
+    setSkillRatings({
+      ...skillRatings,
+      [trimmed]: 3
+    });
+    
+    setCustomSkillInput('');
+    toast.success(`"${trimmed}" added successfully!`);
   };
 
   const handleOnboardSubmit = async (e) => {
@@ -522,12 +551,12 @@ export default function StudentAiMentorship() {
                       <label className="crm-label text-slate-900 font-sans font-bold block mb-3 text-sm">
                         Select Familiar Skills
                       </label>
-                      <p className="text-[11px] text-slate-500 mb-4 leading-relaxed">
+                      <p className="text-[11px] text-slate-500 mb-4 leading-relaxed font-sans">
                         Toggle skills you have some prior knowledge or basic understanding in. Unselected skills will not need rating.
                       </p>
                       
                       <div className="flex flex-wrap gap-2">
-                        {(TRACK_SKILLS[selectedTrack] || []).map(skill => {
+                        {[...(TRACK_SKILLS[selectedTrack] || []), ...customSkills].map(skill => {
                           const isSelected = selectedSkills.includes(skill);
                           return (
                             <button
@@ -542,14 +571,38 @@ export default function StudentAiMentorship() {
                               }}
                               className={`px-3.5 py-2 text-xs font-bold rounded-xl border transition-all ${
                                 isSelected 
-                                  ? 'bg-blue-650 border-blue-600 text-white shadow-xs' 
-                                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent shadow-xs scale-102' 
+                                  : 'bg-slate-100 border-transparent text-slate-650 hover:bg-slate-200'
                               }`}
                             >
                               {skill} {isSelected ? '✓' : ''}
                             </button>
                           );
                         })}
+                      </div>
+
+                      {/* Custom Skill Input */}
+                      <div className="flex gap-2 mt-4 items-center">
+                        <input
+                          type="text"
+                          value={customSkillInput}
+                          onChange={e => setCustomSkillInput(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddCustomSkill();
+                            }
+                          }}
+                          className="crm-input flex-1 h-10 py-1.5 px-3.5 text-xs rounded-xl border border-slate-200 focus:bg-white"
+                          placeholder="Add custom skill (e.g. Docker, TypeScript)"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddCustomSkill}
+                          className="px-4 py-2 bg-indigo-650 hover:bg-indigo-750 text-white rounded-xl text-xs font-bold transition shadow-sm h-10 flex items-center justify-center"
+                        >
+                          + Add Skill
+                        </button>
                       </div>
                     </div>
 
@@ -802,21 +855,33 @@ export default function StudentAiMentorship() {
                 </SurfaceCard>
               ) : !dailyPlan ? (
                 <SurfaceCard className="p-8 text-center border-slate-200 bg-white rounded-3xl shadow-sm space-y-6">
-                  <div className="text-center space-y-2">
-                    <div className="p-3 bg-blue-50 text-blue-600 rounded-full w-fit mx-auto animate-pulse">
-                      <Sparkles size={28} />
+                  {generatingPlan ? (
+                    <div className="py-6 space-y-4">
+                      <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent mx-auto" />
+                      <h3 className="text-lg font-bold text-slate-900">AI Mentor is Preparing Today's Content...</h3>
+                      <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                        This takes about 10-15 seconds. We are building personalized technical notes, coding challenges, aptitude puzzles, and placement preparation questions for you.
+                      </p>
                     </div>
-                    <h3 className="text-xl font-bold text-slate-900">Today's Topic: {roadmap?.stages[0]?.weeks[0]?.topics[0] || 'Getting Started'}</h3>
-                    <p className="text-xs text-slate-500">
-                      Your AI Mentor is ready. Click below to compile today's technical study notes, practice challenges, assignments, and interview questions.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => fetchDailyPlanForDay(selectedDay)}
-                    className="crm-btn-primary px-8 py-3 bg-gradient-to-r from-blue-650 to-indigo-650 font-bold rounded-xl flex items-center justify-center gap-2 mx-auto shadow-md"
-                  >
-                    <Play size={14} fill="currentColor" /> Generate Today's Topic
-                  </button>
+                  ) : (
+                    <>
+                      <div className="text-center space-y-2">
+                        <div className="p-3 bg-blue-50 text-blue-600 rounded-full w-fit mx-auto animate-pulse">
+                          <Sparkles size={28} />
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900">Today's Topic: {roadmap?.stages[0]?.weeks[0]?.topics[0] || 'Getting Started'}</h3>
+                        <p className="text-xs text-slate-500">
+                          Your AI Mentor is ready. Click below to compile today's technical study notes, practice challenges, assignments, and interview questions.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => fetchDailyPlanForDay(selectedDay)}
+                        className="crm-btn-primary px-8 py-3 bg-gradient-to-r from-blue-650 to-indigo-650 font-bold rounded-xl flex items-center justify-center gap-2 mx-auto shadow-md"
+                      >
+                        <Play size={14} fill="currentColor" /> Generate Today's Topic
+                      </button>
+                    </>
+                  )}
                 </SurfaceCard>
               ) : dailyPlan.isAssessmentDay ? (
                 <SurfaceCard className="p-8 text-center border-blue-200 bg-blue-50/10 rounded-3xl shadow-sm">
@@ -846,12 +911,26 @@ export default function StudentAiMentorship() {
                   </div>
                 </SurfaceCard>
               ) : (() => {
+                const isPreviousDay = selectedDay < currentDay;
                 const step1Done = isPreviousDay || (dayProgress?.tasks?.reading === 'Completed' && dayProgress?.tasks?.tech === 'Completed');
                 const step2Done = isPreviousDay || (dayProgress?.tasks?.coding === 'Completed' && dayProgress?.tasks?.logical === 'Completed');
                 const step3Done = isPreviousDay || ['Submitted', 'Completed', 'Reviewed'].includes(dayProgress?.tasks?.assignment);
                 const step4Done = isPreviousDay || (dayProgress?.tasks?.comm === 'Completed');
                 
-                const currentStep = isPreviousDay ? 5 : activeStep;
+                let currentStep = 1;
+                if (isPreviousDay) {
+                  currentStep = 5;
+                } else if (!step1Done) {
+                  currentStep = 1;
+                } else if (!step2Done) {
+                  currentStep = 2;
+                } else if (!step3Done) {
+                  currentStep = 3;
+                } else if (!step4Done) {
+                  currentStep = 4;
+                } else {
+                  currentStep = 5;
+                }
 
                 const questionsList = dailyPlan.interviewQuestions || [];
                 const hrQuestions = questionsList.slice(0, 5);

@@ -192,7 +192,7 @@ export default function Settings() {
           </SurfaceCard>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 xl:max-h-[calc(100vh-230px)] xl:overflow-y-auto xl:pr-4 custom-scrollbar xl:pb-6">
           {userRole === 'student' && (
             <SurfaceCard className="p-5 md:p-6">
               <div className="flex items-start justify-between gap-4 mb-6">

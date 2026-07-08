@@ -623,19 +623,37 @@ export default function TaskList({ isEmbedded = false, onSwitchTab }) {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-slate-800 text-xs leading-relaxed">{question.question}</p>
-                          {question.remarks && (
-                            <div className="mt-2 bg-slate-50 border border-slate-100 rounded-lg p-2.5 flex gap-2 text-xs">
-                              <MessageSquare size={14} className="text-slate-400 shrink-0 mt-0.5" />
-                              <div className="text-slate-700 text-[11px] truncate-3-lines">
-                                <span className="font-bold text-slate-900 mr-1.5">Student Notes:</span>
-                                {question.remarks.startsWith('http') ? (
-                                  <a href={question.remarks} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline break-all">{question.remarks}</a>
-                                ) : (
-                                  <span className="italic">{question.remarks}</span>
-                                )}
-                              </div>
+                          <div className="mt-3 bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-2">
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-550 uppercase tracking-wider">
+                              <MessageSquare size={12} className="text-slate-400" />
+                              Student Notes / Feedback Remarks
                             </div>
-                          )}
+                            <input
+                              type="text"
+                              className="w-full h-8 px-2.5 text-xs bg-white rounded-lg border border-slate-200 focus:outline-hidden focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                              placeholder="No notes or feedback registered yet..."
+                              value={question.remarks || ''}
+                              onChange={(event) => {
+                                setSelectedTask(prev => {
+                                  if (!prev) return prev;
+                                  const nextQuestions = prev.questions.map((item, idx) => 
+                                    idx === index ? { ...item, remarks: event.target.value } : item
+                                  );
+                                  return { ...prev, questions: nextQuestions };
+                                });
+                              }}
+                            />
+                            {question.remarks && question.remarks.trim().startsWith('http') && (
+                              <a 
+                                href={question.remarks.trim()} 
+                                target="_blank" 
+                                rel="noreferrer" 
+                                className="inline-flex items-center gap-1 text-[10px] text-blue-600 hover:underline font-bold mt-1"
+                              >
+                                Open Submission Link ↗
+                              </a>
+                            )}
+                          </div>
                         </div>
                       </div>
                       

@@ -168,27 +168,29 @@ export default function Settings() {
       <SectionTabs items={[{ label: 'Platform Settings', active: true }]} />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[320px_1fr]">
-        <SurfaceCard className="p-5 md:p-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-[linear-gradient(135deg,#dbeafe,#e0e7ff)] text-blue-700">
-              <UserCircle2 size={32} />
+        <div className="xl:sticky xl:top-6 self-start">
+          <SurfaceCard className="p-5 md:p-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-[linear-gradient(135deg,#dbeafe,#e0e7ff)] text-blue-700">
+                <UserCircle2 size={32} />
+              </div>
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-semibold text-slate-955">{currentName}</h2>
+                <p className="truncate text-sm text-slate-500">{currentEmail}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h2 className="truncate text-lg font-semibold text-slate-955">{currentName}</h2>
-              <p className="truncate text-sm text-slate-500">{currentEmail}</p>
-            </div>
-          </div>
 
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Role</p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">{userRole === 'admin' ? 'Administrator' : 'Student'}</p>
-            <p className="mt-1 text-sm text-slate-500">
-              {userRole === 'admin'
-                ? 'Full dashboard access with permission to manage student records and platform configuration.'
-                : 'Student task account with access to assigned tasks and progress updates.'}
-            </p>
-          </div>
-        </SurfaceCard>
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Role</p>
+              <p className="mt-2 text-sm font-semibold text-slate-900">{userRole === 'admin' ? 'Administrator' : 'Student'}</p>
+              <p className="mt-1 text-sm text-slate-500">
+                {userRole === 'admin'
+                  ? 'Full dashboard access with permission to manage student records and platform configuration.'
+                  : 'Student task account with access to assigned tasks and progress updates.'}
+              </p>
+            </div>
+          </SurfaceCard>
+        </div>
 
         <div className="space-y-6">
           {userRole === 'student' && (

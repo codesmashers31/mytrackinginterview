@@ -502,15 +502,15 @@ export default function StudentDashboard() {
                     <span className="text-[10px] text-slate-400 mt-0.5 block">{stage.desc}</span>
 
                     {/* Interactive Stage 4 Toggle */}
-                    {stage.id === 4 && (
+                    {stage.id === 4 && !isLocked && (
                       <div className="mt-2.5">
                         <button
                           type="button"
                           onClick={handleToggleWillingness}
-                          className={`px-3 py-1 text-[10px] font-extrabold uppercase rounded-lg border transition-all ${
+                          className={`px-3 py-1.5 text-[10px] font-extrabold uppercase rounded-lg border transition-all ${
                             isWilling 
-                              ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/20' 
-                              : 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 shadow-md animate-bounce'
+                              ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/20 cursor-pointer' 
+                              : 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 hover:scale-105 shadow-sm cursor-pointer'
                           }`}
                         >
                           {isWilling ? 'Willingness: YES' : 'Click to Register'}

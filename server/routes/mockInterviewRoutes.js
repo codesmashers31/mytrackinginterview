@@ -38,8 +38,8 @@ router.get('/availability', authMiddleware, async (req, res) => {
 // Add a new availability block
 router.post('/availability', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    if (!['admin', 'coordinator', 'placement'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied. Staff privileges required.' });
     }
     const { date, startTime, endTime } = req.body;
     if (!date || !startTime || !endTime) {
@@ -66,8 +66,8 @@ router.post('/availability', authMiddleware, async (req, res) => {
 // Delete an availability block
 router.delete('/availability/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    if (!['admin', 'coordinator', 'placement'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied. Staff privileges required.' });
     }
     const availability = await MockAvailability.findByIdAndDelete(req.params.id);
     if (!availability) {
@@ -82,8 +82,8 @@ router.delete('/availability/:id', authMiddleware, async (req, res) => {
 // Update an availability block
 router.put('/availability/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    if (!['admin', 'coordinator', 'placement'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied. Staff privileges required.' });
     }
     const { date, startTime, endTime } = req.body;
     if (!date || !startTime || !endTime) {
@@ -117,8 +117,8 @@ router.put('/availability/:id', authMiddleware, async (req, res) => {
 // Admin: Get all bookings (can filter by date day-wise)
 router.get('/bookings', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    if (!['admin', 'coordinator', 'placement'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied. Staff privileges required.' });
     }
     const { date } = req.query;
     const filter = {};
@@ -133,8 +133,8 @@ router.get('/bookings', authMiddleware, async (req, res) => {
 // Admin: Submit feedback for a booking (auto-completes the booking)
 router.put('/bookings/:id/feedback', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    if (!['admin', 'coordinator', 'placement'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied. Staff privileges required.' });
     }
     const { score, strengths, improvements, remarks, status } = req.body;
     const booking = await MockInterview.findById(req.params.id);
@@ -170,8 +170,8 @@ router.put('/bookings/:id/feedback', authMiddleware, async (req, res) => {
 // Admin: Update general booking status (Scheduled, Cancelled, Completed)
 router.put('/bookings/:id/status', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    if (!['admin', 'coordinator', 'placement'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied. Staff privileges required.' });
     }
     const { status } = req.body;
     const booking = await MockInterview.findByIdAndUpdate(
@@ -191,8 +191,8 @@ router.put('/bookings/:id/status', authMiddleware, async (req, res) => {
 // Admin: Update general booking details (date, startTime, duration, status)
 router.put('/bookings/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    if (!['admin', 'coordinator', 'placement'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied. Staff privileges required.' });
     }
     const { date, startTime, duration, status } = req.body;
     const booking = await MockInterview.findById(req.params.id);
@@ -231,8 +231,8 @@ router.put('/bookings/:id', authMiddleware, async (req, res) => {
 // Admin: Delete a booking completely
 router.delete('/bookings/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    if (!['admin', 'coordinator', 'placement'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied. Staff privileges required.' });
     }
     const booking = await MockInterview.findByIdAndDelete(req.params.id);
     if (!booking) {

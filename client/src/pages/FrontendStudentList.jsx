@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, Download, Upload, Plus, Edit, Eye, Trash2, X, ChevronLeft, ChevronRight,
@@ -18,6 +18,8 @@ export default function FrontendStudentList() {
   const [searchTerm, setSearchTerm] = useState('');
   const searchTimerRef = useRef(null);
   const [statusFilter, setStatusFilter] = useState('All');
+  const [batchFilter, setBatchFilter] = useState('All');
+  const [yearFilter, setYearFilter] = useState('All');
   const [sortBy, setSortBy] = useState('batch-asc');
   
   // Modals
@@ -88,6 +90,24 @@ export default function FrontendStudentList() {
   useEffect(() => {
     fetchStudents();
   }, [statusFilter]);
+
+  const uniqueBatches = useMemo(() => {
+    const batches = students
+      .map(s => String(s.batch || '').trim())
+      .filter(Boolean);
+    return ['All', ...new Set(batches)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [students]);
+
+  const uniqueYears = useMemo(() => {
+    const years = students
+      .map(s => String(s.passedOutYear || '').trim())
+      .filter(Boolean);
+    return ['All', ...new Set(years)].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+  }, [students]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [batchFilter, yearFilter]);
 
   const handleSearchSubmit = () => {
     setCurrentPage(1);
@@ -241,16 +261,28 @@ export default function FrontendStudentList() {
 
   const processedStudents = [...students]
     .filter(student => {
-      if (!searchTerm) return true;
-      const term = searchTerm.toLowerCase().trim();
-      return (
-        student.name?.toLowerCase().includes(term) ||
-        student.mobile?.toLowerCase().includes(term) ||
-        student.email?.toLowerCase().includes(term) ||
-        student.batch?.toLowerCase().includes(term) ||
-        student.passedOutYear?.toString().includes(term) ||
-        student.city?.toLowerCase().includes(term)
-      );
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase().trim();
+        const matchesSearch = (
+          student.name?.toLowerCase().includes(term) ||
+          student.mobile?.toLowerCase().includes(term) ||
+          student.email?.toLowerCase().includes(term) ||
+          student.batch?.toLowerCase().includes(term) ||
+          student.passedOutYear?.toString().includes(term) ||
+          student.city?.toLowerCase().includes(term)
+        );
+        if (!matchesSearch) return false;
+      }
+
+      if (batchFilter !== 'All') {
+        if (String(student.batch || '').trim() !== batchFilter) return false;
+      }
+
+      if (yearFilter !== 'All') {
+        if (String(student.passedOutYear || '').trim() !== yearFilter) return false;
+      }
+
+      return true;
     })
     .sort((a, b) => {
       if (sortBy === 'name-asc') {
@@ -292,10 +324,10 @@ export default function FrontendStudentList() {
       />
 
       {/* Filter & Actions Toolbar */}
-      <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-white p-4 rounded-[20px] border border-slate-200/85 shadow-sm">
-        <div className="flex flex-col sm:flex-row gap-2 flex-1 max-w-2xl">
+      <div className="mb-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 bg-white p-4 rounded-[20px] border border-slate-200/85 shadow-sm">
+        <div className="flex flex-col md:flex-row gap-2 flex-1 flex-wrap">
           {/* Visible In-Page Search Option */}
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-[200px]">
             <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -323,7 +355,7 @@ export default function FrontendStudentList() {
           </div>
 
           {/* Status pipeline selector */}
-          <div className="w-full sm:w-[200px]">
+          <div className="w-full md:w-[160px]">
             <select
               value={statusFilter}
               onChange={(e) => {
@@ -339,8 +371,36 @@ export default function FrontendStudentList() {
             </select>
           </div>
 
+          {/* Batch Selector */}
+          <div className="w-full md:w-[150px]">
+            <select
+              value={batchFilter}
+              onChange={(e) => setBatchFilter(e.target.value)}
+              className="w-full py-2.5 px-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100 rounded-xl text-xs font-semibold text-slate-700 outline-none transition-all cursor-pointer"
+            >
+              <option value="All">All Batches</option>
+              {uniqueBatches.filter(b => b !== 'All').map(batch => (
+                <option key={batch} value={batch}>{batch}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Batch Year Selector */}
+          <div className="w-full md:w-[120px]">
+            <select
+              value={yearFilter}
+              onChange={(e) => setYearFilter(e.target.value)}
+              className="w-full py-2.5 px-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100 rounded-xl text-xs font-semibold text-slate-700 outline-none transition-all cursor-pointer"
+            >
+              <option value="All">All Years</option>
+              {uniqueYears.filter(y => y !== 'All').map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Sorting selector */}
-          <div className="w-full sm:w-[180px]">
+          <div className="w-full md:w-[160px]">
             <select
               value={sortBy}
               onChange={(e) => {

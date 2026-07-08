@@ -619,8 +619,7 @@ export default function StudentDashboard() {
       {/* Today's Attendance Process Card */}
       {profile && renderTodayAttendanceCard()}
 
-      {/* Visual Placement Process Journey Stepper */}
-      {profile && renderJourneyStepper()}
+
 
       {/* Metric stats cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -934,42 +933,6 @@ export default function StudentDashboard() {
               </button>
             </div>
           </SurfaceCard>
-
-          {/* Mini Leaderboard Card */}
-          {leaderboard.length > 0 && (
-            <SurfaceCard className="p-6 border border-slate-100">
-              <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-1.5 uppercase tracking-wider text-slate-450">
-                <Trophy className="text-indigo-600" size={16} />
-                Guild standings
-              </h3>
-              <div className="space-y-3">
-                {leaderboard.slice(0, 5).map((row, idx) => {
-                  const isMyGuild = myTeam && String(row._id) === String(myTeam._id);
-                  return (
-                    <div 
-                      key={row._id} 
-                      className={`flex items-center justify-between p-2.5 rounded-xl border transition ${
-                        isMyGuild ? 'bg-indigo-50/50 border-indigo-200/60 font-bold' : 'bg-slate-50/50 border-slate-100 hover:bg-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                          idx === 0 ? 'bg-amber-100 text-amber-700' :
-                          idx === 1 ? 'bg-slate-150 text-slate-700' :
-                          idx === 2 ? 'bg-amber-50 text-amber-900' :
-                          'bg-slate-100 text-slate-500'
-                        }`}>
-                          {idx + 1}
-                        </span>
-                        <span className="text-xs text-slate-800 font-semibold truncate max-w-[150px]">{row.name}</span>
-                      </div>
-                      <span className="text-xs font-extrabold text-indigo-600 shrink-0">{row.totalScore} pts</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </SurfaceCard>
-          )}
         </div>
       </div>
 

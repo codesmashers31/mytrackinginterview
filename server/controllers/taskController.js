@@ -111,8 +111,9 @@ export const updateTask = async (req, res) => {
       return res.status(403).json({ message: 'Forbidden: you can only update your own tasks' });
     }
 
+    const isStaff = ['admin', 'coordinator', 'placement'].includes(req.user.role);
     const updates = {};
-    if (req.user.role === 'admin') {
+    if (isStaff) {
       const { title, description, dueDate, questions, overallStatus } = req.body;
       if (title) updates.title = title;
       if (description) updates.description = description;
@@ -142,7 +143,7 @@ export const updateTask = async (req, res) => {
     const updatedTask = await Task.findByIdAndUpdate(req.params.id, updates, { returnDocument: 'after' });
 
     // Send in-app notifications
-    if (req.user.role === 'admin') {
+    if (isStaff) {
       await createNotification(
         updatedTask.studentId,
         'Task Updated',

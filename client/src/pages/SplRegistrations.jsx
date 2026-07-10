@@ -34,6 +34,7 @@ export default function SplRegistrations() {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [editState, setEditState] = useState({
     name: '',
@@ -131,14 +132,21 @@ export default function SplRegistrations() {
   }, []);
 
   const filteredRegs = useMemo(() => {
+    let result = regs;
+    if (typeFilter === 'regular') {
+      result = result.filter(reg => reg.isMergedStudent === true);
+    } else if (typeFilter === 'direct') {
+      result = result.filter(reg => reg.isMergedStudent === false);
+    }
+
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return regs;
-    return regs.filter(reg =>
+    if (!query) return result;
+    return result.filter(reg =>
       [reg.name, reg.email, reg.mobile, reg.degree, reg.batch, reg.stack, reg.status]
         .filter(Boolean)
         .some(value => value.toString().toLowerCase().includes(query))
     );
-  }, [regs, searchQuery]);
+  }, [regs, searchQuery, typeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRegs.length / ITEMS_PER_PAGE));
   const currentItems = filteredRegs.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -310,13 +318,24 @@ export default function SplRegistrations() {
             </div>
           </div>
 
-          <div className="relative">
-            <input
-              value={searchQuery}
-              onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              placeholder="Search registrations by name, email, mobile, degree, or status..."
-              className="crm-input h-10 rounded-xl"
-            />
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="relative flex-1">
+              <input
+                value={searchQuery}
+                onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                placeholder="Search registrations by name, email, mobile, degree, or status..."
+                className="crm-input h-10 rounded-xl"
+              />
+            </div>
+            <select
+              value={typeFilter}
+              onChange={e => { setTypeFilter(e.target.value); setCurrentPage(1); }}
+              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100 min-w-[180px]"
+            >
+              <option value="all">All Registrations</option>
+              <option value="regular">Regular Students (SPL)</option>
+              <option value="direct">Direct SPL Only</option>
+            </select>
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">

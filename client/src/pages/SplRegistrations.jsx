@@ -3,7 +3,8 @@ import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard, StatusBadge } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
-import { Edit, Check, X, Trash2, ArrowLeft, ArrowRight, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Edit, Check, X, Trash2, ArrowLeft, ArrowRight, SlidersHorizontal, ChevronDown, Download, Upload } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 const STATUS_OPTIONS = ['New', 'Reviewed', 'Shortlisted', 'Rejected', 'Placed'];
 const ITEMS_PER_PAGE = 8;
@@ -64,6 +65,61 @@ export default function SplRegistrations() {
       toast.error('Could not load registrations');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExport = () => {
+    const ws = XLSX.utils.json_to_sheet(regs.map(r => ({
+      Name: r.name || '',
+      Email: r.email || '',
+      Mobile: r.mobile || '',
+      Degree: r.degree || '',
+      Batch: r.batch || '',
+      'Batch Year': r.passedOutYear || '',
+      City: r.city || '',
+      Skills: r.skills || '',
+      Stack: r.stack || '',
+      'Willing Company Process': r.willingCompanyProcess ? 'Yes' : 'No',
+      'Willing 30 Days': r.willing30Days || '',
+      'Accept Offer': r.acceptOffer || '',
+      'Full Effort': r.fullEffort || '',
+      Issues: r.issues || '',
+      'Need Most': r.needMost || '',
+      Status: r.status || 'New',
+      'Status Reason': r.statusReason || '',
+      Grade: r.grade || '',
+      IP: r.ip || '',
+      'User Agent': r.userAgent || '',
+      'Created At': r.createdAt ? new Date(r.createdAt).toLocaleString() : ''
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "SPL Registrations");
+    XLSX.writeFile(wb, "SPL_Registrations.xlsx");
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const loadToast = toast.loading('Uploading SPL registrations...');
+    try {
+      const res = await fetch(buildApiUrl('/spl-registration/upload'), {
+        method: 'POST',
+        headers: { ...authHeaders() },
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Imported successfully', { id: loadToast });
+        fetchRegs();
+      } else {
+        toast.error(data.message || 'Import failed', { id: loadToast });
+      }
+    } catch (err) {
+      toast.error('Network error during import', { id: loadToast });
     }
   };
 
@@ -228,6 +284,23 @@ export default function SplRegistrations() {
                   </>
                 )}
               </div>
+
+              <button 
+                type="button"
+                onClick={handleExport}
+                className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Download size={13} />
+                <span>Export Excel</span>
+              </button>
+
+              <label 
+                className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Upload size={13} />
+                <span>Import Excel</span>
+                <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} className="hidden" />
+              </label>
             </div>
           </div>
 

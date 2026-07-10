@@ -25,6 +25,8 @@ export default function SplRegistrations() {
     name: true,
     mobile: true,
     degree: false,
+    batch: true,
+    passedOutYear: true,
     stack: true,
     willingness: false,
     grade: false,
@@ -39,6 +41,7 @@ export default function SplRegistrations() {
     mobile: '',
     degree: '',
     batch: '',
+    passedOutYear: '',
     stack: '',
     willingCompanyProcess: false,
     willing30Days: '',
@@ -151,6 +154,7 @@ export default function SplRegistrations() {
       mobile: reg.mobile || '',
       degree: reg.degree || '',
       batch: reg.batch || '',
+      passedOutYear: reg.passedOutYear || '',
       stack: reg.stack || '',
       willingCompanyProcess: !!reg.willingCompanyProcess,
       willing30Days: reg.willing30Days || '',
@@ -166,7 +170,7 @@ export default function SplRegistrations() {
 
   const closeEditModal = () => {
     setSelectedRegistration(null);
-    setEditState({ status: 'New', statusReason: '', grade: '', stack: '' });
+    setEditState({ status: 'New', statusReason: '', grade: '', stack: '', batch: '', passedOutYear: '' });
     setModalStackSelect('');
     setModalCustomStack('');
   };
@@ -274,6 +278,8 @@ export default function SplRegistrations() {
                           <span>{col === 'name' ? 'Name' : 
                                  col === 'mobile' ? 'Mobile' : 
                                  col === 'degree' ? 'Degree' :
+                                 col === 'batch' ? 'Cohort Batch' :
+                                 col === 'passedOutYear' ? 'Batch Year' :
                                  col === 'willingness' ? 'Willingness' :
                                  col === 'grade' ? 'Grade' :
                                  col === 'stack' ? 'Stack' : 
@@ -320,6 +326,8 @@ export default function SplRegistrations() {
                   {visibleColumns.name && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Name</th>}
                   {visibleColumns.mobile && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Mobile</th>}
                   {visibleColumns.degree && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Degree</th>}
+                  {visibleColumns.batch && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Cohort Batch</th>}
+                  {visibleColumns.passedOutYear && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Batch Year</th>}
                   {visibleColumns.stack && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Stack</th>}
                   {visibleColumns.willingness && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Willingness</th>}
                   {visibleColumns.grade && <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Grade</th>}
@@ -349,6 +357,8 @@ export default function SplRegistrations() {
                     {visibleColumns.name && <td className="whitespace-nowrap px-3 py-2 text-xs font-bold text-slate-900">{reg.name}</td>}
                     {visibleColumns.mobile && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750 font-semibold">{reg.mobile || '—'}</td>}
                     {visibleColumns.degree && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750">{reg.degree || '—'}</td>}
+                    {visibleColumns.batch && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750 font-medium">{reg.batch || '—'}</td>}
+                    {visibleColumns.passedOutYear && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750 font-medium">{reg.passedOutYear || '—'}</td>}
                     {visibleColumns.stack && <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-750">{reg.stack || '—'}</td>}
                       {visibleColumns.willingness && (
                         <td className="whitespace-nowrap px-3 py-2 text-xs">
@@ -481,6 +491,17 @@ export default function SplRegistrations() {
                   type="text"
                   value={editState.batch}
                   onChange={(e) => setEditState(prev => ({ ...prev, batch: e.target.value }))}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              {/* Batch Year */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Batch Year</label>
+                <input
+                  type="text"
+                  value={editState.passedOutYear}
+                  onChange={(e) => setEditState(prev => ({ ...prev, passedOutYear: e.target.value }))}
                   className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                 />
               </div>

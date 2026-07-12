@@ -823,7 +823,7 @@ router.post('/change-password', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user || !(await user.comparePassword(currentPassword))) {
-      return res.status(401).json({ message: 'Current password verification failed' });
+      return res.status(400).json({ message: 'Current password verification failed' });
     }
 
     user.password = newPassword;

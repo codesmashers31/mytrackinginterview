@@ -142,7 +142,11 @@ export default function Settings() {
       const data = await res.json();
 
       if (res.status === 401) {
-        logout();
+        if (data.message === 'Current password verification failed') {
+          toast.error(data.message);
+        } else {
+          logout();
+        }
         return;
       }
 

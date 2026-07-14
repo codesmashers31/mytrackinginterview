@@ -2,6 +2,7 @@ import LeaveRequest from '../models/LeaveRequest.js';
 import Attendance from '../models/Attendance.js';
 import Student from '../models/Student.js';
 import User from '../models/User.js';
+import SplRegistration from '../models/SplRegistration.js';
 import { createNotification, notifyAdmins } from '../utils/notifications.js';
 
 // Apply for a Leave or Permission (Student only)
@@ -84,8 +85,36 @@ export const getMyLeaveRequests = async (req, res) => {
 // Retrieve all requests (Admin & Coordinator only)
 export const getAllLeaveRequests = async (req, res) => {
   try {
-    const requests = await LeaveRequest.find().sort({ createdAt: -1 });
-    res.json(requests);
+    const requests = await LeaveRequest.find().sort({ createdAt: -1 }).lean();
+
+    const enrichedRequests = await Promise.all(
+      requests.map(async (item) => {
+        let studentBatch = '';
+        let studentYear = '';
+
+        if (item.studentEmail) {
+          const student = await Student.findOne({ email: item.studentEmail.trim().toLowerCase() });
+          if (student) {
+            studentBatch = student.batch || '';
+            studentYear = student.passedOutYear || '';
+          } else {
+            const splReg = await SplRegistration.findOne({ email: item.studentEmail.trim().toLowerCase() });
+            if (splReg) {
+              studentBatch = splReg.batch || '';
+              studentYear = splReg.passedOutYear || '';
+            }
+          }
+        }
+
+        return {
+          ...item,
+          studentBatch,
+          studentYear
+        };
+      })
+    );
+
+    res.json(enrichedRequests);
   } catch (error) {
     console.error('Error fetching all leave requests:', error);
     res.status(500).json({ message: 'Failed to fetch leave requests', error: error.message });

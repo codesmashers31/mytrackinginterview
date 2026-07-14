@@ -789,6 +789,13 @@ export default function AttendancePage() {
                         <div>
                           <h3 className="font-bold text-slate-900 leading-snug">{req.studentName}</h3>
                           <p className="text-slate-400 text-xs mt-0.5">{req.studentEmail}</p>
+                          {(req.studentBatch || req.studentYear) && (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10 mt-1.5">
+                              {req.studentBatch ? `${req.studentBatch}` : ''}
+                              {req.studentBatch && req.studentYear ? ` — ` : ''}
+                              {req.studentYear ? `${req.studentYear}` : ''}
+                            </span>
+                          )}
                         </div>
                         <div className="flex flex-col items-end gap-1.5">
                           <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">

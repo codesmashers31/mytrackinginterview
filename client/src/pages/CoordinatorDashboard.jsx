@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users, BookOpen, CheckCircle2, ClipboardList } from 'lucide-react';
 import { AppShell, MetricCard, SectionTabs, SurfaceCard } from '../components/AppShell';
 import { authHeaders, logout } from '../utils/auth';
-import { buildApiUrl } from '../utils/api';
+import { buildApiUrl, cachedGet } from '../utils/api';
 
 export default function CoordinatorDashboard() {
   const navigate = useNavigate();
@@ -13,10 +13,8 @@ export default function CoordinatorDashboard() {
 
   useEffect(() => {
     Promise.all([
-      fetch(buildApiUrl('/students'), { headers: authHeaders() })
-        .then(r => { if (r.status === 401) { logout(); return []; } return r.json().catch(() => []); }),
-      fetch(buildApiUrl('/spl-registration'), { headers: authHeaders() })
-        .then(r => r.json().catch(() => []))
+      cachedGet('/students').catch(() => []),
+      cachedGet('/spl-registration').catch(() => [])
     ]).then(([s, spl]) => {
       setStudents(Array.isArray(s) ? s : []);
       setSplClasses(Array.isArray(spl) ? spl : []);

@@ -28,7 +28,7 @@ router.get('/availability', authMiddleware, async (req, res) => {
     const { date } = req.query;
     const filter = {};
     if (date) filter.date = date;
-    const availabilities = await MockAvailability.find(filter).sort({ date: 1, startTime: 1 });
+    const availabilities = await MockAvailability.find(filter).sort({ date: 1, startTime: 1 }).lean();
     res.json(availabilities);
   } catch (error) {
     res.status(500).json({ message: 'Error retrieving availability', error: error.message });
@@ -123,7 +123,7 @@ router.get('/bookings', authMiddleware, async (req, res) => {
     const { date } = req.query;
     const filter = {};
     if (date) filter.date = date;
-    const bookings = await MockInterview.find(filter).sort({ date: 1, startTime: 1 });
+    const bookings = await MockInterview.find(filter).sort({ date: 1, startTime: 1 }).lean();
     res.json(bookings);
   } catch (error) {
     res.status(500).json({ message: 'Error retrieving bookings', error: error.message });
@@ -407,7 +407,7 @@ router.post('/bookings', authMiddleware, async (req, res) => {
 // Student: Get bookings for the logged-in student
 router.get('/my-bookings', authMiddleware, async (req, res) => {
   try {
-    const bookings = await MockInterview.find({ studentId: req.user.id }).sort({ date: 1, startTime: 1 });
+    const bookings = await MockInterview.find({ studentId: req.user.id }).sort({ date: 1, startTime: 1 }).lean();
     res.json(bookings);
   } catch (error) {
     res.status(500).json({ message: 'Error retrieving student bookings', error: error.message });

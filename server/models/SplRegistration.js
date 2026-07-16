@@ -25,4 +25,9 @@ const splRegistrationSchema = new mongoose.Schema({
   resumeData: { type: Object, default: {} }
 }, { timestamps: true });
 
+splRegistrationSchema.index({ email: 1 });
+splRegistrationSchema.index({ mobile: 1 });
+splRegistrationSchema.index({ status: 1 });
+splRegistrationSchema.index({ batch: 1 });
+
 export default mongoose.model('SplRegistration', splRegistrationSchema);

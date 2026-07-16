@@ -74,7 +74,7 @@ export const applyLeaveRequest = async (req, res) => {
 export const getMyLeaveRequests = async (req, res) => {
   try {
     const userId = req.user.id;
-    const requests = await LeaveRequest.find({ studentId: userId }).sort({ createdAt: -1 });
+    const requests = await LeaveRequest.find({ studentId: userId }).sort({ createdAt: -1 }).lean();
     res.json(requests);
   } catch (error) {
     console.error('Error fetching student leave requests:', error);
@@ -87,32 +87,43 @@ export const getAllLeaveRequests = async (req, res) => {
   try {
     const requests = await LeaveRequest.find().sort({ createdAt: -1 }).lean();
 
-    const enrichedRequests = await Promise.all(
-      requests.map(async (item) => {
-        let studentBatch = '';
-        let studentYear = '';
+    const emails = [...new Set(
+      requests.map(r => r.studentEmail && r.studentEmail.trim().toLowerCase()).filter(Boolean)
+    )];
 
-        if (item.studentEmail) {
-          const student = await Student.findOne({ email: item.studentEmail.trim().toLowerCase() });
-          if (student) {
-            studentBatch = student.batch || '';
-            studentYear = student.passedOutYear || '';
-          } else {
-            const splReg = await SplRegistration.findOne({ email: item.studentEmail.trim().toLowerCase() });
-            if (splReg) {
-              studentBatch = splReg.batch || '';
-              studentYear = splReg.passedOutYear || '';
-            }
+    const [students, splRegs] = await Promise.all([
+      Student.find({ email: { $in: emails } }, 'email batch passedOutYear').lean(),
+      SplRegistration.find({ email: { $in: emails } }, 'email batch passedOutYear').lean()
+    ]);
+
+    const studentMap = new Map(students.map(s => [s.email.trim().toLowerCase(), s]));
+    const splMap = new Map(splRegs.map(s => [s.email.trim().toLowerCase(), s]));
+
+    const enrichedRequests = requests.map((item) => {
+      let studentBatch = '';
+      let studentYear = '';
+
+      if (item.studentEmail) {
+        const email = item.studentEmail.trim().toLowerCase();
+        const student = studentMap.get(email);
+        if (student) {
+          studentBatch = student.batch || '';
+          studentYear = student.passedOutYear || '';
+        } else {
+          const splReg = splMap.get(email);
+          if (splReg) {
+            studentBatch = splReg.batch || '';
+            studentYear = splReg.passedOutYear || '';
           }
         }
+      }
 
-        return {
-          ...item,
-          studentBatch,
-          studentYear
-        };
-      })
-    );
+      return {
+        ...item,
+        studentBatch,
+        studentYear
+      };
+    });
 
     res.json(enrichedRequests);
   } catch (error) {
@@ -169,30 +180,35 @@ export const reviewLeaveRequest = async (req, res) => {
       const student = await Student.findOne({ email: leaveRequest.studentEmail.toLowerCase() });
       const splStudentId = student ? student._id : leaveRequest.studentId;
 
+      const bulkOps = [];
       while (current <= finalEnd) {
         const attendanceDate = new Date(current);
-
-        // Upsert Attendance record
-        await Attendance.findOneAndUpdate(
-          {
-            studentEmail: leaveRequest.studentEmail.toLowerCase(),
-            date: attendanceDate
-          },
-          {
-            $set: {
-              studentId: splStudentId,
-              studentName: leaveRequest.studentName,
+        bulkOps.push({
+          updateOne: {
+            filter: {
               studentEmail: leaveRequest.studentEmail.toLowerCase(),
-              status: 'Leave',
-              remarks: `Leave Approved: ${leaveRequest.reason}`,
-              markedBy: reviewerName
-            }
-          },
-          { upsert: true, new: true }
-        );
+              date: attendanceDate
+            },
+            update: {
+              $set: {
+                studentId: splStudentId,
+                studentName: leaveRequest.studentName,
+                studentEmail: leaveRequest.studentEmail.toLowerCase(),
+                status: 'Leave',
+                remarks: `Leave Approved: ${leaveRequest.reason}`,
+                markedBy: reviewerName
+              }
+            },
+            upsert: true
+          }
+        });
 
         // Increment day
         current.setUTCDate(current.getUTCDate() + 1);
+      }
+
+      if (bulkOps.length > 0) {
+        await Attendance.bulkWrite(bulkOps);
       }
     }
 

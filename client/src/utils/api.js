@@ -18,7 +18,63 @@ export const buildApiUrl = (path) => {
   return `${baseUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
 };
 
-import { authHeaders } from './auth';
+import { authHeaders, logout } from './auth';
+
+// Simple in-memory GET cache with request de-duplication.
+// Avoids re-fetching the same collection (e.g. /students, /spl-registration)
+// every time a page mounts, while staying fresh via a short TTL.
+const getCache = new Map(); // url -> { data, timestamp }
+const inflightRequests = new Map(); // url -> Promise
+const DEFAULT_CACHE_TTL = 30000;
+
+export const cachedGet = async (path, { ttl = DEFAULT_CACHE_TTL, force = false } = {}) => {
+  const url = buildApiUrl(path);
+  const now = Date.now();
+
+  if (!force) {
+    const cached = getCache.get(url);
+    if (cached && (now - cached.timestamp) < ttl) {
+      return cached.data;
+    }
+    const pending = inflightRequests.get(url);
+    if (pending) return pending;
+  }
+
+  const requestPromise = fetch(url, { headers: { ...authHeaders() } })
+    .then(async (res) => {
+      if (res.status === 401) {
+        logout();
+        throw new Error('Session expired');
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `Request failed: ${path}`);
+      }
+      return res.json();
+    })
+    .then((data) => {
+      getCache.set(url, { data, timestamp: Date.now() });
+      inflightRequests.delete(url);
+      return data;
+    })
+    .catch((err) => {
+      inflightRequests.delete(url);
+      throw err;
+    });
+
+  inflightRequests.set(url, requestPromise);
+  return requestPromise;
+};
+
+// Call after mutations (create/update/delete) so the next read is fresh.
+export const invalidateCache = (path) => {
+  if (!path) {
+    getCache.clear();
+    return;
+  }
+  const url = buildApiUrl(path);
+  getCache.delete(url);
+};
 
 // Coordinator API helpers
 export const createCoordinator = async (data) => {

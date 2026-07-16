@@ -307,6 +307,18 @@ export default function AttendancePage() {
     }
   };
 
+  const studentsById = useMemo(() => {
+    const map = {};
+    students.forEach(s => { map[s._id] = s; });
+    return map;
+  }, [students]);
+
+  const getStudentBatch = (studentId) => {
+    const student = studentsById[studentId];
+    if (!student) return '';
+    return student.batch || student.passedOutYear || '';
+  };
+
   const getAttendancePercentage = (student) => {
     if (!summary || !summary.byStudent[student._id]) return 0;
     const data = summary.byStudent[student._id];
@@ -328,6 +340,7 @@ export default function AttendancePage() {
         'Tech Stack': 'MERN',
         'Trainer': '',
         'Student Name': student.name,
+        'Batch': student.batch || student.passedOutYear || '',
         'Attendance (P/A)': statusLetter,
         'Remarks': record ? record.remarks || '' : '',
         'Module': '',
@@ -467,6 +480,9 @@ export default function AttendancePage() {
                             <th className="px-4 py-2 text-left font-semibold text-slate-700">
                               Student
                             </th>
+                            <th className="px-4 py-2 text-left font-semibold text-slate-700">
+                              Batch
+                            </th>
                             <th className="px-4 py-2 text-center font-semibold text-slate-700">
                               Status
                             </th>
@@ -493,6 +509,9 @@ export default function AttendancePage() {
                               <td className="px-4 py-3 text-slate-900">
                                 <div>{record.studentName}</div>
                                 <div className="text-xs text-slate-500">{record.studentEmail}</div>
+                              </td>
+                              <td className="px-4 py-3 text-slate-600">
+                                {getStudentBatch(record.studentId) || '-'}
                               </td>
                               <td className="px-4 py-3 text-center">
                                 <StatusBadge
@@ -544,6 +563,11 @@ export default function AttendancePage() {
                           <div className="flex-1">
                             <p className="font-medium text-slate-900">{student.name}</p>
                             <p className="text-sm text-slate-600">{student.email}</p>
+                            {(student.batch || student.passedOutYear) && (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10 mt-1">
+                                {student.batch || student.passedOutYear}
+                              </span>
+                            )}
                           </div>
                           <div className="flex flex-col gap-2 md:flex-row">
                             <input
@@ -924,7 +948,7 @@ export default function AttendancePage() {
                   <option value="">Choose a student...</option>
                   {students.map(student => (
                     <option key={student._id} value={student._id}>
-                      {student.name} ({student.email})
+                      {student.name} ({student.email}){student.batch ? ` — ${student.batch}` : ''}
                     </option>
                   ))}
                 </select>

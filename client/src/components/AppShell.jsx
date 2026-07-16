@@ -200,7 +200,7 @@ export function AppShell({
   // Fetch notifications and setup reminders
   useEffect(() => {
     fetchNotifications();
-    const notificationInterval = setInterval(fetchNotifications, 15000);
+    const notificationInterval = setInterval(fetchNotifications, 45000);
 
     let checkoutTimeoutId = null;
 

@@ -76,7 +76,7 @@ export const listTasks = async (req, res) => {
     if (studentEmail) query.studentEmail = studentEmail;
     if (status) query.overallStatus = status;
 
-    const tasks = await Task.find(query).sort({ assignedAt: -1 });
+    const tasks = await Task.find(query).sort({ assignedAt: -1 }).lean();
     res.json(tasks);
   } catch (error) {
     res.status(500).json({ message: 'Failed to list tasks', error: error.message });
@@ -95,7 +95,7 @@ export const getTaskById = async (req, res) => {
 
 export const getMyTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({ studentId: req.user.id }).sort({ dueDate: 1, assignedAt: -1 });
+    const tasks = await Task.find({ studentId: req.user.id }).sort({ dueDate: 1, assignedAt: -1 }).lean();
     res.json(tasks);
   } catch (error) {
     res.status(500).json({ message: 'Unable to fetch student tasks', error: error.message });
@@ -177,7 +177,7 @@ export const deleteTask = async (req, res) => {
 export const getStudentTasks = async (req, res) => {
   try {
     const { studentId } = req.params;
-    const tasks = await Task.find({ studentId }).sort({ assignedAt: -1 });
+    const tasks = await Task.find({ studentId }).sort({ assignedAt: -1 }).lean();
     res.json(tasks);
   } catch (error) {
     res.status(500).json({ message: 'Could not load student tasks', error: error.message });

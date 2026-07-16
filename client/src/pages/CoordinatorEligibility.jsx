@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { AppShell, SectionTabs, SurfaceCard } from '../components/AppShell';
 import { authHeaders, logout } from '../utils/auth';
-import { buildApiUrl } from '../utils/api';
+import { buildApiUrl, cachedGet } from '../utils/api';
 
 export default function CoordinatorEligibility() {
   const navigate = useNavigate();
@@ -12,11 +12,7 @@ export default function CoordinatorEligibility() {
   const [filter, setFilter] = useState('All');
 
   useEffect(() => {
-    fetch(buildApiUrl('/students'), { headers: authHeaders() })
-      .then(r => {
-        if (r.status === 401) { logout(); return []; }
-        return r.json().catch(() => []);
-      })
+    cachedGet('/students')
       .then(data => {
         setStudents(Array.isArray(data) ? data : []);
         setLoading(false);

@@ -251,7 +251,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 // GET all team tasks
 router.get('/tasks', authMiddleware, async (req, res) => {
   try {
-    const tasks = await TeamTask.find().populate('associatedTeams').sort({ dueDate: 1 });
+    const tasks = await TeamTask.find().populate('associatedTeams').sort({ dueDate: 1 }).lean();
     res.json(tasks);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching team tasks', error: error.message });
@@ -387,7 +387,8 @@ router.get('/performances', authMiddleware, async (req, res) => {
     const performances = await TeamPerformance.find()
       .populate('teamId')
       .populate('taskId')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json(performances);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching performance logs', error: error.message });
@@ -415,7 +416,8 @@ router.get('/performances/team/:teamId', authMiddleware, async (req, res) => {
   try {
     const performances = await TeamPerformance.find({ teamId: req.params.teamId })
       .populate('taskId')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json(performances);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching performance logs', error: error.message });
@@ -439,7 +441,8 @@ router.get('/performances/my-team', authMiddleware, async (req, res) => {
 
     const performances = await TeamPerformance.find({ teamId: team._id })
       .populate('taskId')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.json({
       team,
@@ -463,7 +466,8 @@ router.get('/leaderboard', authMiddleware, async (req, res) => {
     if (batch && batch !== 'All') query.batch = batch;
 
     const teams = await Team.find(query).lean();
-    const performances = await TeamPerformance.find().lean();
+    const teamIds = teams.map(t => t._id);
+    const performances = await TeamPerformance.find({ teamId: { $in: teamIds } }).lean();
 
     const leaderboard = teams.map(team => {
       const teamPerf = performances.filter(p => String(p.teamId) === String(team._id));

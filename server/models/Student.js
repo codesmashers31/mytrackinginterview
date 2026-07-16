@@ -50,5 +50,7 @@ studentSchema.index({ mobile: 1 });
 studentSchema.index({ studentType: 1 });
 studentSchema.index({ isFrontend: 1, studentType: 1, currentStatus: 1 });
 studentSchema.index({ currentStatus: 1 });
+studentSchema.index({ enrollments: 1 });
+studentSchema.index({ passedOutYear: 1 });
 
 export default mongoose.model('Student', studentSchema);

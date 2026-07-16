@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { BookOpen, Clock, CheckCircle } from 'lucide-react';
 import { AppShell, SectionTabs, SurfaceCard, MetricCard } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
-import { buildApiUrl } from '../utils/api';
+import { buildApiUrl, cachedGet } from '../utils/api';
 
 export default function CoordinatorSplClasses() {
   const navigate = useNavigate();
@@ -14,8 +14,8 @@ export default function CoordinatorSplClasses() {
 
   useEffect(() => {
     Promise.all([
-      fetch(buildApiUrl('/spl-registration'), { headers: authHeaders() }).then(r => r.json().catch(() => [])),
-      fetch(buildApiUrl('/teams'), { headers: authHeaders() }).then(r => r.json().catch(() => []))
+      cachedGet('/spl-registration').catch(() => []),
+      cachedGet('/teams').catch(() => [])
     ])
     .then(([regData, teamData]) => {
       setRegistrations(Array.isArray(regData) ? regData : []);

@@ -1,43 +1,50 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import StudentList from './pages/StudentList';
-import EligibilityPage from './pages/EligibilityPage';
-import CoordinatorManagement from './pages/CoordinatorManagement';
-import CoordinatorDashboard from './pages/CoordinatorDashboard';
-import CoordinatorEligibility from './pages/CoordinatorEligibility';
-import CoordinatorSplClasses from './pages/CoordinatorSplClasses';
-import Settings from './pages/Settings';
-import SplClassForm from './pages/SplClassForm';
-import SplSuccess from './pages/SplSuccess';
-import AttendancePage from './pages/AttendancePage';
-import TaskManagement from './pages/TaskManagement';
-import PlacementManagement from './pages/PlacementManagement';
-import StudentTasks from './pages/StudentTasks';
-import StudentAttendance from './pages/StudentAttendance';
-import StudentDailyActivity from './pages/StudentDailyActivity';
-import StudentDashboard from './pages/StudentDashboard';
-import AdminDailyActivities from './pages/AdminDailyActivities';
-import PlacementDashboard from './pages/PlacementDashboard';
-import PlacementEligibility from './pages/PlacementEligibility';
-import PlacementSplClasses from './pages/PlacementSplClasses';
-import ResumeBuilder from './pages/ResumeBuilder';
-import TeamManagement from './pages/TeamManagement';
-import StudentTeams from './pages/StudentTeams';
-import FrontendStudentList from './pages/FrontendStudentList';
-import SplRegistrations from './pages/SplRegistrations';
-import StudentAiMentorship from './pages/StudentAiMentorship';
-import AdminAiMentorship from './pages/AdminAiMentorship';
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const StudentList = lazy(() => import('./pages/StudentList'));
+const EligibilityPage = lazy(() => import('./pages/EligibilityPage'));
+const CoordinatorManagement = lazy(() => import('./pages/CoordinatorManagement'));
+const CoordinatorDashboard = lazy(() => import('./pages/CoordinatorDashboard'));
+const CoordinatorEligibility = lazy(() => import('./pages/CoordinatorEligibility'));
+const CoordinatorSplClasses = lazy(() => import('./pages/CoordinatorSplClasses'));
+const Settings = lazy(() => import('./pages/Settings'));
+const SplClassForm = lazy(() => import('./pages/SplClassForm'));
+const SplSuccess = lazy(() => import('./pages/SplSuccess'));
+const AttendancePage = lazy(() => import('./pages/AttendancePage'));
+const TaskManagement = lazy(() => import('./pages/TaskManagement'));
+const PlacementManagement = lazy(() => import('./pages/PlacementManagement'));
+const StudentTasks = lazy(() => import('./pages/StudentTasks'));
+const StudentAttendance = lazy(() => import('./pages/StudentAttendance'));
+const StudentDailyActivity = lazy(() => import('./pages/StudentDailyActivity'));
+const StudentDashboard = lazy(() => import('./pages/StudentDashboard'));
+const AdminDailyActivities = lazy(() => import('./pages/AdminDailyActivities'));
+const PlacementDashboard = lazy(() => import('./pages/PlacementDashboard'));
+const PlacementEligibility = lazy(() => import('./pages/PlacementEligibility'));
+const PlacementSplClasses = lazy(() => import('./pages/PlacementSplClasses'));
+const ResumeBuilder = lazy(() => import('./pages/ResumeBuilder'));
+const TeamManagement = lazy(() => import('./pages/TeamManagement'));
+const StudentTeams = lazy(() => import('./pages/StudentTeams'));
+const FrontendStudentList = lazy(() => import('./pages/FrontendStudentList'));
+const SplRegistrations = lazy(() => import('./pages/SplRegistrations'));
+const StudentAiMentorship = lazy(() => import('./pages/StudentAiMentorship'));
+const AdminAiMentorship = lazy(() => import('./pages/AdminAiMentorship'));
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
 import { isAuthenticated } from './utils/auth';
+
+const PageFallback = () => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+    Loading...
+  </div>
+);
 
 function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-right" />
+      <Suspense fallback={<PageFallback />}>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route
@@ -91,6 +98,7 @@ function App() {
         <Route path="/student/ai-mentorship" element={<RoleRoute roles={[ 'student' ]}><StudentAiMentorship /></RoleRoute>} />
         <Route path="/admin/ai-mentorship" element={<RoleRoute roles={[ 'admin', 'coordinator', 'placement' ]}><AdminAiMentorship /></RoleRoute>} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

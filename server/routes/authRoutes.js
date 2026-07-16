@@ -308,7 +308,7 @@ router.post('/register-placement', authMiddleware, requireRole('admin'), async (
 // Get all coordinators (admin only)
 router.get('/coordinators', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
-    const coordinators = await User.find({ role: 'coordinator' }).select('name email createdAt');
+    const coordinators = await User.find({ role: 'coordinator' }).select('name email createdAt').lean();
     res.json(coordinators);
   } catch (error) {
     res.status(500).json({ message: 'Could not fetch coordinators', error: error.message });
@@ -318,7 +318,7 @@ router.get('/coordinators', authMiddleware, requireRole('admin'), async (req, re
 // Get all placement support accounts (admin only)
 router.get('/placements', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
-    const placements = await User.find({ role: 'placement' }).select('name email createdAt');
+    const placements = await User.find({ role: 'placement' }).select('name email createdAt').lean();
     res.json(placements);
   } catch (error) {
     res.status(500).json({ message: 'Could not fetch placement support accounts', error: error.message });
@@ -811,7 +811,7 @@ router.post('/register-student', async (req, res) => {
 
 router.get('/students', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
-    const students = await User.find({ role: 'student' }).select('name email createdAt');
+    const students = await User.find({ role: 'student' }).select('name email createdAt').lean();
     res.json(students);
   } catch (error) {
     res.status(500).json({ message: 'Could not fetch student accounts', error: error.message });

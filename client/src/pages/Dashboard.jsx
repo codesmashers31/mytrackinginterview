@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { AppShell, MetricCard, SectionTabs, StatusBadge, SurfaceCard } from '../components/AppShell';
 import { authHeaders, logout } from '../utils/auth';
-import { buildApiUrl } from '../utils/api';
+import { buildApiUrl, cachedGet } from '../utils/api';
 import { exportToExcel, exportRegularAnalyticsToExcel } from '../utils/excelExporter';
 
 function getNormalizedYear(student) {
@@ -104,32 +104,14 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    fetch(buildApiUrl('/students/stats'), {
-      headers: { ...authHeaders() },
-    })
-      .then(async res => {
-        if (res.status === 401) {
-          logout();
-          return null;
-        }
-        return res.json();
-      })
+    cachedGet('/students/stats')
       .then(data => {
         if (data) setStats(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
 
-    fetch(buildApiUrl('/students?all=true'), {
-      headers: { ...authHeaders() },
-    })
-      .then(res => {
-        if (res.status === 401) {
-          logout();
-          return null;
-        }
-        return res.json();
-      })
+    cachedGet('/students?all=true')
       .then(data => {
         if (data && Array.isArray(data)) {
           setAllStudents(data);

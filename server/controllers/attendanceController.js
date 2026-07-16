@@ -197,7 +197,7 @@ export const getStudentAttendance = async (req, res) => {
       query.date = { $gte: start, $lte: end };
     }
 
-    const attendance = await Attendance.find(query).sort({ date: -1 });
+    const attendance = await Attendance.find(query).sort({ date: -1 }).lean();
     res.json(attendance);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch attendance', error: err.message });
@@ -218,7 +218,7 @@ export const getAttendanceByDate = async (req, res) => {
         $gte: targetDate,
         $lt: nextDate
       }
-    }).sort({ studentName: 1 });
+    }).sort({ studentName: 1 }).lean();
 
     res.json(attendance);
   } catch (err) {
@@ -241,7 +241,7 @@ export const getAttendanceSummary = async (req, res) => {
 
     const attendance = await Attendance.find({
       date: { $gte: start, $lte: end }
-    });
+    }).lean();
 
     // Calculate summary
     const summary = {
@@ -301,7 +301,8 @@ export const listAttendance = async (req, res) => {
 
     const attendance = await Attendance.find(query)
       .sort({ date: -1 })
-      .populate('studentId', 'name email');
+      .populate('studentId', 'name email')
+      .lean();
 
     res.json(attendance);
   } catch (err) {
@@ -361,10 +362,10 @@ export const getUnmarkedStudents = async (req, res) => {
     nextDate.setUTCDate(nextDate.getUTCDate() + 1);
 
     // Get all active students (not inactive)
-    const allStudents = await Student.find({ currentStatus: { $not: /^inactive/i } });
-    const splRegs = await SplRegistration.find({ status: { $not: /^inactive/i } });
+    const allStudents = await Student.find({ currentStatus: { $not: /^inactive/i } }).lean();
+    const splRegs = await SplRegistration.find({ status: { $not: /^inactive/i } }).lean();
     const mappedSpls = splRegs.map(r => ({
-      ...r.toObject(),
+      ...r,
       currentStatus: r.status
     }));
     const combinedStudents = [...allStudents, ...mappedSpls];
@@ -375,7 +376,7 @@ export const getUnmarkedStudents = async (req, res) => {
         $gte: targetDate,
         $lt: nextDate
       }
-    });
+    }).lean();
 
     const markedStudentIds = markedAttendance.map(a => a.studentId.toString());
 

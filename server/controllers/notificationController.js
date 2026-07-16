@@ -5,7 +5,8 @@ export const getMyNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ recipientId: req.user.id })
       .sort({ createdAt: -1 })
-      .limit(30);
+      .limit(30)
+      .lean();
     res.json(notifications);
   } catch (error) {
     res.status(500).json({ message: 'Failed to retrieve notifications', error: error.message });

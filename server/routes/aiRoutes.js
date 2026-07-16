@@ -18,11 +18,13 @@ const router = express.Router();
 // Helper to calculate overall readiness score based on weight system:
 // 30% Tech, 20% Coding, 15% Comm, 15% Assignment, 10% Attendance, 10% Mock
 const calculateReadiness = async (studentId) => {
-  const profile = await LearningProfile.findOne({ studentId });
-  const path = await LearningPath.findOne({ studentId });
-  const progresses = await DayProgress.find({ studentId });
-  const assessments = await Assessment.find({ studentId });
-  const mocks = await MockInterview.find({ studentId, status: 'Completed' });
+  const [profile, path, progresses, assessments, mocks] = await Promise.all([
+    LearningProfile.findOne({ studentId }),
+    LearningPath.findOne({ studentId }),
+    DayProgress.find({ studentId }),
+    Assessment.find({ studentId }),
+    MockInterview.find({ studentId, status: 'Completed' })
+  ]);
 
   // 1. Technical Skill Score (30%)
   // Base from onboarding ratings + average of passed assessments
@@ -650,7 +652,7 @@ router.get('/readiness', authMiddleware, async (req, res) => {
  */
 router.get('/mocks', authMiddleware, async (req, res) => {
   try {
-    const mocks = await MockInterview.find({ studentId: req.user.id }).sort({ scheduledAt: -1 });
+    const mocks = await MockInterview.find({ studentId: req.user.id }).sort({ scheduledAt: -1 }).lean();
     res.status(200).json(mocks);
   } catch (err) {
     res.status(500).json({ message: 'Server error loading mock slots', error: err.message });
@@ -718,18 +720,19 @@ router.get('/admin/dashboard', authMiddleware, async (req, res) => {
     }
 
     // Roster of students with profiles and scores
-    const profiles = await LearningProfile.find();
-    const studentsReport = [];
+    const profiles = await LearningProfile.find().lean();
 
-    for (const p of profiles) {
-      const path = await LearningPath.findOne({ studentId: p.studentId });
-      const scoreObj = await ReadinessScore.findOne({ studentId: p.studentId });
-      const completedCount = await DayProgress.countDocuments({ 
-        studentId: p.studentId, 
-        'tasks.assignment': { $in: ['Completed', 'Reviewed'] } 
-      });
+    const studentsReport = await Promise.all(profiles.map(async (p) => {
+      const [path, scoreObj, completedCount] = await Promise.all([
+        LearningPath.findOne({ studentId: p.studentId }).lean(),
+        ReadinessScore.findOne({ studentId: p.studentId }).lean(),
+        DayProgress.countDocuments({
+          studentId: p.studentId,
+          'tasks.assignment': { $in: ['Completed', 'Reviewed'] }
+        })
+      ]);
 
-      studentsReport.push({
+      return {
         studentId: p.studentId,
         name: p.name,
         track: p.techTrack,
@@ -741,8 +744,8 @@ router.get('/admin/dashboard', authMiddleware, async (req, res) => {
         assignmentsCompleted: completedCount,
         readinessScore: scoreObj ? scoreObj.overallScore : 0,
         status: scoreObj ? scoreObj.status : 'Learning Stage'
-      });
-    }
+      };
+    }));
 
     res.status(200).json({ settings, students: studentsReport });
   } catch (err) {
@@ -785,7 +788,8 @@ router.get('/admin/submissions', authMiddleware, async (req, res) => {
 
     const submissions = await DayProgress.find({ 'tasks.assignment': 'Submitted' })
       .populate({ path: 'studentId', select: 'name email' })
-      .sort({ updatedAt: -1 });
+      .sort({ updatedAt: -1 })
+      .lean();
 
     res.status(200).json(submissions);
   } catch (err) {

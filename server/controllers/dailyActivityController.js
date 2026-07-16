@@ -55,7 +55,7 @@ export const createActivityLog = async (req, res) => {
 export const getMyActivityLogs = async (req, res) => {
   try {
     const studentId = req.user.id;
-    const logs = await DailyActivity.find({ studentId }).sort({ date: -1, createdAt: -1 });
+    const logs = await DailyActivity.find({ studentId }).sort({ date: -1, createdAt: -1 }).lean();
     res.json(logs);
   } catch (error) {
     res.status(500).json({ message: 'Failed to retrieve daily logs', error: error.message });
@@ -92,7 +92,7 @@ export const getAllActivityLogs = async (req, res) => {
       ];
     }
 
-    const logs = await DailyActivity.find(query).sort({ date: -1, createdAt: -1 });
+    const logs = await DailyActivity.find(query).sort({ date: -1, createdAt: -1 }).lean();
     res.json(logs);
   } catch (error) {
     res.status(500).json({ message: 'Failed to retrieve daily logs', error: error.message });

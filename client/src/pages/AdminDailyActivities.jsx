@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard, SectionTabs } from '../components/AppShell';
 import { authHeaders, logout } from '../utils/auth';
-import { buildApiUrl } from '../utils/api';
+import { buildApiUrl, cachedGet } from '../utils/api';
 import { 
   Search, 
   Calendar, 
@@ -38,13 +38,8 @@ export default function AdminDailyActivities() {
 
   const fetchStudents = async () => {
     try {
-      const res = await fetch(buildApiUrl('/students'), {
-        headers: { ...authHeaders() }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setStudentsList(data);
-      }
+      const data = await cachedGet('/students');
+      setStudentsList(data);
     } catch (err) {
       console.error('Failed to load student list', err);
     }

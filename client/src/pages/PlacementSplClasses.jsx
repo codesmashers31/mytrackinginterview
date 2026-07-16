@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard, StatusBadge, SectionTabs } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
-import { buildApiUrl } from '../utils/api';
+import { buildApiUrl, cachedGet, invalidateCache } from '../utils/api';
 import { Edit, Check, X, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
 
 const STATUS_OPTIONS = ['New', 'Reviewed', 'Shortlisted', 'Rejected', 'Placed'];
@@ -35,12 +35,10 @@ export default function PlacementSplClasses() {
   });
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  const fetchRegs = async () => {
+  const fetchRegs = async (force = false) => {
     setLoading(true);
     try {
-      const res = await fetch(buildApiUrl('/spl-registration'), { headers: { ...authHeaders() } });
-      if (!res.ok) throw new Error('Failed to load registrations');
-      const data = await res.json();
+      const data = await cachedGet('/spl-registration', { force });
       setRegs(data);
     } catch (err) {
       toast.error('Could not load registrations');
@@ -118,6 +116,7 @@ export default function PlacementSplClasses() {
       }
       const updated = await res.json();
       setRegs(prev => prev.map(item => (item._id === updated._id ? updated : item)));
+      invalidateCache('/spl-registration');
       toast.success('Registration updated');
       closeEditModal();
     } catch (err) {
@@ -145,6 +144,7 @@ export default function PlacementSplClasses() {
         throw new Error(errBody.message || 'Delete failed');
       }
       setRegs(prev => prev.filter(item => item._id !== deleteTarget._id));
+      invalidateCache('/spl-registration');
       toast.success('Registration removed');
       cancelDelete();
     } catch (err) {

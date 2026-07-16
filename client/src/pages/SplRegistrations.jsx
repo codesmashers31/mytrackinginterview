@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard, StatusBadge } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
-import { buildApiUrl } from '../utils/api';
+import { buildApiUrl, cachedGet, invalidateCache } from '../utils/api';
 import { Edit, Check, X, Trash2, ArrowLeft, ArrowRight, SlidersHorizontal, ChevronDown, Download, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -58,12 +58,10 @@ export default function SplRegistrations() {
   const [modalCustomStack, setModalCustomStack] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  const fetchRegs = async () => {
+  const fetchRegs = async (force = false) => {
     setLoading(true);
     try {
-      const res = await fetch(buildApiUrl('/spl-registration'), { headers: { ...authHeaders() } });
-      if (!res.ok) throw new Error('Failed to load registrations');
-      const data = await res.json();
+      const data = await cachedGet('/spl-registration', { force });
       setRegs(data);
     } catch (err) {
       toast.error('Could not load registrations');
@@ -118,7 +116,8 @@ export default function SplRegistrations() {
       const data = await res.json();
       if (res.ok) {
         toast.success(data.message || 'Imported successfully', { id: loadToast });
-        fetchRegs();
+        invalidateCache('/spl-registration');
+        fetchRegs(true);
       } else {
         toast.error(data.message || 'Import failed', { id: loadToast });
       }
@@ -200,6 +199,7 @@ export default function SplRegistrations() {
       }
       const updated = await res.json();
       setRegs(prev => prev.map(item => (item._id === updated._id ? updated : item)));
+      invalidateCache('/spl-registration');
       toast.success('Registration updated');
       closeEditModal();
     } catch (err) {
@@ -227,6 +227,7 @@ export default function SplRegistrations() {
         throw new Error(errBody.message || 'Delete failed');
       }
       setRegs(prev => prev.filter(item => item._id !== deleteTarget._id));
+      invalidateCache('/spl-registration');
       toast.success('Registration removed');
       cancelDelete();
     } catch (err) {

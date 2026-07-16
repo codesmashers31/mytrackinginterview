@@ -69,7 +69,7 @@ router.get('/', authMiddleware, async (req, res) => {
         if (degree && degree !== 'All') query.degree = { $regex: new RegExp(`^${degree}$`, 'i') };
         if (year) query.passedOutYear = year;
 
-        let students = await Student.find(query).lean();
+        let students = await Student.find(query).select('-resumeData').lean();
 
         // 2. Fetch and Map SplRegistration records if we are looking for SPL students
         const includeSplRegs = !enrollment || enrollment === 'All' || enrollment === 'SPL';
@@ -96,7 +96,7 @@ router.get('/', authMiddleware, async (req, res) => {
                 splQuery.batch = year;
             }
 
-            const rawSplRegs = await SplRegistration.find(splQuery).lean();
+            const rawSplRegs = await SplRegistration.find(splQuery).select('-resumeData').lean();
             splRegs = rawSplRegs.map(r => ({
                 ...r,
                 studentType: 'SPL',
@@ -677,8 +677,8 @@ router.post('/eligible', authMiddleware, async (req, res) => {
              splQuery.batch = { $in: stringYears };
         }
 
-        const students = await Student.find(studentQuery).lean();
-        const spls = await SplRegistration.find(splQuery).lean();
+        const students = await Student.find(studentQuery).select('-resumeData').lean();
+        const spls = await SplRegistration.find(splQuery).select('-resumeData').lean();
 
         // Deduplicate using mobile and email
         const uniqueMobiles = new Set(students.map(s => s.mobile).filter(Boolean));

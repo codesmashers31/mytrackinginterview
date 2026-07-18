@@ -186,7 +186,7 @@ export const reviewLeaveRequest = async (req, res) => {
         bulkOps.push({
           updateOne: {
             filter: {
-              studentEmail: leaveRequest.studentEmail.toLowerCase(),
+              studentId: splStudentId,
               date: attendanceDate
             },
             update: {

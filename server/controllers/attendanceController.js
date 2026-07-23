@@ -361,8 +361,8 @@ export const getUnmarkedStudents = async (req, res) => {
     const nextDate = new Date(targetDate);
     nextDate.setUTCDate(nextDate.getUTCDate() + 1);
 
-    // Get all active students (not inactive)
-    const allStudents = await Student.find({ currentStatus: { $not: /^inactive/i } }).lean();
+    // Get all active students (not inactive) enrolled in SPL
+    const allStudents = await Student.find({ currentStatus: { $not: /^inactive/i }, enrollments: 'SPL' }).lean();
     const splRegs = await SplRegistration.find({ status: { $not: /^inactive/i } }).lean();
     const mappedSpls = splRegs.map(r => ({
       ...r,
@@ -454,6 +454,13 @@ export const studentCheckIn = async (req, res) => {
       return res.status(404).json({ message: 'Student profile not found. Please contact administration.' });
     }
 
+    const isSpl = (student.enrollments && student.enrollments.includes('SPL')) || 
+                  (!student.enrollments);
+
+    if (!isSpl) {
+      return res.status(403).json({ message: 'Access Denied: Attendance tracking is only available for SPL Class students.' });
+    }
+
     const splStudentId = student._id;
     const studentName = student.name;
     const studentEmail = student.email || user.email;
@@ -540,6 +547,13 @@ export const studentCheckOut = async (req, res) => {
 
     if (!student) {
       return res.status(404).json({ message: 'Student profile not found.' });
+    }
+
+    const isSpl = (student.enrollments && student.enrollments.includes('SPL')) || 
+                  (!student.enrollments);
+
+    if (!isSpl) {
+      return res.status(403).json({ message: 'Access Denied: Attendance tracking is only available for SPL Class students.' });
     }
 
     const today = parseUTCDate(new Date().toISOString().split('T')[0]);

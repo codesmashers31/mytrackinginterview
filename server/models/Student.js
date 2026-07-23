@@ -41,6 +41,8 @@ const studentSchema = new mongoose.Schema({
     needMost: { type: String, default: '' },
     status: { type: String, default: 'New' },
 
+    githubLink: { type: String, default: '' },
+    linkedinLink: { type: String, default: '' },
     resumeData: { type: Object, default: {} }
 }, { timestamps: true });
 

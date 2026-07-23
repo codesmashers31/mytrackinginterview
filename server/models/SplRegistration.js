@@ -22,6 +22,8 @@ const splRegistrationSchema = new mongoose.Schema({
   grade: { type: String, default: '' },
   ip: { type: String, default: '' },
   userAgent: { type: String, default: '' },
+  githubLink: { type: String, default: '' },
+  linkedinLink: { type: String, default: '' },
   resumeData: { type: Object, default: {} }
 }, { timestamps: true });
 

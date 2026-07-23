@@ -53,6 +53,8 @@ export const createRegistration = async (req, res) => {
       regularStudent.needMost = payload.needMost || regularStudent.needMost;
       regularStudent.status = payload.status || regularStudent.status || 'New';
       regularStudent.statusReason = payload.statusReason || regularStudent.statusReason || '';
+      regularStudent.githubLink = payload.githubLink || regularStudent.githubLink;
+      regularStudent.linkedinLink = payload.linkedinLink || regularStudent.linkedinLink;
       
       regularStudent.studentType = regularStudent.isFrontend ? 'Frontend' : 'Regular';
 

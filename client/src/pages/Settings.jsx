@@ -346,6 +346,32 @@ export default function Settings() {
                         </div>
                       )}
                     </div>
+
+                    <div className="md:col-span-2 pt-5 border-t border-slate-100">
+                      <h3 className="text-sm font-bold text-slate-800 mb-4">Social Profiles</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                          <label className="crm-label">GitHub URL</label>
+                          <input
+                            type="url"
+                            value={profileData.githubLink || ''}
+                            onChange={e => setProfileData({ ...profileData, githubLink: e.target.value })}
+                            className="crm-input"
+                            placeholder="https://github.com/username"
+                          />
+                        </div>
+                        <div>
+                          <label className="crm-label">LinkedIn URL</label>
+                          <input
+                            type="url"
+                            value={profileData.linkedinLink || ''}
+                            onChange={e => setProfileData({ ...profileData, linkedinLink: e.target.value })}
+                            className="crm-input"
+                            placeholder="https://linkedin.com/in/username"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {profileType === 'directory' && (

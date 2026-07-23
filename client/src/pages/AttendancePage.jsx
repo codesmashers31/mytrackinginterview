@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard, StatusBadge, SectionTabs } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
-import { Calendar, Plus, Check, X, Clock, FileText, TrendingUp, Download, Search, CheckCircle2, XCircle } from 'lucide-react';
+import { Calendar, Plus, Check, X, Clock, FileText, TrendingUp, Download, Search, CheckCircle2, XCircle, User, MapPin, Trash2, Filter, AlertCircle } from 'lucide-react';
 
 const STATUS_OPTIONS = ['Present', 'Absent', 'Late', 'Leave'];
 const STATUS_COLORS = {
@@ -40,6 +40,10 @@ export default function AttendancePage() {
   const [submittingLeaveId, setSubmittingLeaveId] = useState(null);
   const [leaveRemarks, setLeaveRemarks] = useState({});
 
+  const getInitials = (name) => {
+    return (name || '').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  };
+
   // Fetch active students from the unified collection
   const fetchStudents = async () => {
     try {
@@ -48,9 +52,35 @@ export default function AttendancePage() {
       });
       if (!res.ok) throw new Error('Failed to load students');
       const data = await res.json();
-      // Filter out inactive students
-      const activeStudents = data.filter(student => !/^inactive/i.test(student.currentStatus || ''));
-      setStudents(activeStudents);
+      
+      // Filter out inactive students and keep only SPL enrolled ones
+      const activeStudents = data.filter(student => 
+        !/^inactive/i.test(student.currentStatus || '') && 
+        student.enrollments && 
+        student.enrollments.includes('SPL')
+      );
+
+      // Fetch direct SPL registrations too
+      const splRes = await fetch(buildApiUrl('/spl-registration'), {
+        headers: { ...authHeaders() }
+      });
+      if (splRes.ok) {
+        const splData = await splRes.json();
+        const activeSpls = splData.filter(student => !/^inactive/i.test(student.status || ''));
+        const mappedSpls = activeSpls.map(s => ({
+          _id: s._id,
+          name: s.name,
+          email: s.email,
+          batch: s.batch || s.passedOutYear || '',
+          enrollments: ['SPL']
+        }));
+        
+        const combined = [...activeStudents, ...mappedSpls];
+        combined.sort((a, b) => a.name.localeCompare(b.name));
+        setStudents(combined);
+      } else {
+        setStudents(activeStudents);
+      }
     } catch (err) {
       toast.error('Could not load students');
     }
@@ -358,184 +388,229 @@ export default function AttendancePage() {
 
   return (
     <AppShell
-      title="Attendance Management"
-      subtitle="Track and manage SPL class student attendance day-wise"
+      title="Attendance & Leaves"
+      subtitle="Track and manage SPL class student attendance, daily check-ins, and leave requests"
       searchPlaceholder="Search students or dates"
     >
-      <SectionTabs
-        items={[
-          {
-            label: 'Daily Attendance',
-            active: activeTab === 'daily',
-            onClick: () => setActiveTab('daily')
-          },
-          {
-            label: 'Leave Requests',
-            active: activeTab === 'leaves',
-            onClick: () => setActiveTab('leaves')
-          },
-          {
-            label: 'Summary Report',
-            active: activeTab === 'summary',
-            onClick: () => setActiveTab('summary')
-          },
-          {
-            label: 'Student History',
-            active: activeTab === 'student',
-            onClick: () => setActiveTab('student')
-          }
-        ]}
-      />
+      <div className="mb-6">
+        <SectionTabs
+          items={[
+            {
+              label: 'Daily Attendance',
+              active: activeTab === 'daily',
+              onClick: () => setActiveTab('daily')
+            },
+            {
+              label: 'Leave Requests',
+              active: activeTab === 'leaves',
+              onClick: () => setActiveTab('leaves')
+            },
+            {
+              label: 'Summary Report',
+              active: activeTab === 'summary',
+              onClick: () => setActiveTab('summary')
+            },
+            {
+              label: 'Student History',
+              active: activeTab === 'student',
+              onClick: () => setActiveTab('student')
+            }
+          ]}
+        />
+      </div>
 
       {/* Daily Attendance Tab */}
       {activeTab === 'daily' && (
         <div className="space-y-6">
-          <SurfaceCard className="p-6">
+          <SurfaceCard className="p-6 border border-slate-100 shadow-xs">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <Calendar size={20} className="text-blue-600" />
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={e => setSelectedDate(e.target.value)}
-                  className="crm-input"
-                />
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 shadow-2xs">
+                  <Calendar size={18} />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Selected Date</label>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={e => setSelectedDate(e.target.value)}
+                    className="crm-input h-9 py-1 px-2 border-0 bg-transparent font-bold text-slate-700 focus:ring-0 cursor-pointer text-sm outline-none"
+                  />
+                </div>
               </div>
+
               <button
                 type="button"
                 onClick={exportDailyAttendance}
-                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 transition"
+                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition cursor-pointer"
               >
-                <Download size={16} /> Export Excel
+                <Download size={14} /> Export Excel
               </button>
             </div>
 
             {loading ? (
-              <div className="flex items-center justify-center py-12">
+              <div className="flex min-h-[300px] items-center justify-center">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {/* Summary stats */}
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                  <div className="crm-surface p-4 text-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      {attendance.filter(a => a.status === 'Present').length}
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50/60 to-emerald-50/10 p-5 flex items-center gap-4 hover:scale-[1.01] transition duration-200">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+                      <CheckCircle2 size={20} />
                     </div>
-                    <div className="text-sm text-slate-600">Present</div>
+                    <div>
+                      <div className="text-2xl font-black text-emerald-700">
+                        {attendance.filter(a => a.status === 'Present').length}
+                      </div>
+                      <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">Present</div>
+                    </div>
                   </div>
-                  <div className="crm-surface p-4 text-center">
-                    <div className="text-2xl font-bold text-red-600">
-                      {attendance.filter(a => a.status === 'Absent').length}
+
+                  <div className="rounded-2xl border border-rose-100 bg-gradient-to-br from-rose-50/60 to-rose-50/10 p-5 flex items-center gap-4 hover:scale-[1.01] transition duration-200">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600">
+                      <XCircle size={20} />
                     </div>
-                    <div className="text-sm text-slate-600">Absent</div>
+                    <div>
+                      <div className="text-2xl font-black text-rose-700">
+                        {attendance.filter(a => a.status === 'Absent').length}
+                      </div>
+                      <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">Absent</div>
+                    </div>
                   </div>
-                  <div className="crm-surface p-4 text-center">
-                    <div className="text-2xl font-bold text-yellow-600">
-                      {attendance.filter(a => a.status === 'Late').length}
+
+                  <div className="rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50/60 to-amber-50/10 p-5 flex items-center gap-4 hover:scale-[1.01] transition duration-200">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
+                      <Clock size={20} />
                     </div>
-                    <div className="text-sm text-slate-600">Late</div>
+                    <div>
+                      <div className="text-2xl font-black text-amber-700">
+                        {attendance.filter(a => a.status === 'Late').length}
+                      </div>
+                      <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">Late</div>
+                    </div>
                   </div>
-                  <div className="crm-surface p-4 text-center">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {attendance.filter(a => a.status === 'Leave').length}
+
+                  <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/60 to-blue-50/10 p-5 flex items-center gap-4 hover:scale-[1.01] transition duration-200">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600">
+                      <Calendar size={20} />
                     </div>
-                    <div className="text-sm text-slate-600">Leave</div>
+                    <div>
+                      <div className="text-2xl font-black text-blue-700">
+                        {attendance.filter(a => a.status === 'Leave').length}
+                      </div>
+                      <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">On Leave</div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Bulk actions for unmarked */}
                 {unmarked.length > 0 && (
-                  <div className="border-t border-slate-200 pt-4">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-slate-900">
-                          {unmarked.length} students not marked
-                        </p>
-                        <p className="text-sm text-slate-500">Quick mark all:</p>
-                      </div>
-                      <div className="flex gap-2">
-                        {STATUS_OPTIONS.map(status => (
-                          <button
-                            key={status}
-                            onClick={() => handleBulkMark(status)}
-                            className="crm-button crm-button-secondary text-xs"
-                          >
-                            All {status}
-                          </button>
-                        ))}
-                      </div>
+                  <div className="bg-slate-50/60 border border-slate-100 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Quick Mark Action</h4>
+                      <p className="text-xs font-bold text-slate-700 mt-0.5">
+                        {unmarked.length} students have not been marked for today.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {STATUS_OPTIONS.map(status => (
+                        <button
+                          key={status}
+                          onClick={() => handleBulkMark(status)}
+                          className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition cursor-pointer shadow-3xs"
+                        >
+                          Mark all as {status}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
 
                 {/* Marked attendance table */}
-                <div className="border-t border-slate-200 pt-4">
-                  <h3 className="mb-4 font-semibold text-slate-900">Marked Attendance</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Marked Attendance ({attendance.length})</h3>
+                  </div>
+
                   {attendance.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-slate-200">
-                            <th className="px-4 py-2 text-left font-semibold text-slate-700">
-                              Student
-                            </th>
-                            <th className="px-4 py-2 text-left font-semibold text-slate-700">
-                              Batch
-                            </th>
-                            <th className="px-4 py-2 text-center font-semibold text-slate-700">
-                              Status
-                            </th>
-                            <th className="px-4 py-2 text-center font-semibold text-slate-700">
-                              Check In
-                            </th>
-                            <th className="px-4 py-2 text-center font-semibold text-slate-700">
-                              Check Out
-                            </th>
-                            <th className="px-4 py-2 text-center font-semibold text-slate-700">
-                              Total Hrs
-                            </th>
-                            <th className="px-4 py-2 text-left font-semibold text-slate-700">
-                              Remarks
-                            </th>
-                            <th className="px-4 py-2 text-center font-semibold text-slate-700">
-                              Action
-                            </th>
+                    <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-2xs">
+                      <table className="min-w-full divide-y divide-slate-100 text-left">
+                        <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                          <tr>
+                            <th className="px-4 py-3">Student Info</th>
+                            <th className="px-4 py-3">Batch Info</th>
+                            <th className="px-4 py-3 text-center">Status</th>
+                            <th className="px-4 py-3 text-center">Check-In</th>
+                            <th className="px-4 py-3 text-center">Check-Out</th>
+                            <th className="px-4 py-3 text-center">Hours</th>
+                            <th className="px-4 py-3">Remarks</th>
+                            <th className="px-4 py-3 text-right">Action</th>
                           </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700 bg-white">
                           {attendance.map(record => (
-                            <tr key={record._id} className="border-b border-slate-100 hover:bg-slate-50">
-                              <td className="px-4 py-3 text-slate-900">
-                                <div>{record.studentName}</div>
-                                <div className="text-xs text-slate-500">{record.studentEmail}</div>
+                            <tr key={record._id} className="hover:bg-slate-50/50 transition">
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[11px] font-black text-slate-700 uppercase">
+                                    {getInitials(record.studentName)}
+                                  </div>
+                                  <div>
+                                    <div className="font-bold text-slate-800 leading-snug">{record.studentName}</div>
+                                    <div className="text-[10px] text-slate-400 mt-0.5">{record.studentEmail}</div>
+                                  </div>
+                                </div>
                               </td>
-                              <td className="px-4 py-3 text-slate-600">
-                                {getStudentBatch(record.studentId) || '-'}
+                              <td className="px-4 py-3 text-slate-500">
+                                {getStudentBatch(record.studentId) ? (
+                                  <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                                    {getStudentBatch(record.studentId)}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-300">—</span>
+                                )}
                               </td>
                               <td className="px-4 py-3 text-center">
-                                <StatusBadge
-                                  status={record.status}
-                                  tone={STATUS_COLORS[record.status] || 'info'}
-                                />
+                                <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full uppercase tracking-wider ${getStatusStyle(record.status)}`}>
+                                  {record.status}
+                                </span>
                               </td>
-                              <td className="px-4 py-3 text-center text-slate-600">
-                                {record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                              <td className="px-4 py-3 text-center text-slate-500">
+                                {record.checkInTime ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-100 rounded-lg py-1 px-1.5">
+                                    <MapPin size={11} className="text-emerald-500" />
+                                    {new Date(record.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-300">—</span>
+                                )}
                               </td>
-                              <td className="px-4 py-3 text-center text-slate-600">
-                                {record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                              <td className="px-4 py-3 text-center text-slate-500">
+                                {record.checkOutTime ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-100 rounded-lg py-1 px-1.5">
+                                    <Clock size={11} className="text-amber-500" />
+                                    {new Date(record.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-300">—</span>
+                                )}
                               </td>
-                              <td className="px-4 py-3 text-center font-semibold text-slate-700">
-                                {record.totalHours ? record.totalHours + 'h' : '-'}
+                              <td className="px-4 py-3 text-center font-bold text-slate-800">
+                                {record.totalHours ? `${record.totalHours.toFixed(1)} hrs` : <span className="text-slate-300">—</span>}
                               </td>
-                              <td className="px-4 py-3 text-slate-600">{record.remarks}</td>
-                              <td className="px-4 py-3 text-center">
+                              <td className="px-4 py-3 max-w-[200px] truncate text-slate-500 italic">
+                                {record.remarks || <span className="text-slate-300">—</span>}
+                              </td>
+                              <td className="px-4 py-3 text-right">
                                 <button
+                                  type="button"
                                   onClick={() => handleDeleteAttendance(record._id)}
-                                  className="text-red-600 hover:text-red-800"
-                                  title="Delete"
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                                  title="Delete Record"
                                 >
-                                  <X size={18} />
+                                  <Trash2 size={14} />
                                 </button>
                               </td>
                             </tr>
@@ -544,52 +619,61 @@ export default function AttendancePage() {
                       </table>
                     </div>
                   ) : (
-                    <p className="py-4 text-center text-slate-500">No attendance marked for this date</p>
+                    <div className="flex flex-col items-center justify-center p-8 border border-dashed border-slate-200 rounded-2xl text-center bg-slate-50/20">
+                      <Calendar size={22} className="text-slate-300 mb-2" />
+                      <p className="text-xs font-semibold text-slate-400">No attendance marked for this date</p>
+                    </div>
                   )}
                 </div>
 
                 {/* Unmarked students */}
                 {unmarked.length > 0 && (
-                  <div className="border-t border-slate-200 pt-4">
-                    <h3 className="mb-4 font-semibold text-slate-900">
-                      Unmarked Students ({unmarked.length})
-                    </h3>
-                    <div className="space-y-3">
+                  <div className="space-y-3 pt-4 border-t border-slate-100">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Unmarked Students ({unmarked.length})</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {unmarked.map(student => (
                         <div
                           key={student._id}
-                          className="crm-surface flex items-center justify-between p-4"
+                          className="border border-slate-100 bg-white rounded-2xl p-4 flex flex-col justify-between gap-4 shadow-3xs"
                         >
-                          <div className="flex-1">
-                            <p className="font-medium text-slate-900">{student.name}</p>
-                            <p className="text-sm text-slate-600">{student.email}</p>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xs font-black text-blue-600 uppercase">
+                                {getInitials(student.name)}
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-slate-800 leading-snug">{student.name}</h4>
+                                <p className="text-[10px] text-slate-400 mt-0.5">{student.email}</p>
+                              </div>
+                            </div>
                             {(student.batch || student.passedOutYear) && (
-                              <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10 mt-1">
+                              <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[9px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10">
                                 {student.batch || student.passedOutYear}
                               </span>
                             )}
                           </div>
-                          <div className="flex flex-col gap-2 md:flex-row">
+
+                          <div className="flex flex-col sm:flex-row gap-2">
                             <input
                               type="text"
                               placeholder="Remarks (optional)"
                               value={remarks[student._id] || ''}
                               onChange={e => handleRemarksChange(student._id, e.target.value)}
-                              className="crm-input text-xs"
+                              className="flex-1 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 px-3 py-1.5 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:bg-white"
                             />
-                            <div className="flex gap-2">
+                            <div className="flex gap-1.5">
                               {STATUS_OPTIONS.map(status => (
                                 <button
                                   key={status}
                                   onClick={() => handleMarkAttendance(student._id, status)}
-                                  className={`crm-button text-xs ${
+                                  className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition shadow-3xs cursor-pointer ${
                                     status === 'Present'
-                                      ? 'crm-button-success'
+                                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                                       : status === 'Absent'
-                                        ? 'crm-button-error'
+                                        ? 'bg-rose-600 hover:bg-rose-700 text-white'
                                         : status === 'Late'
-                                          ? 'crm-button-warning'
-                                          : 'crm-button-secondary'
+                                          ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                                          : 'bg-indigo-600 hover:bg-indigo-700 text-white'
                                   }`}
                                 >
                                   {status}
@@ -608,333 +692,307 @@ export default function AttendancePage() {
         </div>
       )}
 
-      {/* Summary Report Tab */}
-      {activeTab === 'summary' && (
-        <div className="space-y-6">
-          <SurfaceCard className="p-6">
-            <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center">
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-slate-700">From:</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={e => setStartDate(e.target.value)}
-                  className="crm-input"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-slate-700">To:</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={e => setEndDate(e.target.value)}
-                  className="crm-input"
-                />
-              </div>
-            </div>
-
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-              </div>
-            ) : summary ? (
-              <div className="space-y-6">
-                {/* Overall stats */}
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                  <div className="crm-surface p-4 text-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      {summary.byStatus.Present}
-                    </div>
-                    <div className="text-sm text-slate-600">Total Present</div>
-                  </div>
-                  <div className="crm-surface p-4 text-center">
-                    <div className="text-2xl font-bold text-red-600">{summary.byStatus.Absent}</div>
-                    <div className="text-sm text-slate-600">Total Absent</div>
-                  </div>
-                  <div className="crm-surface p-4 text-center">
-                    <div className="text-2xl font-bold text-yellow-600">{summary.byStatus.Late}</div>
-                    <div className="text-sm text-slate-600">Total Late</div>
-                  </div>
-                  <div className="crm-surface p-4 text-center">
-                    <div className="text-2xl font-bold text-blue-600">{summary.byStatus.Leave}</div>
-                    <div className="text-sm text-slate-600">Total Leave</div>
-                  </div>
-                </div>
-
-                {/* Student-wise report */}
-                <div className="border-t border-slate-200 pt-6">
-                  <h3 className="mb-4 font-semibold text-slate-900">Student-wise Summary</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-slate-200">
-                          <th className="px-4 py-2 text-left font-semibold text-slate-700">
-                            Student
-                          </th>
-                          <th className="px-4 py-2 text-center font-semibold text-slate-700">
-                            Present
-                          </th>
-                          <th className="px-4 py-2 text-center font-semibold text-slate-700">
-                            Absent
-                          </th>
-                          <th className="px-4 py-2 text-center font-semibold text-slate-700">
-                            Late
-                          </th>
-                          <th className="px-4 py-2 text-center font-semibold text-slate-700">
-                            Leave
-                          </th>
-                          <th className="px-4 py-2 text-center font-semibold text-slate-700">
-                            Total
-                          </th>
-                          <th className="px-4 py-2 text-center font-semibold text-slate-700">
-                            % Present
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.values(summary.byStudent).map((data, idx) => (
-                          <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="px-4 py-3 text-slate-900">{data.name}</td>
-                            <td className="px-4 py-3 text-center text-green-600">
-                              {data.Present}
-                            </td>
-                            <td className="px-4 py-3 text-center text-red-600">{data.Absent}</td>
-                            <td className="px-4 py-3 text-center text-yellow-600">{data.Late}</td>
-                            <td className="px-4 py-3 text-center text-blue-600">{data.Leave}</td>
-                            <td className="px-4 py-3 text-center font-semibold text-slate-900">
-                              {data.total}
-                            </td>
-                            <td className="px-4 py-3 text-center font-semibold">
-                              <div className="inline-block rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-700">
-                                {Math.round((data.Present / data.total) * 100)}%
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </SurfaceCard>
-        </div>
-      )}
-
       {/* Leave Requests Tab */}
       {activeTab === 'leaves' && (
         <div className="space-y-6">
-          {/* Search and Tabs Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            {/* Navigation Tabs */}
-            <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
-              <button
-                type="button"
-                onClick={() => setLeaveActiveTab('Pending')}
-                className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors ${
-                  leaveActiveTab === 'Pending' 
-                    ? 'bg-white text-blue-700 shadow-sm' 
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Pending Approval ({leaveRequests.filter(r => r.status === 'Pending').length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setLeaveActiveTab('History')}
-                className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors ${
-                  leaveActiveTab === 'History' 
-                    ? 'bg-white text-blue-700 shadow-sm' 
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Review History ({leaveRequests.filter(r => r.status !== 'Pending').length})
-              </button>
-            </div>
-
-            {/* Search Input */}
-            <div className="relative w-full md:w-80">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search by student, email, or reason..."
-                value={leaveSearchQuery}
-                onChange={(e) => setLeaveSearchQuery(e.target.value)}
-                className="w-full h-10 pl-11 pr-4 text-sm rounded-xl border border-slate-200 bg-white outline-none transition focus:border-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Requests Display */}
-          {loadingLeaves ? (
-            <div className="flex min-h-[400px] items-center justify-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-            </div>
-          ) : leaveRequests.filter(req => {
-            const matchesTab = leaveActiveTab === 'Pending' ? req.status === 'Pending' : req.status !== 'Pending';
-            const matchesSearch = 
-              (req.studentName || '').toLowerCase().includes(leaveSearchQuery.toLowerCase()) ||
-              (req.studentEmail || '').toLowerCase().includes(leaveSearchQuery.toLowerCase()) ||
-              (req.reason || '').toLowerCase().includes(leaveSearchQuery.toLowerCase());
-            return matchesTab && matchesSearch;
-          }).length === 0 ? (
-            <SurfaceCard className="flex flex-col items-center justify-center min-h-[350px] text-center p-8">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 mb-4">
-                <FileText size={22} />
+          <SurfaceCard className="p-6 border border-slate-100 shadow-xs">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setLeaveActiveTab('Pending')}
+                  className={`px-4 py-2 text-xs font-bold rounded-xl transition cursor-pointer ${
+                    leaveActiveTab === 'Pending' 
+                      ? 'bg-blue-600 text-white shadow-sm' 
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/50'
+                  }`}
+                >
+                  Pending Approval ({leaveRequests.filter(r => r.status === 'Pending').length})
+                </button>
+                <button
+                  onClick={() => setLeaveActiveTab('History')}
+                  className={`px-4 py-2 text-xs font-bold rounded-xl transition cursor-pointer ${
+                    leaveActiveTab === 'History' 
+                      ? 'bg-blue-600 text-white shadow-sm' 
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/50'
+                  }`}
+                >
+                  Review History ({leaveRequests.filter(r => r.status !== 'Pending').length})
+                </button>
               </div>
-              <h3 className="text-base font-bold text-slate-800">No requests found</h3>
-              <p className="text-sm text-slate-500 max-w-sm mt-1">
-                {leaveSearchQuery 
-                  ? 'No requests match your current search filters.' 
-                  : `There are no ${leaveActiveTab.toLowerCase()} requests at the moment.`}
-              </p>
-            </SurfaceCard>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {leaveRequests
-                .filter(req => {
-                  const matchesTab = leaveActiveTab === 'Pending' ? req.status === 'Pending' : req.status !== 'Pending';
-                  const matchesSearch = 
-                    (req.studentName || '').toLowerCase().includes(leaveSearchQuery.toLowerCase()) ||
-                    (req.studentEmail || '').toLowerCase().includes(leaveSearchQuery.toLowerCase()) ||
-                    (req.reason || '').toLowerCase().includes(leaveSearchQuery.toLowerCase());
-                  return matchesTab && matchesSearch;
-                })
-                .map((req) => (
-                  <SurfaceCard 
-                    key={req._id} 
-                    className={`p-6 border flex flex-col justify-between ${
-                      req.status === 'Pending' ? 'border-slate-100' : 'border-slate-200/50 bg-slate-50/20'
-                    }`}
-                  >
-                    <div className="space-y-4">
-                      {/* Header: Student Info & Request Type */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="font-bold text-slate-900 leading-snug">{req.studentName}</h3>
-                          <p className="text-slate-400 text-xs mt-0.5">{req.studentEmail}</p>
-                          {(req.studentBatch || req.studentYear) && (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10 mt-1.5">
-                              {req.studentBatch ? `${req.studentBatch}` : ''}
-                              {req.studentBatch && req.studentYear ? ` — ` : ''}
-                              {req.studentYear ? `${req.studentYear}` : ''}
+
+              <div className="relative w-full max-w-xs">
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search student or reason..."
+                  value={leaveSearchQuery}
+                  onChange={(e) => setLeaveSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-white placeholder-slate-400 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+            </div>
+
+            {loadingLeaves ? (
+              <div className="flex min-h-[300px] items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+              </div>
+            ) : leaveRequests.filter(req => {
+              const matchesTab = leaveActiveTab === 'Pending' ? req.status === 'Pending' : req.status !== 'Pending';
+              const matchesSearch = 
+                (req.studentName || '').toLowerCase().includes(leaveSearchQuery.toLowerCase()) ||
+                (req.studentEmail || '').toLowerCase().includes(leaveSearchQuery.toLowerCase()) ||
+                (req.reason || '').toLowerCase().includes(leaveSearchQuery.toLowerCase());
+              return matchesTab && matchesSearch;
+            }).length === 0 ? (
+              <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-8 bg-slate-50/20 border border-dashed border-slate-200 rounded-2xl">
+                <FileText size={24} className="text-slate-300 mb-2" />
+                <h3 className="text-xs font-bold text-slate-400">No requests found</h3>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {leaveRequests
+                  .filter(req => {
+                    const matchesTab = leaveActiveTab === 'Pending' ? req.status === 'Pending' : req.status !== 'Pending';
+                    const matchesSearch = 
+                      (req.studentName || '').toLowerCase().includes(leaveSearchQuery.toLowerCase()) ||
+                      (req.studentEmail || '').toLowerCase().includes(leaveSearchQuery.toLowerCase()) ||
+                      (req.reason || '').toLowerCase().includes(leaveSearchQuery.toLowerCase());
+                    return matchesTab && matchesSearch;
+                  })
+                  .map((req) => (
+                    <div 
+                      key={req._id} 
+                      className={`p-5 rounded-2xl border flex flex-col justify-between gap-4 shadow-3xs transition duration-200 ${
+                        req.status === 'Pending' ? 'border-slate-100 bg-white' : 'border-slate-100 bg-slate-50/30'
+                      }`}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xs font-black text-indigo-600 uppercase">
+                              {getInitials(req.studentName)}
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-slate-800 leading-snug">{req.studentName}</h3>
+                              <p className="text-[10px] text-slate-400 mt-0.5">{req.studentEmail}</p>
+                              {(req.studentBatch || req.studentYear) && (
+                                <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[9px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10 mt-1">
+                                  {req.studentBatch ? `${req.studentBatch}` : ''}
+                                  {req.studentBatch && req.studentYear ? ` — ` : ''}
+                                  {req.studentYear ? `${req.studentYear}` : ''}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-1.5">
+                            <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-slate-400">
+                              {req.type === 'Leave' ? <Calendar size={11} className="text-indigo-500" /> : <Clock size={11} className="text-cyan-500" />}
+                              {req.type}
                             </span>
+                            <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full uppercase tracking-wider ${getStatusStyle(req.status)}`}>
+                              {req.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Date info block */}
+                        <div className="p-3 bg-slate-50/80 border border-slate-100 rounded-xl text-xs font-semibold text-slate-700">
+                          {req.type === 'Leave' ? (
+                            <div className="flex items-center gap-2">
+                              <Calendar size={13} className="text-slate-450" />
+                              <span>{formatDate(req.startDate)} – {formatDate(req.endDate)}</span>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <Calendar size={13} className="text-slate-450" />
+                                <span>{formatDate(req.date)}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium ml-5">
+                                <Clock size={11} className="text-slate-400" />
+                                <span>{req.startTime} – {req.endTime}</span>
+                              </div>
+                            </div>
                           )}
                         </div>
-                        <div className="flex flex-col items-end gap-1.5">
-                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                            {req.type === 'Leave' ? <Calendar size={12} className="text-indigo-500" /> : <Clock size={12} className="text-cyan-500" />}
-                            {req.type}
-                          </span>
-                          <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full uppercase tracking-wider ${getStatusStyle(req.status)}`}>
-                            {req.status}
-                          </span>
-                        </div>
-                      </div>
 
-                      {/* Date / Time Details */}
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-100/80 text-sm font-semibold text-slate-800">
-                        {req.type === 'Leave' ? (
-                          <div className="flex items-center gap-2">
-                            <Calendar size={15} className="text-slate-400" />
-                            <span>{formatDate(req.startDate)} – {formatDate(req.endDate)}</span>
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Calendar size={15} className="text-slate-400" />
-                              <span>{formatDate(req.date)}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-slate-500 font-medium ml-5">
-                              <Clock size={13} className="text-slate-400" />
-                              <span>{req.startTime} – {req.endTime}</span>
+                        {/* Reason */}
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Reason for absence</span>
+                          <p className="text-xs text-slate-650 leading-relaxed font-medium bg-slate-50/30 rounded-xl p-2.5 border border-slate-100/50">
+                            {req.reason}
+                          </p>
+                        </div>
+
+                        {/* Approver remarks if reviewed */}
+                        {req.status !== 'Pending' && (
+                          <div className="border-t border-slate-100/80 pt-3 space-y-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Review Feedback</span>
+                            <div className="text-xs text-slate-600 bg-slate-50/40 rounded-xl p-2.5 border border-slate-100/50">
+                              <p className="font-semibold text-slate-700">Reviewed By: {req.reviewerName}</p>
+                              {req.reviewerRemarks && (
+                                <p className="mt-1 text-slate-500 italic">“ {req.reviewerRemarks} ”</p>
+                              )}
                             </div>
                           </div>
                         )}
                       </div>
 
-                      {/* Reason */}
-                      <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Reason</p>
-                        <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">{req.reason}</p>
-                      </div>
-
-                      {/* Review Details (For History Tab) */}
-                      {req.status !== 'Pending' && (
-                        <div className="p-3.5 bg-white rounded-xl border border-slate-100 flex items-start gap-2.5 mt-2">
-                          {req.status === 'Approved' ? (
-                            <CheckCircle2 size={16} className="text-emerald-500 shrink-0 mt-0.5" />
-                          ) : (
-                            <XCircle size={16} className="text-rose-500 shrink-0 mt-0.5" />
-                          )}
-                          <div className="text-xs">
-                            <span className="font-bold text-slate-700">
-                              Reviewed by {req.reviewerName || 'Administrator'}
-                            </span>
-                            {req.reviewerRemarks && (
-                              <p className="text-slate-500 mt-1 italic">
-                                "{req.reviewerRemarks}"
-                              </p>
-                            )}
+                      {/* Approval action block */}
+                      {req.status === 'Pending' && (
+                        <div className="pt-3 border-t border-slate-100 space-y-3">
+                          <input
+                            type="text"
+                            placeholder="Add remarks or justification (optional)..."
+                            value={leaveRemarks[req._id] || ''}
+                            onChange={(e) => handleLeaveRemarksChange(req._id, e.target.value)}
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:bg-white"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              disabled={submittingLeaveId === req._id}
+                              onClick={() => handleReviewLeave(req._id, 'Approved')}
+                              className="flex-1 flex items-center justify-center gap-1.5 h-9 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-xl text-xs font-bold transition shadow-3xs cursor-pointer"
+                            >
+                              <Check size={13} /> Approve
+                            </button>
+                            <button
+                              type="button"
+                              disabled={submittingLeaveId === req._id}
+                              onClick={() => handleReviewLeave(req._id, 'Rejected')}
+                              className="flex-1 flex items-center justify-center gap-1.5 h-9 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white rounded-xl text-xs font-bold transition shadow-3xs cursor-pointer"
+                            >
+                              <X size={13} /> Reject
+                            </button>
                           </div>
                         </div>
                       )}
                     </div>
+                  ))}
+              </div>
+            )}
+          </SurfaceCard>
+        </div>
+      )}
 
-                    {/* Approval Actions (For Pending Tab) */}
-                    {req.status === 'Pending' && (
-                      <div className="mt-6 pt-5 border-t border-slate-100 space-y-4">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                            Reviewer Remarks (Optional)
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="Add comments or rejection reasons..."
-                            value={leaveRemarks[req._id] || ''}
-                            onChange={(e) => handleLeaveRemarksChange(req._id, e.target.value)}
-                            className="w-full h-10 px-3 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:border-blue-500 focus:bg-white outline-none transition"
-                          />
-                        </div>
-
-                        <div className="flex gap-3">
-                          <button
-                            type="button"
-                            disabled={submittingLeaveId === req._id}
-                            onClick={() => handleReviewLeave(req._id, 'Approved')}
-                            className="flex-1 flex items-center justify-center gap-1.5 h-10 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-xl text-xs font-bold transition shadow-sm"
-                          >
-                            <Check size={14} />
-                            Approve
-                          </button>
-                          <button
-                            type="button"
-                            disabled={submittingLeaveId === req._id}
-                            onClick={() => handleReviewLeave(req._id, 'Rejected')}
-                            className="flex-1 flex items-center justify-center gap-1.5 h-10 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white rounded-xl text-xs font-bold transition shadow-sm"
-                          >
-                            <X size={14} />
-                            Reject
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </SurfaceCard>
-                ))}
+      {/* Summary Report Tab */}
+      {activeTab === 'summary' && (
+        <div className="space-y-6">
+          <SurfaceCard className="p-6 border border-slate-100 shadow-xs">
+            <div className="mb-6 flex flex-wrap items-center gap-4 border-b border-slate-100 pb-5">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">From Date:</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  className="crm-input h-9 px-3 text-xs"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">To Date:</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  className="crm-input h-9 px-3 text-xs"
+                />
+              </div>
             </div>
-          )}
+
+            {loading ? (
+              <div className="flex min-h-[300px] items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+              </div>
+            ) : summary ? (
+              <div className="space-y-6">
+                {/* Summary aggregate stats */}
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  <div className="crm-surface p-4 text-center rounded-2xl border border-slate-100">
+                    <div className="text-2xl font-black text-emerald-600">
+                      {summary.byStatus.Present}
+                    </div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Total Present</div>
+                  </div>
+                  <div className="crm-surface p-4 text-center rounded-2xl border border-slate-100">
+                    <div className="text-2xl font-black text-rose-600">{summary.byStatus.Absent}</div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Total Absent</div>
+                  </div>
+                  <div className="crm-surface p-4 text-center rounded-2xl border border-slate-100">
+                    <div className="text-2xl font-black text-amber-600">{summary.byStatus.Late}</div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Total Late</div>
+                  </div>
+                  <div className="crm-surface p-4 text-center rounded-2xl border border-slate-100">
+                    <div className="text-2xl font-black text-blue-600">{summary.byStatus.Leave}</div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Total On Leave</div>
+                  </div>
+                </div>
+
+                {/* Detailed Table */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Student-wise Performance</h3>
+                  <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-2xs bg-white">
+                    <table className="min-w-full divide-y divide-slate-100 text-left">
+                      <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                        <tr>
+                          <th className="px-4 py-3">Student Name</th>
+                          <th className="px-4 py-3 text-center">Present</th>
+                          <th className="px-4 py-3 text-center">Absent</th>
+                          <th className="px-4 py-3 text-center">Late</th>
+                          <th className="px-4 py-3 text-center">Leave</th>
+                          <th className="px-4 py-3 text-center">Total days</th>
+                          <th className="px-4 py-3 text-center">% Ratio</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700 bg-white">
+                        {Object.values(summary.byStudent).map((data, idx) => {
+                          const percentage = Math.round((data.Present / data.total) * 100);
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50/50 transition">
+                              <td className="px-4 py-3 font-bold text-slate-800">{data.name}</td>
+                              <td className="px-4 py-3 text-center text-emerald-600 font-bold">{data.Present}</td>
+                              <td className="px-4 py-3 text-center text-rose-600 font-bold">{data.Absent}</td>
+                              <td className="px-4 py-3 text-center text-amber-600 font-bold">{data.Late}</td>
+                              <td className="px-4 py-3 text-center text-blue-600 font-bold">{data.Leave}</td>
+                              <td className="px-4 py-3 text-center font-bold text-slate-900">{data.total}</td>
+                              <td className="px-4 py-3 text-center">
+                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset ${
+                                  percentage >= 75
+                                    ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
+                                    : percentage >= 50
+                                      ? 'bg-amber-50 text-amber-700 ring-amber-600/20'
+                                      : 'bg-rose-50 text-rose-700 ring-rose-600/20'
+                                }`}>
+                                  {percentage}%
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8 border border-dashed border-slate-200 rounded-2xl text-center bg-slate-50/20">
+                <TrendingUp size={22} className="text-slate-300 mb-2" />
+                <p className="text-xs font-semibold text-slate-400">Set date range and query attendance summary</p>
+              </div>
+            )}
+          </SurfaceCard>
         </div>
       )}
 
       {/* Student History Tab */}
       {activeTab === 'student' && (
         <div className="space-y-6">
-          <SurfaceCard className="p-6">
-            <div className="mb-6 space-y-4">
+          <SurfaceCard className="p-6 border border-slate-100 shadow-xs">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-slate-100 pb-5">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Select Student
-                </label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Select SPL Student</label>
                 <select
                   value={selectedStudent || ''}
                   onChange={e => {
@@ -943,9 +1001,9 @@ export default function AttendancePage() {
                       fetchStudentAttendance(e.target.value);
                     }
                   }}
-                  className="crm-input"
+                  className="crm-input w-full h-10 px-3 text-xs"
                 >
-                  <option value="">Choose a student...</option>
+                  <option value="">Choose student...</option>
                   {students.map(student => (
                     <option key={student._id} value={student._id}>
                       {student.name} ({student.email}){student.batch ? ` — ${student.batch}` : ''}
@@ -954,102 +1012,100 @@ export default function AttendancePage() {
                 </select>
               </div>
 
-              <div className="flex flex-col gap-4 md:flex-row md:items-center">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-slate-700">From:</label>
+              <div className="flex items-center gap-2 self-end">
+                <div className="flex-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">From Date</label>
                   <input
                     type="date"
                     value={startDate}
                     onChange={e => setStartDate(e.target.value)}
-                    className="crm-input"
+                    className="crm-input h-10 px-3 text-xs w-full"
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-slate-700">To:</label>
+                <div className="flex-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">To Date</label>
                   <input
                     type="date"
                     value={endDate}
                     onChange={e => setEndDate(e.target.value)}
-                    className="crm-input"
+                    className="crm-input h-10 px-3 text-xs w-full"
                   />
                 </div>
               </div>
             </div>
 
             {selectedStudent && (
-              <div className="space-y-4">
+              <div className="space-y-6 pt-4">
                 {loading ? (
-                  <div className="flex items-center justify-center py-12">
+                  <div className="flex min-h-[250px] items-center justify-center">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
                   </div>
                 ) : (
                   <>
-                    {/* Attendance stats for this student */}
+                    {/* Stats for single student */}
                     {studentAttendance.length > 0 && (
-                      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 mb-6">
-                        <div className="crm-surface p-4 text-center">
-                          <div className="text-2xl font-bold text-green-600">
+                      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                        <div className="crm-surface p-4 text-center rounded-2xl border border-slate-100">
+                          <div className="text-2xl font-black text-emerald-600">
                             {studentAttendance.filter(a => a.status === 'Present').length}
                           </div>
-                          <div className="text-sm text-slate-600">Present</div>
+                          <div className="text-[10px] font-bold text-slate-400 uppercase mt-1">Days Present</div>
                         </div>
-                        <div className="crm-surface p-4 text-center">
-                          <div className="text-2xl font-bold text-red-600">
+                        <div className="crm-surface p-4 text-center rounded-2xl border border-slate-100">
+                          <div className="text-2xl font-black text-rose-600">
                             {studentAttendance.filter(a => a.status === 'Absent').length}
                           </div>
-                          <div className="text-sm text-slate-600">Absent</div>
+                          <div className="text-[10px] font-bold text-slate-400 uppercase mt-1">Days Absent</div>
                         </div>
-                        <div className="crm-surface p-4 text-center">
-                          <div className="text-2xl font-bold text-yellow-600">
+                        <div className="crm-surface p-4 text-center rounded-2xl border border-slate-100">
+                          <div className="text-2xl font-black text-amber-600">
                             {studentAttendance.filter(a => a.status === 'Late').length}
                           </div>
-                          <div className="text-sm text-slate-600">Late</div>
+                          <div className="text-[10px] font-bold text-slate-400 uppercase mt-1">Days Late</div>
                         </div>
-                        <div className="crm-surface p-4 text-center">
-                          <div className="text-2xl font-bold text-blue-600">
+                        <div className="crm-surface p-4 text-center rounded-2xl border border-slate-100">
+                          <div className="text-2xl font-black text-blue-600">
                             {studentAttendance.filter(a => a.status === 'Leave').length}
                           </div>
-                          <div className="text-sm text-slate-600">Leave</div>
+                          <div className="text-[10px] font-bold text-slate-400 uppercase mt-1">Days On Leave</div>
                         </div>
                       </div>
                     )}
 
                     {studentAttendance.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-slate-200">
-                              <th className="px-4 py-2 text-left font-semibold text-slate-700">
-                                Date
-                              </th>
-                              <th className="px-4 py-2 text-left font-semibold text-slate-700">
-                                Status
-                              </th>
-                              <th className="px-4 py-2 text-left font-semibold text-slate-700">
-                                Remarks
-                              </th>
+                      <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-2xs bg-white">
+                        <table className="min-w-full divide-y divide-slate-100 text-left">
+                          <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                            <tr>
+                              <th className="px-4 py-3">Marked Date</th>
+                              <th className="px-4 py-3">Status</th>
+                              <th className="px-4 py-3">Remarks / Reason</th>
                             </tr>
                           </thead>
-                          <tbody>
+                          <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700 bg-white">
                             {studentAttendance.map(record => (
-                              <tr key={record._id} className="border-b border-slate-100 hover:bg-slate-50">
-                                <td className="px-4 py-3 text-slate-900">
-                                  {new Date(record.date).toLocaleDateString()}
+                              <tr key={record._id} className="hover:bg-slate-50/50 transition">
+                                <td className="px-4 py-3 font-bold text-slate-800">
+                                  {new Date(record.date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
                                 </td>
                                 <td className="px-4 py-3">
-                                  <StatusBadge
-                                    status={record.status}
-                                    tone={STATUS_COLORS[record.status]}
-                                  />
+                                  <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full uppercase tracking-wider ${getStatusStyle(record.status)}`}>
+                                    {record.status}
+                                  </span>
                                 </td>
-                                <td className="px-4 py-3 text-slate-600">{record.remarks}</td>
+                                <td className="px-4 py-3 text-slate-500 italic">
+                                  {record.remarks || <span className="text-slate-300">—</span>}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
                       </div>
                     ) : (
-                      <p className="py-4 text-center text-slate-500">No attendance records found</p>
+                      <div className="flex flex-col items-center justify-center p-8 border border-dashed border-slate-200 rounded-2xl text-center bg-slate-50/20">
+                        <AlertCircle size={22} className="text-slate-300 mb-2" />
+                        <p className="text-xs font-semibold text-slate-450">No attendance records found in this range</p>
+                      </div>
                     )}
                   </>
                 )}

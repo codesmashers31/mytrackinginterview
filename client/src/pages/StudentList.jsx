@@ -817,7 +817,9 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
     acceptOffer: student?.acceptOffer || '',
     fullEffort: student?.fullEffort || '',
     issues: student?.issues || '',
-    needMost: student?.needMost || ''
+    needMost: student?.needMost || '',
+    githubLink: student?.githubLink || '',
+    linkedinLink: student?.linkedinLink || ''
   });
 
   const statusOptions = [
@@ -1006,6 +1008,27 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
                         </div>
                       )}
 
+                       <div>
+                          <label className="crm-label">GitHub URL</label>
+                          <input
+                             type="url"
+                             value={formData.githubLink}
+                             onChange={e => setFormData({...formData, githubLink: e.target.value})}
+                             className="crm-input"
+                             placeholder="https://github.com/username"
+                          />
+                       </div>
+
+                       <div>
+                          <label className="crm-label">LinkedIn URL</label>
+                          <input
+                             type="url"
+                             value={formData.linkedinLink}
+                             onChange={e => setFormData({...formData, linkedinLink: e.target.value})}
+                             className="crm-input"
+                             placeholder="https://linkedin.com/in/username"
+                          />
+                       </div>
 
                       <div className="md:col-span-2">
                          <label className="crm-label">Other Notes</label>
@@ -1116,6 +1139,22 @@ function StudentDetailModal({ onClose, student }) {
                 {student.others && (
                   <DetailRow label="Other Notes" val={student.others} />
                 )}
+                {student.githubLink && (
+                   <div className="flex justify-between items-center gap-3 py-1">
+                      <span className="text-[12px] md:text-[14px] font-bold text-slate-400">GitHub</span>
+                      <a href={student.githubLink} target="_blank" rel="noopener noreferrer" className="text-[13px] md:text-[15px] font-extrabold text-blue-600 hover:underline text-right break-all max-w-[200px]">
+                         {student.githubLink}
+                      </a>
+                   </div>
+                 )}
+                 {student.linkedinLink && (
+                   <div className="flex justify-between items-center gap-3 py-1">
+                      <span className="text-[12px] md:text-[14px] font-bold text-slate-400">LinkedIn</span>
+                      <a href={student.linkedinLink} target="_blank" rel="noopener noreferrer" className="text-[13px] md:text-[15px] font-extrabold text-blue-600 hover:underline text-right break-all max-w-[200px]">
+                         {student.linkedinLink}
+                      </a>
+                   </div>
+                 )}
                 {student.currentStatus.toLowerCase() === 'placed' && (
                   <div className="pt-5 mt-5 border-t border-slate-100 space-y-3">
                      <p className="text-[11px] md:text-[13px] font-extrabold text-emerald-600 uppercase tracking-widest mb-3">Placement Telemetry</p>

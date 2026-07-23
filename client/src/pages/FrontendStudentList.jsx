@@ -769,6 +769,8 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
     companyName: student?.companyName || '',
     packageLpa: student?.packageLpa || '',
     jobGetMode: student?.jobGetMode || '',
+    githubLink: student?.githubLink || '',
+    linkedinLink: student?.linkedinLink || '',
     studentType: 'Frontend',
     isFrontend: true
   });
@@ -949,6 +951,29 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
                 </div>
               )}
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="crm-label">GitHub URL</label>
+                  <input
+                    type="url"
+                    value={formData.githubLink}
+                    onChange={e => setFormData({...formData, githubLink: e.target.value})}
+                    className="crm-input"
+                    placeholder="https://github.com/username"
+                  />
+                </div>
+                <div>
+                  <label className="crm-label">LinkedIn URL</label>
+                  <input
+                    type="url"
+                    value={formData.linkedinLink}
+                    onChange={e => setFormData({...formData, linkedinLink: e.target.value})}
+                    className="crm-input"
+                    placeholder="https://linkedin.com/in/username"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="crm-label">Other Notes</label>
                 <input
@@ -1070,6 +1095,22 @@ function FrontendStudentDetailModal({ onClose, student }) {
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400 font-medium">Other Notes</span>
                 <span className="text-slate-800 font-semibold text-right max-w-[200px] break-words">{student.others}</span>
+              </div>
+            )}
+            {student.githubLink && (
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400 font-medium">GitHub</span>
+                <a href={student.githubLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-semibold break-all max-w-[200px] text-right">
+                  {student.githubLink}
+                </a>
+              </div>
+            )}
+            {student.linkedinLink && (
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400 font-medium">LinkedIn</span>
+                <a href={student.linkedinLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-semibold break-all max-w-[200px] text-right">
+                  {student.linkedinLink}
+                </a>
               </div>
             )}
             {student.currentStatus?.toLowerCase() === 'placed' && (

@@ -124,11 +124,9 @@ export default function AttendancePage() {
       if (!res.ok) throw new Error('Failed to load students');
       const data = await res.json();
       
-      // Filter out inactive students and keep only SPL enrolled ones
+      // Filter out inactive students
       const activeStudents = data.filter(student => 
-        !/^inactive/i.test(student.currentStatus || '') && 
-        student.enrollments && 
-        student.enrollments.includes('SPL')
+        !/^inactive/i.test(student.currentStatus || '')
       );
 
       // Fetch direct SPL registrations too
@@ -143,11 +141,18 @@ export default function AttendancePage() {
         const splData = await splRes.json();
         const activeSpls = splData.filter(student => !/^inactive/i.test(student.status || ''));
         
-        // Deduplicate between activeStudents and activeSpls by email
+        // Deduplicate between activeStudents and activeSpls by email and name
         const existingEmails = new Set(activeStudents.map(s => (s.email || '').toLowerCase().trim()).filter(Boolean));
+        const existingNames = new Set(activeStudents.map(s => (s.name || '').toLowerCase().trim()).filter(Boolean));
         
         const mappedSpls = activeSpls
-          .filter(s => !s.email || !existingEmails.has(s.email.toLowerCase().trim()))
+          .filter(s => {
+            const emailKey = (s.email || '').toLowerCase().trim();
+            const nameKey = (s.name || '').toLowerCase().trim();
+            if (emailKey && existingEmails.has(emailKey)) return false;
+            if (nameKey && existingNames.has(nameKey)) return false;
+            return true;
+          })
           .map(s => ({
             _id: s._id,
             name: s.name,

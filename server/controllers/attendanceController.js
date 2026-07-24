@@ -246,9 +246,7 @@ export const getAttendanceSummary = async (req, res) => {
     ]);
 
     const activeStudents = allStudents.filter(student => 
-      !/^inactive/i.test(student.currentStatus || '') && 
-      student.enrollments && 
-      student.enrollments.includes('SPL')
+      !/^inactive/i.test(student.currentStatus || '')
     );
     const activeSpls = allSpls.filter(student => 
       !/^inactive/i.test(student.status || '')
@@ -256,6 +254,7 @@ export const getAttendanceSummary = async (req, res) => {
 
     const byStudent = {};
     const emailToStudentId = {};
+    const nameToStudentId = {};
 
     activeStudents.forEach(s => {
       const idStr = s._id.toString();
@@ -275,12 +274,20 @@ export const getAttendanceSummary = async (req, res) => {
         const emailKey = s.email.toLowerCase().trim();
         emailToStudentId[emailKey] = idStr;
       }
+      if (s.name) {
+        const nameKey = s.name.toLowerCase().trim();
+        nameToStudentId[nameKey] = idStr;
+      }
     });
 
     activeSpls.forEach(s => {
       const idStr = s._id.toString();
       const emailKey = s.email ? s.email.toLowerCase().trim() : '';
+      const nameKey = s.name ? s.name.toLowerCase().trim() : '';
       if (emailKey && emailToStudentId[emailKey]) {
+        return;
+      }
+      if (nameKey && nameToStudentId[nameKey]) {
         return;
       }
       byStudent[idStr] = {
@@ -297,6 +304,9 @@ export const getAttendanceSummary = async (req, res) => {
       };
       if (emailKey) {
         emailToStudentId[emailKey] = idStr;
+      }
+      if (nameKey) {
+        nameToStudentId[nameKey] = idStr;
       }
     });
 
@@ -437,25 +447,34 @@ export const getUnmarkedStudents = async (req, res) => {
     const nextDate = new Date(targetDate);
     nextDate.setUTCDate(nextDate.getUTCDate() + 1);
 
-    // Get all active students (not inactive) enrolled in SPL
-    const allStudents = await Student.find({ currentStatus: { $ne: 'Inactive/Suspend' }, enrollments: 'SPL' }).lean();
+    // Get all active students (not inactive)
+    const allStudents = await Student.find({ currentStatus: { $ne: 'Inactive/Suspend' } }).lean();
     const splRegs = await SplRegistration.find({ status: { $ne: 'Inactive/Suspend' } }).lean();
 
     const emailMap = new Map();
+    const nameMap = new Map();
     const combinedStudents = [];
 
     allStudents.forEach(s => {
       const emailKey = s.email ? s.email.toLowerCase().trim() : '';
+      const nameKey = s.name ? s.name.toLowerCase().trim() : '';
       if (emailKey) {
         emailMap.set(emailKey, s._id.toString());
+      }
+      if (nameKey) {
+        nameMap.set(nameKey, s._id.toString());
       }
       combinedStudents.push(s);
     });
 
     splRegs.forEach(r => {
       const emailKey = r.email ? r.email.toLowerCase().trim() : '';
+      const nameKey = r.name ? r.name.toLowerCase().trim() : '';
       if (emailKey && emailMap.has(emailKey)) {
         return; // skip duplicate email
+      }
+      if (nameKey && nameMap.has(nameKey)) {
+        return; // skip duplicate name
       }
       combinedStudents.push({
         ...r,

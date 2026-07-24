@@ -129,45 +129,49 @@ export default function AttendancePage() {
         !/^inactive/i.test(student.currentStatus || '')
       );
 
-      // Fetch direct SPL registrations too
-      const splRes = await fetch(buildApiUrl('/spl-registration'), {
-        headers: { ...authHeaders() }
-      });
-      if (splRes.status === 401) {
-        logout();
-        return;
+      // Fetch direct SPL registrations too (wrapped in try/catch to prevent blocking)
+      let activeSpls = [];
+      try {
+        const splRes = await fetch(buildApiUrl('/spl-registration'), {
+          headers: { ...authHeaders() }
+        });
+        if (splRes.status === 401) {
+          logout();
+          return;
+        }
+        if (splRes.ok) {
+          const splData = await splRes.json();
+          activeSpls = splData.filter(student => !/^inactive/i.test(student.status || ''));
+        }
+      } catch (splErr) {
+        console.error('Failed to fetch SPL registrations:', splErr);
       }
-      if (splRes.ok) {
-        const splData = await splRes.json();
-        const activeSpls = splData.filter(student => !/^inactive/i.test(student.status || ''));
-        
-        // Deduplicate between activeStudents and activeSpls by email and name
-        const existingEmails = new Set(activeStudents.map(s => (s.email || '').toLowerCase().trim()).filter(Boolean));
-        const existingNames = new Set(activeStudents.map(s => (s.name || '').toLowerCase().trim()).filter(Boolean));
-        
-        const mappedSpls = activeSpls
-          .filter(s => {
-            const emailKey = (s.email || '').toLowerCase().trim();
-            const nameKey = (s.name || '').toLowerCase().trim();
-            if (emailKey && existingEmails.has(emailKey)) return false;
-            if (nameKey && existingNames.has(nameKey)) return false;
-            return true;
-          })
-          .map(s => ({
-            _id: s._id,
-            name: s.name,
-            email: s.email,
-            batch: s.batch || s.passedOutYear || '',
-            enrollments: ['SPL']
-          }));
-        
-        const combined = [...activeStudents, ...mappedSpls];
-        combined.sort((a, b) => a.name.localeCompare(b.name));
-        setStudents(combined);
-      } else {
-        setStudents(activeStudents);
-      }
+
+      // Deduplicate between activeStudents and activeSpls by email and name
+      const existingEmails = new Set(activeStudents.map(s => (s.email || '').toLowerCase().trim()).filter(Boolean));
+      const existingNames = new Set(activeStudents.map(s => (s.name || '').toLowerCase().trim()).filter(Boolean));
+      
+      const mappedSpls = activeSpls
+        .filter(s => {
+          const emailKey = (s.email || '').toLowerCase().trim();
+          const nameKey = (s.name || '').toLowerCase().trim();
+          if (emailKey && existingEmails.has(emailKey)) return false;
+          if (nameKey && existingNames.has(nameKey)) return false;
+          return true;
+        })
+        .map(s => ({
+          _id: s._id,
+          name: s.name,
+          email: s.email,
+          batch: s.batch || s.passedOutYear || '',
+          enrollments: ['SPL']
+        }));
+      
+      const combined = [...activeStudents, ...mappedSpls];
+      combined.sort((a, b) => a.name.localeCompare(b.name));
+      setStudents(combined);
     } catch (err) {
+      console.error(err);
       toast.error('Could not load students');
     }
   };
@@ -262,6 +266,12 @@ export default function AttendancePage() {
   useEffect(() => {
     fetchStudents();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'student' && students.length === 0) {
+      fetchStudents();
+    }
+  }, [activeTab, students.length]);
 
   useEffect(() => {
     if (activeTab === 'daily') {
@@ -1311,7 +1321,7 @@ export default function AttendancePage() {
           <SurfaceCard className="p-6 border border-slate-100 shadow-xs">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-slate-100 pb-5">
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Select SPL Student</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Select Student</label>
                 <select
                   value={selectedStudent || ''}
                   onChange={e => {

@@ -246,6 +246,11 @@ export default function AttendancePage() {
     });
   };
 
+  const formatTime = (dateString) => {
+    if (!dateString) return '--:--';
+    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   // Mark attendance for a student
   const handleMarkAttendance = async (studentId, status) => {
     try {
@@ -781,6 +786,11 @@ export default function AttendancePage() {
                                   {req.studentBatch && req.studentYear ? ` — ` : ''}
                                   {req.studentYear ? `${req.studentYear}` : ''}
                                 </span>
+                              )}
+                              {req.createdAt && (
+                                <p className="text-[10px] text-slate-400 mt-1.5 font-semibold">
+                                  Applied: {formatDate(req.createdAt)} at {formatTime(req.createdAt)}
+                                </p>
                               )}
                             </div>
                           </div>

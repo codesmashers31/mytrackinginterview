@@ -570,7 +570,7 @@ export default function StudentAttendance() {
                       </div>
 
                       <div className="text-[10px] text-slate-400 font-semibold self-end md:self-start">
-                        Requested {new Date(req.createdAt).toLocaleDateString()}
+                        Requested: {formatDate(req.createdAt)} at {formatTime(req.createdAt)}
                       </div>
                     </div>
                   ))}

@@ -35,6 +35,7 @@ export default function StudentAttendance() {
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [reason, setReason] = useState('');
+  const [modeTransition, setModeTransition] = useState('None');
 
   useEffect(() => {
     fetchTodayAttendance();
@@ -188,6 +189,7 @@ export default function StudentAttendance() {
       payload.date = leaveDate;
       payload.startTime = startTime;
       payload.endTime = endTime;
+      payload.modeTransition = modeTransition;
     }
 
     setSubmittingLeave(true);
@@ -210,6 +212,7 @@ export default function StudentAttendance() {
         setStartTime('');
         setEndTime('');
         setReason('');
+        setModeTransition('None');
         // Refresh history list
         fetchRequests();
       } else {
@@ -468,6 +471,21 @@ export default function StudentAttendance() {
                         />
                       </div>
                     </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        Mode Transition / Permission Subtype
+                      </label>
+                      <select
+                        value={modeTransition}
+                        onChange={(e) => setModeTransition(e.target.value)}
+                        className="w-full h-11 px-4 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:border-blue-500 focus:bg-white outline-none transition cursor-pointer font-semibold text-slate-700"
+                      >
+                        <option value="None">None / Standard Permission</option>
+                        <option value="Offline to Online">Offline to Online</option>
+                        <option value="Online to Offline">Online to Offline</option>
+                      </select>
+                    </div>
                   </div>
                 )}
 
@@ -532,6 +550,11 @@ export default function StudentAttendance() {
                             {req.type === 'Leave' ? <Calendar size={14} className="text-indigo-500" /> : <Clock size={14} className="text-cyan-500" />}
                             {req.type}
                           </span>
+                          {req.modeTransition && req.modeTransition !== 'None' && (
+                            <span className="px-2 py-0.5 text-[9px] font-bold rounded-full uppercase tracking-wider bg-purple-50 text-purple-700 ring-1 ring-purple-600/10">
+                              {req.modeTransition}
+                            </span>
+                          )}
                           <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full uppercase tracking-wider ${getStatusStyle(req.status)}`}>
                             {req.status}
                           </span>

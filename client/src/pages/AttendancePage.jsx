@@ -800,6 +800,11 @@ export default function AttendancePage() {
                               {req.type === 'Leave' ? <Calendar size={11} className="text-indigo-500" /> : <Clock size={11} className="text-cyan-500" />}
                               {req.type}
                             </span>
+                            {req.modeTransition && req.modeTransition !== 'None' && (
+                              <span className="px-2 py-0.5 text-[9px] font-bold rounded-full uppercase tracking-wider bg-purple-50 text-purple-700 ring-1 ring-purple-600/10">
+                                {req.modeTransition}
+                              </span>
+                            )}
                             <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full uppercase tracking-wider ${getStatusStyle(req.status)}`}>
                               {req.status}
                             </span>
@@ -852,12 +857,12 @@ export default function AttendancePage() {
                       {/* Approval action block */}
                       {req.status === 'Pending' && (
                         <div className="pt-3 border-t border-slate-100 space-y-3">
-                          <input
-                            type="text"
-                            placeholder="Add remarks or justification (optional)..."
+                          <textarea
+                            placeholder="Add remarks, approval or rejection reason (optional)..."
                             value={leaveRemarks[req._id] || ''}
                             onChange={(e) => handleLeaveRemarksChange(req._id, e.target.value)}
-                            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:bg-white"
+                            rows={2}
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-700 outline-none transition focus:border-blue-300 focus:bg-white resize-none"
                           />
                           <div className="flex gap-2">
                             <button

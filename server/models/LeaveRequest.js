@@ -36,6 +36,11 @@ const leaveRequestSchema = new mongoose.Schema({
   endTime: {
     type: String
   },
+  modeTransition: {
+    type: String,
+    enum: ['None', 'Offline to Online', 'Online to Offline'],
+    default: 'None'
+  },
   reason: {
     type: String,
     required: true

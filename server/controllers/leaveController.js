@@ -8,7 +8,7 @@ import { createNotification, notifyAdmins } from '../utils/notifications.js';
 // Apply for a Leave or Permission (Student only)
 export const applyLeaveRequest = async (req, res) => {
   try {
-    const { type, startDate, endDate, date, startTime, endTime, reason } = req.body;
+    const { type, startDate, endDate, date, startTime, endTime, reason, modeTransition } = req.body;
     const userId = req.user.id;
 
     const user = await User.findById(userId);
@@ -45,6 +45,7 @@ export const applyLeaveRequest = async (req, res) => {
       newRequestData.date = new Date(date);
       newRequestData.startTime = startTime;
       newRequestData.endTime = endTime;
+      newRequestData.modeTransition = modeTransition || 'None';
     } else {
       return res.status(400).json({ message: 'Invalid request type. Must be Leave or Permission.' });
     }

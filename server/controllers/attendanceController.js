@@ -258,12 +258,11 @@ export const getAttendanceSummary = async (req, res) => {
     const emailToStudentId = {};
 
     activeStudents.forEach(s => {
-      const emailKey = s.email.toLowerCase().trim();
       const idStr = s._id.toString();
       byStudent[idStr] = {
         studentId: idStr,
         name: s.name,
-        email: s.email,
+        email: s.email || '',
         batch: s.batch || '',
         passedOutYear: s.passedOutYear || '',
         Present: 0,
@@ -272,19 +271,22 @@ export const getAttendanceSummary = async (req, res) => {
         Leave: 0,
         total: 0
       };
-      emailToStudentId[emailKey] = idStr;
+      if (s.email) {
+        const emailKey = s.email.toLowerCase().trim();
+        emailToStudentId[emailKey] = idStr;
+      }
     });
 
     activeSpls.forEach(s => {
-      const emailKey = s.email.toLowerCase().trim();
-      if (emailToStudentId[emailKey]) {
+      const idStr = s._id.toString();
+      const emailKey = s.email ? s.email.toLowerCase().trim() : '';
+      if (emailKey && emailToStudentId[emailKey]) {
         return;
       }
-      const idStr = s._id.toString();
       byStudent[idStr] = {
         studentId: idStr,
         name: s.name,
-        email: s.email,
+        email: s.email || '',
         batch: s.batch || s.passedOutYear || '',
         passedOutYear: s.passedOutYear || '',
         Present: 0,
@@ -293,7 +295,9 @@ export const getAttendanceSummary = async (req, res) => {
         Leave: 0,
         total: 0
       };
-      emailToStudentId[emailKey] = idStr;
+      if (emailKey) {
+        emailToStudentId[emailKey] = idStr;
+      }
     });
 
     const attendance = await Attendance.find({
@@ -434,13 +438,30 @@ export const getUnmarkedStudents = async (req, res) => {
     nextDate.setUTCDate(nextDate.getUTCDate() + 1);
 
     // Get all active students (not inactive) enrolled in SPL
-    const allStudents = await Student.find({ currentStatus: { $not: /^inactive/i }, enrollments: 'SPL' }).lean();
-    const splRegs = await SplRegistration.find({ status: { $not: /^inactive/i } }).lean();
-    const mappedSpls = splRegs.map(r => ({
-      ...r,
-      currentStatus: r.status
-    }));
-    const combinedStudents = [...allStudents, ...mappedSpls];
+    const allStudents = await Student.find({ currentStatus: { $ne: 'Inactive/Suspend' }, enrollments: 'SPL' }).lean();
+    const splRegs = await SplRegistration.find({ status: { $ne: 'Inactive/Suspend' } }).lean();
+
+    const emailMap = new Map();
+    const combinedStudents = [];
+
+    allStudents.forEach(s => {
+      const emailKey = s.email ? s.email.toLowerCase().trim() : '';
+      if (emailKey) {
+        emailMap.set(emailKey, s._id.toString());
+      }
+      combinedStudents.push(s);
+    });
+
+    splRegs.forEach(r => {
+      const emailKey = r.email ? r.email.toLowerCase().trim() : '';
+      if (emailKey && emailMap.has(emailKey)) {
+        return; // skip duplicate email
+      }
+      combinedStudents.push({
+        ...r,
+        currentStatus: r.status
+      });
+    });
 
     // Get marked attendance for this date
     const markedAttendance = await Attendance.find({

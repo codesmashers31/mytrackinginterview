@@ -122,13 +122,19 @@ export default function AttendancePage() {
       if (splRes.ok) {
         const splData = await splRes.json();
         const activeSpls = splData.filter(student => !/^inactive/i.test(student.status || ''));
-        const mappedSpls = activeSpls.map(s => ({
-          _id: s._id,
-          name: s.name,
-          email: s.email,
-          batch: s.batch || s.passedOutYear || '',
-          enrollments: ['SPL']
-        }));
+        
+        // Deduplicate between activeStudents and activeSpls by email
+        const existingEmails = new Set(activeStudents.map(s => (s.email || '').toLowerCase().trim()).filter(Boolean));
+        
+        const mappedSpls = activeSpls
+          .filter(s => !s.email || !existingEmails.has(s.email.toLowerCase().trim()))
+          .map(s => ({
+            _id: s._id,
+            name: s.name,
+            email: s.email,
+            batch: s.batch || s.passedOutYear || '',
+            enrollments: ['SPL']
+          }));
         
         const combined = [...activeStudents, ...mappedSpls];
         combined.sort((a, b) => a.name.localeCompare(b.name));

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard, StatusBadge, SectionTabs } from '../components/AppShell';
-import { authHeaders } from '../utils/auth';
+import { authHeaders, logout } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
 import { Calendar, Plus, Check, X, Clock, FileText, TrendingUp, Download, Search, CheckCircle2, XCircle, User, MapPin, Trash2, Filter, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -105,6 +105,10 @@ export default function AttendancePage() {
       const res = await fetch(buildApiUrl('/students?all=true'), {
         headers: { ...authHeaders() }
       });
+      if (res.status === 401) {
+        logout();
+        return;
+      }
       if (!res.ok) throw new Error('Failed to load students');
       const data = await res.json();
       
@@ -119,6 +123,10 @@ export default function AttendancePage() {
       const splRes = await fetch(buildApiUrl('/spl-registration'), {
         headers: { ...authHeaders() }
       });
+      if (splRes.status === 401) {
+        logout();
+        return;
+      }
       if (splRes.ok) {
         const splData = await splRes.json();
         const activeSpls = splData.filter(student => !/^inactive/i.test(student.status || ''));
@@ -154,6 +162,10 @@ export default function AttendancePage() {
       const res = await fetch(buildApiUrl(`/attendance/date/${selectedDate}`), {
         headers: { ...authHeaders() }
       });
+      if (res.status === 401) {
+        logout();
+        return;
+      }
       if (!res.ok) throw new Error('Failed to load attendance');
       const data = await res.json();
       setAttendance(data);
@@ -169,6 +181,10 @@ export default function AttendancePage() {
       const unmarkedRes = await fetch(buildApiUrl(`/attendance/unmarked/${selectedDate}`), {
         headers: { ...authHeaders() }
       });
+      if (unmarkedRes.status === 401) {
+        logout();
+        return;
+      }
       if (unmarkedRes.ok) {
         const unmarkedData = await unmarkedRes.json();
         setUnmarked(unmarkedData);
@@ -188,6 +204,10 @@ export default function AttendancePage() {
         buildApiUrl(`/attendance/summary/range?startDate=${startDate}&endDate=${endDate}`),
         { headers: { ...authHeaders() } }
       );
+      if (res.status === 401) {
+        logout();
+        return;
+      }
       if (!res.ok) throw new Error('Failed to load summary');
       const data = await res.json();
       setSummary(data);
@@ -208,6 +228,10 @@ export default function AttendancePage() {
         ),
         { headers: { ...authHeaders() } }
       );
+      if (res.status === 401) {
+        logout();
+        return;
+      }
       if (!res.ok) throw new Error('Failed to load student attendance');
       const data = await res.json();
       setStudentAttendance(data);
@@ -242,6 +266,10 @@ export default function AttendancePage() {
       const res = await fetch(buildApiUrl('/leaves'), {
         headers: authHeaders()
       });
+      if (res.status === 401) {
+        logout();
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setLeaveRequests(data);
@@ -268,6 +296,11 @@ export default function AttendancePage() {
         },
         body: JSON.stringify({ status, reviewerRemarks })
       });
+
+      if (res.status === 401) {
+        logout();
+        return;
+      }
 
       if (res.ok) {
         toast.success(`Request ${status.toLowerCase()} successfully!`);
@@ -333,6 +366,11 @@ export default function AttendancePage() {
         })
       });
 
+      if (res.status === 401) {
+        logout();
+        return;
+      }
+
       if (!res.ok) throw new Error('Failed to mark attendance');
       const data = await res.json();
       setMarkedAttendance(prev => ({
@@ -373,6 +411,11 @@ export default function AttendancePage() {
         body: JSON.stringify({ attendanceRecords })
       });
 
+      if (res.status === 401) {
+        logout();
+        return;
+      }
+
       if (!res.ok) throw new Error('Bulk mark failed');
       toast.success(`Marked ${unmarkedIds.length} students as ${status}`);
       fetchDailyAttendance();
@@ -398,6 +441,11 @@ export default function AttendancePage() {
         method: 'DELETE',
         headers: { ...authHeaders() }
       });
+
+      if (res.status === 401) {
+        logout();
+        return;
+      }
 
       if (!res.ok) throw new Error('Failed to delete');
       toast.success('Attendance deleted');

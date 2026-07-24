@@ -92,8 +92,20 @@ export default function AttendancePage() {
   const [loadingLeaves, setLoadingLeaves] = useState(false);
   const [leaveActiveTab, setLeaveActiveTab] = useState('Pending'); // 'Pending' or 'History'
   const [leaveSearchQuery, setLeaveSearchQuery] = useState('');
+  const [leaveBatch, setLeaveBatch] = useState('All');
+  const [leaveYear, setLeaveYear] = useState('All');
   const [submittingLeaveId, setSubmittingLeaveId] = useState(null);
   const [leaveRemarks, setLeaveRemarks] = useState({});
+
+  const uniqueLeaveBatches = useMemo(() => {
+    const batches = leaveRequests.map(r => String(r.studentBatch || '').trim()).filter(Boolean);
+    return ['All', ...new Set(batches)].sort();
+  }, [leaveRequests]);
+
+  const uniqueLeaveYears = useMemo(() => {
+    const years = leaveRequests.map(r => String(r.studentYear || '').trim()).filter(Boolean);
+    return ['All', ...new Set(years)].sort();
+  }, [leaveRequests]);
 
   const getInitials = (name) => {
     return (name || '').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase();
@@ -838,15 +850,43 @@ export default function AttendancePage() {
                 </button>
               </div>
 
-              <div className="relative w-full max-w-xs">
-                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search student or reason..."
-                  value={leaveSearchQuery}
-                  onChange={(e) => setLeaveSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-white placeholder-slate-400 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                />
+              <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                <div className="relative flex-1 min-w-[200px] lg:flex-initial">
+                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search student, batch or reason..."
+                    value={leaveSearchQuery}
+                    onChange={(e) => setLeaveSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-white placeholder-slate-400 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+
+                <div className="w-[140px]">
+                  <select
+                    value={leaveBatch}
+                    onChange={e => setLeaveBatch(e.target.value)}
+                    className="w-full h-9 px-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+                  >
+                    <option value="All">All Batches</option>
+                    {uniqueLeaveBatches.filter(b => b !== 'All').map(batch => (
+                      <option key={batch} value={batch}>{batch}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="w-[110px]">
+                  <select
+                    value={leaveYear}
+                    onChange={e => setLeaveYear(e.target.value)}
+                    className="w-full h-9 px-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+                  >
+                    <option value="All">All Years</option>
+                    {uniqueLeaveYears.filter(y => y !== 'All').map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -859,8 +899,13 @@ export default function AttendancePage() {
               const matchesSearch = 
                 (req.studentName || '').toLowerCase().includes(leaveSearchQuery.toLowerCase()) ||
                 (req.studentEmail || '').toLowerCase().includes(leaveSearchQuery.toLowerCase()) ||
-                (req.reason || '').toLowerCase().includes(leaveSearchQuery.toLowerCase());
-              return matchesTab && matchesSearch;
+                (req.reason || '').toLowerCase().includes(leaveSearchQuery.toLowerCase()) ||
+                (req.studentBatch || '').toLowerCase().includes(leaveSearchQuery.toLowerCase());
+              
+              const matchesBatch = leaveBatch === 'All' || String(req.studentBatch || '').trim() === leaveBatch;
+              const matchesYear = leaveYear === 'All' || String(req.studentYear || '').trim() === leaveYear;
+              
+              return matchesTab && matchesSearch && matchesBatch && matchesYear;
             }).length === 0 ? (
               <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-8 bg-slate-50/20 border border-dashed border-slate-200 rounded-2xl">
                 <FileText size={24} className="text-slate-300 mb-2" />
@@ -874,8 +919,13 @@ export default function AttendancePage() {
                     const matchesSearch = 
                       (req.studentName || '').toLowerCase().includes(leaveSearchQuery.toLowerCase()) ||
                       (req.studentEmail || '').toLowerCase().includes(leaveSearchQuery.toLowerCase()) ||
-                      (req.reason || '').toLowerCase().includes(leaveSearchQuery.toLowerCase());
-                    return matchesTab && matchesSearch;
+                      (req.reason || '').toLowerCase().includes(leaveSearchQuery.toLowerCase()) ||
+                      (req.studentBatch || '').toLowerCase().includes(leaveSearchQuery.toLowerCase());
+                    
+                    const matchesBatch = leaveBatch === 'All' || String(req.studentBatch || '').trim() === leaveBatch;
+                    const matchesYear = leaveYear === 'All' || String(req.studentYear || '').trim() === leaveYear;
+                    
+                    return matchesTab && matchesSearch && matchesBatch && matchesYear;
                   })
                   .map((req) => (
                     <div 

@@ -259,49 +259,51 @@ export default function FrontendStudentList() {
 
   const availableStatuses = ['Job Seeker', 'Placed', 'Need to filled', 'Inactive/Suspend'];
 
-  const processedStudents = [...students]
-    .filter(student => {
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase().trim();
-        const matchesSearch = (
-          student.name?.toLowerCase().includes(term) ||
-          student.mobile?.toLowerCase().includes(term) ||
-          student.email?.toLowerCase().includes(term) ||
-          student.batch?.toLowerCase().includes(term) ||
-          student.passedOutYear?.toString().includes(term) ||
-          student.city?.toLowerCase().includes(term)
-        );
-        if (!matchesSearch) return false;
-      }
+  const processedStudents = useMemo(() => {
+    return [...students]
+      .filter(student => {
+        if (searchTerm) {
+          const term = searchTerm.toLowerCase().trim();
+          const matchesSearch = (
+            student.name?.toLowerCase().includes(term) ||
+            student.mobile?.toLowerCase().includes(term) ||
+            student.email?.toLowerCase().includes(term) ||
+            student.batch?.toLowerCase().includes(term) ||
+            student.passedOutYear?.toString().includes(term) ||
+            student.city?.toLowerCase().includes(term)
+          );
+          if (!matchesSearch) return false;
+        }
 
-      if (batchFilter !== 'All') {
-        if (String(student.batch || '').trim() !== batchFilter) return false;
-      }
+        if (batchFilter !== 'All') {
+          if (String(student.batch || '').trim() !== batchFilter) return false;
+        }
 
-      if (yearFilter !== 'All') {
-        if (String(student.passedOutYear || '').trim() !== yearFilter) return false;
-      }
+        if (yearFilter !== 'All') {
+          if (String(student.passedOutYear || '').trim() !== yearFilter) return false;
+        }
 
-      return true;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'name-asc') {
-        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-      }
-      if (sortBy === 'name-desc') {
-        return b.name.localeCompare(a.name, undefined, { sensitivity: 'base' });
-      }
-      if (sortBy === 'batch-asc' || sortBy === 'batch-desc') {
-        const bA = String(a.batch || '').trim();
-        const bB = String(b.batch || '').trim();
-        if (!bA && !bB) return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-        if (!bA) return 1;
-        if (!bB) return -1;
-        const cmp = bA.localeCompare(bB, undefined, { numeric: true, sensitivity: 'base' });
-        return sortBy === 'batch-asc' ? cmp : -cmp;
-      }
-      return 0;
-    });
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'name-asc') {
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        }
+        if (sortBy === 'name-desc') {
+          return b.name.localeCompare(a.name, undefined, { sensitivity: 'base' });
+        }
+        if (sortBy === 'batch-asc' || sortBy === 'batch-desc') {
+          const bA = String(a.batch || '').trim();
+          const bB = String(b.batch || '').trim();
+          if (!bA && !bB) return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+          if (!bA) return 1;
+          if (!bB) return -1;
+          const cmp = bA.localeCompare(bB, undefined, { numeric: true, sensitivity: 'base' });
+          return sortBy === 'batch-asc' ? cmp : -cmp;
+        }
+        return 0;
+      });
+  }, [students, searchTerm, batchFilter, yearFilter, sortBy]);
   const totalPages = Math.ceil(processedStudents.length / itemsPerPage);
   const currentItems = processedStudents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
@@ -775,6 +777,8 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
     isFrontend: true
   });
 
+  const [submitting, setSubmitting] = useState(false);
+
   const statusOptions = [
     { value: 'Job Seeker', label: 'Active Job Seeker' },
     { value: 'Placed', label: 'Placed successfully' },
@@ -786,6 +790,7 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       const url = editMode 
         ? buildApiUrl(`/students/${student._id}`)
@@ -812,6 +817,8 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
       }
     } catch (err) {
       toast.error('Network disconnect');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -1012,11 +1019,18 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-            <button type="button" onClick={onClose} className="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
+            <button type="button" disabled={submitting} onClick={onClose} className="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50">
               Cancel
             </button>
-            <button type="submit" className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition-colors">
-              Save Changes
+            <button type="submit" disabled={submitting} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-xl shadow-md transition-colors flex items-center justify-center gap-2 min-w-[120px]">
+              {submitting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
             </button>
           </div>
         </form>

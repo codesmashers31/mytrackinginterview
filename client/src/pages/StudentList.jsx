@@ -301,43 +301,45 @@ export default function StudentList() {
       .filter(Boolean)
   )].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
-  const processedStudents = [...students]
-    .filter(student => {
-      if (batchFilter === 'All') return true;
-      return String(student.batch || '').trim() === batchFilter;
-    })
-    .filter(student => {
-      if (!searchTerm) return true;
-      const term = searchTerm.toLowerCase().trim();
-      return (
-        student.name?.toLowerCase().includes(term) ||
-        student.mobile?.toLowerCase().includes(term) ||
-        student.email?.toLowerCase().includes(term) ||
-        student.batch?.toLowerCase().includes(term) ||
-        student.passedOutYear?.toString().includes(term) ||
-        student.city?.toLowerCase().includes(term)
-      );
-    })
-    .sort((a, b) => {
-      if (sortBy === 'name-asc') {
-        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-      }
+  const processedStudents = useMemo(() => {
+    return [...students]
+      .filter(student => {
+        if (batchFilter === 'All') return true;
+        return String(student.batch || '').trim() === batchFilter;
+      })
+      .filter(student => {
+        if (!searchTerm) return true;
+        const term = searchTerm.toLowerCase().trim();
+        return (
+          student.name?.toLowerCase().includes(term) ||
+          student.mobile?.toLowerCase().includes(term) ||
+          student.email?.toLowerCase().includes(term) ||
+          student.batch?.toLowerCase().includes(term) ||
+          student.passedOutYear?.toString().includes(term) ||
+          student.city?.toLowerCase().includes(term)
+        );
+      })
+      .sort((a, b) => {
+        if (sortBy === 'name-asc') {
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        }
 
-      if (sortBy === 'name-desc') {
-        return b.name.localeCompare(a.name, undefined, { sensitivity: 'base' });
-      }
+        if (sortBy === 'name-desc') {
+          return b.name.localeCompare(a.name, undefined, { sensitivity: 'base' });
+        }
 
-      if (sortBy === 'batch-asc' || sortBy === 'batch-desc') {
-        const bA = String(a.batch || '').trim();
-        const bB = String(b.batch || '').trim();
-        if (!bA && !bB) return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-        if (!bA) return 1;
-        if (!bB) return -1;
-        const cmp = bA.localeCompare(bB, undefined, { numeric: true, sensitivity: 'base' });
-        return sortBy === 'batch-asc' ? cmp : -cmp;
-      }
-      return 0;
-    });
+        if (sortBy === 'batch-asc' || sortBy === 'batch-desc') {
+          const bA = String(a.batch || '').trim();
+          const bB = String(b.batch || '').trim();
+          if (!bA && !bB) return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+          if (!bA) return 1;
+          if (!bB) return -1;
+          const cmp = bA.localeCompare(bB, undefined, { numeric: true, sensitivity: 'base' });
+          return sortBy === 'batch-asc' ? cmp : -cmp;
+        }
+        return 0;
+      });
+  }, [students, batchFilter, searchTerm, sortBy]);
 
   useEffect(() => {
     const maxPage = Math.max(1, Math.ceil(processedStudents.length / itemsPerPage));
@@ -822,6 +824,8 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
     linkedinLink: student?.linkedinLink || ''
   });
 
+  const [submitting, setSubmitting] = useState(false);
+
   const statusOptions = [
     { value: 'Job Seeker', label: 'Active Job Seeker' },
     { value: 'Placed', label: 'Placed successfully' },
@@ -844,6 +848,7 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
       toast.error('Please select at least one program enrollment (Regular or SPL)');
       return;
     }
+    setSubmitting(true);
     try {
       const url = editMode 
         ? buildApiUrl(`/students/${student._id}`)
@@ -869,6 +874,8 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
       }
     } catch (err) {
       toast.error('Network disconnect');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -1089,8 +1096,17 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
              </div>
 
              <div className="mt-6 md:mt-8 flex flex-col-reverse sm:flex-row justify-end gap-2.5 md:gap-3">
-                <button type="button" onClick={onClose} className="crm-btn-secondary crm-btn-compact px-6 md:px-7">Discard</button>
-                <button type="submit" className="crm-btn-primary crm-btn-compact px-6 md:px-7">{editMode ? 'Commit Edit' : 'Append State'}</button>
+                <button type="button" disabled={submitting} onClick={onClose} className="crm-btn-secondary crm-btn-compact px-6 md:px-7 disabled:opacity-50">Discard</button>
+                <button type="submit" disabled={submitting} className="crm-btn-primary crm-btn-compact px-6 md:px-7 flex items-center justify-center gap-2 min-w-[125px]">
+                  {submitting ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Saving...
+                    </>
+                  ) : (
+                    editMode ? 'Commit Edit' : 'Append State'
+                  )}
+                </button>
              </div>
           </form>
        </div>

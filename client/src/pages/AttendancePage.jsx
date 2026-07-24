@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard, StatusBadge, SectionTabs } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
-import { Calendar, Plus, Check, X, Clock, FileText, TrendingUp, Download, Search, CheckCircle2, XCircle, User, MapPin, Trash2, Filter, AlertCircle } from 'lucide-react';
+import { Calendar, Plus, Check, X, Clock, FileText, TrendingUp, Download, Search, CheckCircle2, XCircle, User, MapPin, Trash2, Filter, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const STATUS_OPTIONS = ['Present', 'Absent', 'Late', 'Leave'];
 const STATUS_COLORS = {
@@ -31,6 +31,61 @@ export default function AttendancePage() {
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentAttendance, setStudentAttendance] = useState([]);
+
+  // Summary report filters & pagination
+  const [summarySearch, setSummarySearch] = useState('');
+  const [summaryBatch, setSummaryBatch] = useState('All');
+  const [summaryYear, setSummaryYear] = useState('All');
+  const [summaryPage, setSummaryPage] = useState(1);
+  const [summaryItemsPerPage] = useState(10);
+
+  const uniqueSummaryBatches = useMemo(() => {
+    if (!summary || !summary.byStudent) return ['All'];
+    const batches = Object.values(summary.byStudent)
+      .map(s => String(s.batch || '').trim())
+      .filter(Boolean);
+    return ['All', ...new Set(batches)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [summary]);
+
+  const uniqueSummaryYears = useMemo(() => {
+    if (!summary || !summary.byStudent) return ['All'];
+    const years = Object.values(summary.byStudent)
+      .map(s => String(s.passedOutYear || '').trim())
+      .filter(Boolean);
+    return ['All', ...new Set(years)].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+  }, [summary]);
+
+  const sortedAndFilteredStudents = useMemo(() => {
+    if (!summary || !summary.byStudent) return [];
+    
+    return Object.values(summary.byStudent)
+      .filter(s => {
+        const matchesSearch = 
+          (s.name || '').toLowerCase().includes(summarySearch.toLowerCase()) ||
+          (s.email || '').toLowerCase().includes(summarySearch.toLowerCase());
+          
+        const matchesBatch = summaryBatch === 'All' || String(s.batch || '').trim() === summaryBatch;
+        const matchesYear = summaryYear === 'All' || String(s.passedOutYear || '').trim() === summaryYear;
+        
+        return matchesSearch && matchesBatch && matchesYear;
+      })
+      .sort((a, b) => {
+        const batchA = String(a.batch || '').trim();
+        const batchB = String(b.batch || '').trim();
+        if (batchA !== batchB) {
+          return batchA.localeCompare(batchB, undefined, { numeric: true, sensitivity: 'base' });
+        }
+        return (a.name || '').localeCompare(b.name || '');
+      });
+  }, [summary, summarySearch, summaryBatch, summaryYear]);
+
+  const summaryTotalPages = Math.ceil(sortedAndFilteredStudents.length / summaryItemsPerPage);
+  const currentSummaryItems = useMemo(() => {
+    return sortedAndFilteredStudents.slice(
+      (summaryPage - 1) * summaryItemsPerPage,
+      summaryPage * summaryItemsPerPage
+    );
+  }, [sortedAndFilteredStudents, summaryPage, summaryItemsPerPage]);
 
   // Leave management states
   const [leaveRequests, setLeaveRequests] = useState([]);
@@ -170,6 +225,10 @@ export default function AttendancePage() {
       fetchLeaveRequests();
     }
   }, [activeTab, selectedDate, startDate, endDate]);
+
+  useEffect(() => {
+    setSummaryPage(1);
+  }, [summarySearch, summaryBatch, summaryYear]);
 
   const fetchLeaveRequests = async () => {
     setLoadingLeaves(true);
@@ -896,24 +955,66 @@ export default function AttendancePage() {
       {activeTab === 'summary' && (
         <div className="space-y-6">
           <SurfaceCard className="p-6 border border-slate-100 shadow-xs">
-            <div className="mb-6 flex flex-wrap items-center gap-4 border-b border-slate-100 pb-5">
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">From Date:</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={e => setStartDate(e.target.value)}
-                  className="crm-input h-9 px-3 text-xs"
-                />
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">From Date:</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={e => setStartDate(e.target.value)}
+                    className="crm-input h-9 px-3 text-xs"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">To Date:</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={e => setEndDate(e.target.value)}
+                    className="crm-input h-9 px-3 text-xs"
+                  />
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">To Date:</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={e => setEndDate(e.target.value)}
-                  className="crm-input h-9 px-3 text-xs"
-                />
+
+              {/* Search and Batch/Year Filters */}
+              <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                <div className="relative flex-1 min-w-[200px] lg:flex-initial">
+                  <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search candidate..."
+                    value={summarySearch}
+                    onChange={e => setSummarySearch(e.target.value)}
+                    className="w-full pl-9 pr-3 h-9 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl text-xs font-semibold text-slate-700 outline-none transition"
+                  />
+                </div>
+
+                <div className="w-[140px]">
+                  <select
+                    value={summaryBatch}
+                    onChange={e => setSummaryBatch(e.target.value)}
+                    className="w-full h-9 px-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+                  >
+                    <option value="All">All Batches</option>
+                    {uniqueSummaryBatches.filter(b => b !== 'All').map(batch => (
+                      <option key={batch} value={batch}>{batch}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="w-[110px]">
+                  <select
+                    value={summaryYear}
+                    onChange={e => setSummaryYear(e.target.value)}
+                    className="w-full h-9 px-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+                  >
+                    <option value="All">All Years</option>
+                    {uniqueSummaryYears.filter(y => y !== 'All').map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -953,6 +1054,7 @@ export default function AttendancePage() {
                       <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
                         <tr>
                           <th className="px-4 py-3">Student Name</th>
+                          <th className="px-4 py-3">Batch Details</th>
                           <th className="px-4 py-3 text-center">Present</th>
                           <th className="px-4 py-3 text-center">Absent</th>
                           <th className="px-4 py-3 text-center">Late</th>
@@ -962,33 +1064,126 @@ export default function AttendancePage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700 bg-white">
-                        {Object.values(summary.byStudent).map((data, idx) => {
-                          const percentage = Math.round((data.Present / data.total) * 100);
-                          return (
-                            <tr key={idx} className="hover:bg-slate-50/50 transition">
-                              <td className="px-4 py-3 font-bold text-slate-800">{data.name}</td>
-                              <td className="px-4 py-3 text-center text-emerald-600 font-bold">{data.Present}</td>
-                              <td className="px-4 py-3 text-center text-rose-600 font-bold">{data.Absent}</td>
-                              <td className="px-4 py-3 text-center text-amber-600 font-bold">{data.Late}</td>
-                              <td className="px-4 py-3 text-center text-blue-600 font-bold">{data.Leave}</td>
-                              <td className="px-4 py-3 text-center font-bold text-slate-900">{data.total}</td>
-                              <td className="px-4 py-3 text-center">
-                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset ${
-                                  percentage >= 75
-                                    ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
-                                    : percentage >= 50
-                                      ? 'bg-amber-50 text-amber-700 ring-amber-600/20'
-                                      : 'bg-rose-50 text-rose-700 ring-rose-600/20'
-                                }`}>
-                                  {percentage}%
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {currentSummaryItems.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="px-4 py-8 text-center text-slate-400 font-semibold italic">
+                              No matching student records found.
+                            </td>
+                          </tr>
+                        ) : (
+                          currentSummaryItems.map((data, idx) => {
+                            const percentage = data.total > 0 ? Math.round((data.Present / data.total) * 100) : 0;
+                            return (
+                              <tr key={idx} className="hover:bg-slate-50/50 transition">
+                                <td className="px-4 py-3">
+                                  <div className="font-bold text-slate-800">{data.name}</div>
+                                  <div className="text-[10px] text-slate-400 mt-0.5">{data.email}</div>
+                                </td>
+                                <td className="px-4 py-3 font-semibold text-slate-650">
+                                  {data.batch ? (
+                                    <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[9px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                                      {data.batch}
+                                      {data.passedOutYear ? ` — ${data.passedOutYear}` : ''}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] text-slate-400 italic">Not Added</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-center text-emerald-600 font-bold">{data.Present}</td>
+                                <td className="px-4 py-3 text-center text-rose-600 font-bold">{data.Absent}</td>
+                                <td className="px-4 py-3 text-center text-amber-600 font-bold">{data.Late}</td>
+                                <td className="px-4 py-3 text-center text-blue-600 font-bold">{data.Leave}</td>
+                                <td className="px-4 py-3 text-center font-bold text-slate-900">{data.total}</td>
+                                <td className="px-4 py-3 text-center">
+                                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset ${
+                                    percentage >= 75
+                                      ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
+                                      : percentage >= 50
+                                        ? 'bg-amber-50 text-amber-700 ring-amber-600/20'
+                                        : 'bg-rose-50 text-rose-700 ring-rose-600/20'
+                                  }`}>
+                                    {percentage}%
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Pagination control */}
+                  {summaryTotalPages > 1 && (
+                    <div className="flex items-center justify-between border-t border-slate-100 bg-white px-4 py-3 sm:px-6">
+                      <div className="flex flex-1 justify-between sm:hidden">
+                        <button
+                          disabled={summaryPage === 1}
+                          onClick={() => setSummaryPage(prev => Math.max(prev - 1, 1))}
+                          className="relative inline-flex items-center rounded-md border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+                        >
+                          Previous
+                        </button>
+                        <button
+                          disabled={summaryPage === summaryTotalPages}
+                          onClick={() => setSummaryPage(prev => Math.min(prev + 1, summaryTotalPages))}
+                          className="relative ml-3 inline-flex items-center rounded-md border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+                        >
+                          Next
+                        </button>
+                      </div>
+                      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-xs text-slate-500 font-medium">
+                            Showing{' '}
+                            <span className="font-bold text-slate-750">
+                              {(summaryPage - 1) * summaryItemsPerPage + 1}
+                            </span>{' '}
+                            to{' '}
+                            <span className="font-bold text-slate-750">
+                              {Math.min(summaryPage * summaryItemsPerPage, sortedAndFilteredStudents.length)}
+                            </span>{' '}
+                            of{' '}
+                            <span className="font-bold text-slate-750">
+                              {sortedAndFilteredStudents.length}
+                            </span>{' '}
+                            candidates
+                          </p>
+                        </div>
+                        <div>
+                          <nav className="isolate inline-flex -space-x-px rounded-xl shadow-3xs" aria-label="Pagination">
+                            <button
+                              disabled={summaryPage === 1}
+                              onClick={() => setSummaryPage(prev => Math.max(prev - 1, 1))}
+                              className="relative inline-flex items-center rounded-l-xl border border-slate-200 bg-white px-2.5 py-1.5 text-slate-400 hover:bg-slate-50 transition disabled:opacity-50"
+                            >
+                              <ChevronLeft size={16} />
+                            </button>
+                            {Array.from({ length: summaryTotalPages }, (_, i) => i + 1).map((p) => (
+                              <button
+                                key={p}
+                                onClick={() => setSummaryPage(p)}
+                                className={`relative inline-flex items-center border text-xs font-bold px-3 py-1.5 transition ${
+                                  p === summaryPage
+                                    ? 'z-10 bg-blue-600 border-blue-600 text-white'
+                                    : 'border-slate-200 bg-white text-slate-650 hover:bg-slate-50'
+                                }`}
+                              >
+                                {p}
+                              </button>
+                            ))}
+                            <button
+                              disabled={summaryPage === summaryTotalPages}
+                              onClick={() => setSummaryPage(prev => Math.min(prev + 1, summaryTotalPages))}
+                              className="relative inline-flex items-center rounded-r-xl border border-slate-200 bg-white px-2.5 py-1.5 text-slate-400 hover:bg-slate-50 transition disabled:opacity-50"
+                            >
+                              <ChevronRight size={16} />
+                            </button>
+                          </nav>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

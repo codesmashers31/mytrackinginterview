@@ -239,11 +239,100 @@ export const getAttendanceSummary = async (req, res) => {
     const end = parseUTCDate(endDate);
     end.setUTCHours(23, 59, 59, 999);
 
+    // Fetch all active students and direct SPL registrations
+    const [allStudents, allSpls] = await Promise.all([
+      Student.find({ currentStatus: { $ne: 'Inactive/Suspend' } }).lean(),
+      SplRegistration.find({ status: { $ne: 'Inactive/Suspend' } }).lean()
+    ]);
+
+    const activeStudents = allStudents.filter(student => 
+      !/^inactive/i.test(student.currentStatus || '') && 
+      student.enrollments && 
+      student.enrollments.includes('SPL')
+    );
+    const activeSpls = allSpls.filter(student => 
+      !/^inactive/i.test(student.status || '')
+    );
+
+    const byStudent = {};
+    const emailToStudentId = {};
+
+    activeStudents.forEach(s => {
+      const emailKey = s.email.toLowerCase().trim();
+      const idStr = s._id.toString();
+      byStudent[idStr] = {
+        studentId: idStr,
+        name: s.name,
+        email: s.email,
+        batch: s.batch || '',
+        passedOutYear: s.passedOutYear || '',
+        Present: 0,
+        Absent: 0,
+        Late: 0,
+        Leave: 0,
+        total: 0
+      };
+      emailToStudentId[emailKey] = idStr;
+    });
+
+    activeSpls.forEach(s => {
+      const emailKey = s.email.toLowerCase().trim();
+      if (emailToStudentId[emailKey]) {
+        return;
+      }
+      const idStr = s._id.toString();
+      byStudent[idStr] = {
+        studentId: idStr,
+        name: s.name,
+        email: s.email,
+        batch: s.batch || s.passedOutYear || '',
+        passedOutYear: s.passedOutYear || '',
+        Present: 0,
+        Absent: 0,
+        Late: 0,
+        Leave: 0,
+        total: 0
+      };
+      emailToStudentId[emailKey] = idStr;
+    });
+
     const attendance = await Attendance.find({
       date: { $gte: start, $lte: end }
     }).lean();
 
-    // Calculate summary
+    // Group by student and calculate summary
+    attendance.forEach(record => {
+      const emailKey = (record.studentEmail || '').toLowerCase().trim();
+      let matchedStudentId = record.studentId ? record.studentId.toString() : null;
+      
+      if (!matchedStudentId && emailKey) {
+        matchedStudentId = emailToStudentId[emailKey];
+      }
+
+      if (matchedStudentId && byStudent[matchedStudentId]) {
+        byStudent[matchedStudentId][record.status]++;
+        byStudent[matchedStudentId].total++;
+      } else {
+        const fallbackId = matchedStudentId || record.studentId?.toString() || record._id.toString();
+        if (!byStudent[fallbackId]) {
+          byStudent[fallbackId] = {
+            studentId: fallbackId,
+            name: record.studentName,
+            email: record.studentEmail,
+            batch: '',
+            passedOutYear: '',
+            Present: 0,
+            Absent: 0,
+            Late: 0,
+            Leave: 0,
+            total: 0
+          };
+        }
+        byStudent[fallbackId][record.status]++;
+        byStudent[fallbackId].total++;
+      }
+    });
+
     const summary = {
       totalRecords: attendance.length,
       byStatus: {
@@ -252,25 +341,8 @@ export const getAttendanceSummary = async (req, res) => {
         Late: attendance.filter(a => a.status === 'Late').length,
         Leave: attendance.filter(a => a.status === 'Leave').length
       },
-      byStudent: {}
+      byStudent
     };
-
-    // Group by student
-    attendance.forEach(record => {
-      if (!summary.byStudent[record.studentId]) {
-        summary.byStudent[record.studentId] = {
-          name: record.studentName,
-          email: record.studentEmail,
-          Present: 0,
-          Absent: 0,
-          Late: 0,
-          Leave: 0,
-          total: 0
-        };
-      }
-      summary.byStudent[record.studentId][record.status]++;
-      summary.byStudent[record.studentId].total++;
-    });
 
     res.json(summary);
   } catch (err) {

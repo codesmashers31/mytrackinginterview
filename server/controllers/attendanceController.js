@@ -220,7 +220,47 @@ export const getAttendanceByDate = async (req, res) => {
       }
     }).sort({ studentName: 1 }).lean();
 
-    res.json(attendance);
+    // Fetch active students to resolve ID mappings (casing, old IDs)
+    const [allStudents, allSpls] = await Promise.all([
+      Student.find({ currentStatus: { $ne: 'Inactive/Suspend' } }).lean(),
+      SplRegistration.find({ status: { $ne: 'Inactive/Suspend' } }).lean()
+    ]);
+
+    const emailToStudentId = {};
+    const nameToStudentId = {};
+
+    allStudents.forEach(s => {
+      const idStr = s._id.toString();
+      if (s.email) emailToStudentId[s.email.toLowerCase().trim()] = idStr;
+      if (s.name) nameToStudentId[s.name.toLowerCase().trim()] = idStr;
+    });
+
+    allSpls.forEach(s => {
+      const idStr = s._id.toString();
+      const emailKey = s.email ? s.email.toLowerCase().trim() : '';
+      const nameKey = s.name ? s.name.toLowerCase().trim() : '';
+      if (emailKey && !emailToStudentId[emailKey]) emailToStudentId[emailKey] = idStr;
+      if (nameKey && !nameToStudentId[nameKey]) nameToStudentId[nameKey] = idStr;
+    });
+
+    const resolvedAttendance = attendance.map(record => {
+      const emailKey = (record.studentEmail || '').toLowerCase().trim();
+      const nameKey = (record.studentName || '').toLowerCase().trim();
+      
+      let resolvedStudentId = record.studentId ? record.studentId.toString() : '';
+      if (emailKey && emailToStudentId[emailKey]) {
+        resolvedStudentId = emailToStudentId[emailKey];
+      } else if (nameKey && nameToStudentId[nameKey]) {
+        resolvedStudentId = nameToStudentId[nameKey];
+      }
+      
+      return {
+        ...record,
+        studentId: resolvedStudentId
+      };
+    });
+
+    res.json(resolvedAttendance);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch attendance', error: err.message });
   }
@@ -317,22 +357,27 @@ export const getAttendanceSummary = async (req, res) => {
     // Group by student and calculate summary
     attendance.forEach(record => {
       const emailKey = (record.studentEmail || '').toLowerCase().trim();
-      let matchedStudentId = record.studentId ? record.studentId.toString() : null;
+      const nameKey = (record.studentName || '').toLowerCase().trim();
       
-      if (!matchedStudentId && emailKey) {
+      let matchedStudentId = null;
+      if (emailKey && emailToStudentId[emailKey]) {
         matchedStudentId = emailToStudentId[emailKey];
+      } else if (nameKey && nameToStudentId[nameKey]) {
+        matchedStudentId = nameToStudentId[nameKey];
+      } else if (record.studentId) {
+        matchedStudentId = record.studentId.toString();
       }
 
       if (matchedStudentId && byStudent[matchedStudentId]) {
         byStudent[matchedStudentId][record.status]++;
         byStudent[matchedStudentId].total++;
       } else {
-        const fallbackId = matchedStudentId || record.studentId?.toString() || record._id.toString();
+        const fallbackId = matchedStudentId || record._id.toString();
         if (!byStudent[fallbackId]) {
           byStudent[fallbackId] = {
             studentId: fallbackId,
             name: record.studentName,
-            email: record.studentEmail,
+            email: record.studentEmail || '',
             batch: '',
             passedOutYear: '',
             Present: 0,
@@ -490,11 +535,28 @@ export const getUnmarkedStudents = async (req, res) => {
       }
     }).lean();
 
-    const markedStudentIds = markedAttendance.map(a => a.studentId.toString());
+    const markedStudentIds = new Set();
+    markedAttendance.forEach(a => {
+      const emailKey = a.studentEmail ? a.studentEmail.toLowerCase().trim() : '';
+      const nameKey = a.studentName ? a.studentName.toLowerCase().trim() : '';
+      
+      let resolvedId = null;
+      if (emailKey && emailMap.has(emailKey)) {
+        resolvedId = emailMap.get(emailKey);
+      } else if (nameKey && nameMap.has(nameKey)) {
+        resolvedId = nameMap.get(nameKey);
+      } else if (a.studentId) {
+        resolvedId = a.studentId.toString();
+      }
+      
+      if (resolvedId) {
+        markedStudentIds.add(resolvedId);
+      }
+    });
 
     // Find unmarked students
     const unmarkedStudents = combinedStudents.filter(
-      student => !markedStudentIds.includes(student._id.toString())
+      student => !markedStudentIds.has(student._id.toString())
     );
 
     res.json(unmarkedStudents);

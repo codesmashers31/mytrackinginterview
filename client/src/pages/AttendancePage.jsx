@@ -98,14 +98,14 @@ export default function AttendancePage() {
   const [leaveRemarks, setLeaveRemarks] = useState({});
 
   const uniqueLeaveBatches = useMemo(() => {
-    const batches = leaveRequests.map(r => String(r.studentBatch || '').trim()).filter(Boolean);
-    return ['All', ...new Set(batches)].sort();
-  }, [leaveRequests]);
+    const batches = students.map(s => String(s.batch || '').trim()).filter(Boolean);
+    return ['All', ...new Set(batches)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [students]);
 
   const uniqueLeaveYears = useMemo(() => {
-    const years = leaveRequests.map(r => String(r.studentYear || '').trim()).filter(Boolean);
-    return ['All', ...new Set(years)].sort();
-  }, [leaveRequests]);
+    const years = students.map(s => String(s.passedOutYear || '').trim()).filter(Boolean);
+    return ['All', ...new Set(years)].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+  }, [students]);
 
   const getInitials = (name) => {
     return (name || '').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase();

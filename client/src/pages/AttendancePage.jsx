@@ -168,7 +168,7 @@ export default function AttendancePage() {
         }));
       
       const combined = [...activeStudents, ...mappedSpls];
-      combined.sort((a, b) => a.name.localeCompare(b.name));
+      combined.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       setStudents(combined);
     } catch (err) {
       console.error(err);

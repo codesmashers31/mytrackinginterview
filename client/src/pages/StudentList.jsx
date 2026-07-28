@@ -30,6 +30,7 @@ export default function StudentList() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [enrollmentFilter, setEnrollmentFilter] = useState('All');
   const [batchFilter, setBatchFilter] = useState('All');
+  const [yearFilter, setYearFilter] = useState('All');
   const [sortBy, setSortBy] = useState('batch-asc');
   
   // Modals
@@ -301,11 +302,21 @@ export default function StudentList() {
       .filter(Boolean)
   )].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
+  const availableYears = [...new Set(
+    students
+      .map(student => String(student.passedOutYear || '').trim())
+      .filter(Boolean)
+  )].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+
   const processedStudents = useMemo(() => {
     return [...students]
       .filter(student => {
         if (batchFilter === 'All') return true;
         return String(student.batch || '').trim() === batchFilter;
+      })
+      .filter(student => {
+        if (yearFilter === 'All') return true;
+        return String(student.passedOutYear || '').trim() === yearFilter;
       })
       .filter(student => {
         if (!searchTerm) return true;
@@ -339,7 +350,7 @@ export default function StudentList() {
         }
         return 0;
       });
-  }, [students, batchFilter, searchTerm, sortBy]);
+  }, [students, batchFilter, yearFilter, searchTerm, sortBy]);
 
   useEffect(() => {
     const maxPage = Math.max(1, Math.ceil(processedStudents.length / itemsPerPage));
@@ -371,7 +382,7 @@ export default function StudentList() {
 
            {/* Toolbar */}
            <div className="mb-3 flex flex-col gap-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 w-full">
                  <select 
                    value={statusFilter} 
                    onChange={(e) => setStatusFilter(e.target.value)}
@@ -406,6 +417,19 @@ export default function StudentList() {
                     <option value="All">All Institute Batches</option>
                     {availableBatches.map(batch => (
                       <option key={batch} value={batch}>{batch}</option>
+                    ))}
+                 </select>
+                 <select
+                   value={yearFilter}
+                   onChange={(e) => {
+                     setYearFilter(e.target.value);
+                     setCurrentPage(1);
+                   }}
+                   className="w-full py-2 px-3 bg-white border border-slate-200 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4338ca] text-[12px] md:text-[13px] font-semibold text-[#1e293b] cursor-pointer transition-shadow"
+                 >
+                    <option value="All">All Graduation Years</option>
+                    {availableYears.map(year => (
+                      <option key={year} value={year}>{year}</option>
                     ))}
                  </select>
                  <select

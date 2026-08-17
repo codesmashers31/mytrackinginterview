@@ -19,6 +19,15 @@ const teamSchema = new mongoose.Schema({
   batch: {
     type: String,
     default: ''
+  },
+  status: {
+    type: String,
+    enum: ['Active', 'Completed'],
+    default: 'Active'
+  },
+  prize: {
+    type: String,
+    default: ''
   }
 }, { timestamps: true });
 

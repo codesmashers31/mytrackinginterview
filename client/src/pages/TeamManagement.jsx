@@ -42,11 +42,14 @@ export default function TeamManagement() {
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamTrack, setNewTeamTrack] = useState('Regular');
   const [newTeamBatch, setNewTeamBatch] = useState('');
+  const [newTeamStatus, setNewTeamStatus] = useState('Active');
+  const [newTeamPrize, setNewTeamPrize] = useState('');
   const [selectedStudents, setSelectedStudents] = useState([]);
 
   // Filters for team list
   const [filterTeamTrack, setFilterTeamTrack] = useState('All');
   const [filterTeamBatch, setFilterTeamBatch] = useState('All');
+  const [filterTeamStatus, setFilterTeamStatus] = useState('Active');
 
   // Filters for leaderboard
   const [filterLeaderboardTrack, setFilterLeaderboardTrack] = useState('All');
@@ -137,7 +140,9 @@ export default function TeamManagement() {
           name: newTeamName.trim(),
           members: selectedStudents,
           track: newTeamTrack,
-          batch: newTeamBatch
+          batch: newTeamBatch,
+          status: newTeamStatus,
+          prize: newTeamPrize
         })
       });
 
@@ -149,6 +154,8 @@ export default function TeamManagement() {
       setSelectedStudents([]);
       setNewTeamTrack('Regular');
       setNewTeamBatch('');
+      setNewTeamStatus('Active');
+      setNewTeamPrize('');
       setEditingTeamId(null);
       setShowCreateModal(false);
       fetchData();
@@ -164,6 +171,8 @@ export default function TeamManagement() {
     setSelectedStudents(team.members.map(m => m._id));
     setNewTeamTrack(team.track || 'Regular');
     setNewTeamBatch(team.batch || '');
+    setNewTeamStatus(team.status || 'Active');
+    setNewTeamPrize(team.prize || '');
     setShowCreateModal(true);
   };
 
@@ -383,7 +392,8 @@ export default function TeamManagement() {
   const filteredTeams = teams.filter(team => {
     const matchesTrack = filterTeamTrack === 'All' || team.track === filterTeamTrack;
     const matchesBatch = filterTeamTrack === 'Frontend' || filterTeamTrack === 'SPL' || filterTeamBatch === 'All' || team.batch === filterTeamBatch;
-    return matchesTrack && matchesBatch;
+    const matchesStatus = filterTeamStatus === 'All' || (team.status || 'Active') === filterTeamStatus;
+    return matchesTrack && matchesBatch && matchesStatus;
   });
 
   const handleStudentSelect = (studentId) => {
@@ -409,7 +419,7 @@ export default function TeamManagement() {
 
   // Find which team a student belongs to (excluding currently edited team)
   const getStudentTeamName = (studentId) => {
-    const team = teams.find(t => t._id !== editingTeamId && t.members.some(m => m._id === studentId));
+    const team = teams.find(t => t.status !== 'Completed' && t._id !== editingTeamId && t.members.some(m => m._id === studentId));
     return team ? team.name : null;
   };
 
@@ -492,6 +502,19 @@ export default function TeamManagement() {
                     </select>
                   </div>
                 )}
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-500">Filter Status:</span>
+                  <select
+                    value={filterTeamStatus}
+                    onChange={(e) => setFilterTeamStatus(e.target.value)}
+                    className="h-9 px-3 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-700 focus:border-indigo-600 outline-none transition"
+                  >
+                    <option value="Active">Active Teams</option>
+                    <option value="Completed">Completed Teams</option>
+                    <option value="All">All Statuses</option>
+                  </select>
+                </div>
               </div>
 
               {filteredTeams.length === 0 ? (
@@ -525,6 +548,16 @@ export default function TeamManagement() {
                               {team.batch && (
                                 <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                                   {team.batch}
+                                </span>
+                              )}
+                              <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                (team.status || 'Active') === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-indigo-50/70 text-indigo-600 border border-indigo-100/50'
+                              }`}>
+                                {team.status || 'Active'}
+                              </span>
+                              {team.prize && (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-bold bg-amber-50 border border-amber-200/50 px-2 py-0.5 rounded-full shadow-3xs">
+                                  <Crown size={10} className="text-amber-500 shrink-0" /> {team.prize}
                                 </span>
                               )}
                             </div>
@@ -644,6 +677,36 @@ export default function TeamManagement() {
                             <option key={b} value={b}>{b}</option>
                           ))}
                         </select>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Status</label>
+                      <select
+                        value={newTeamStatus}
+                        onChange={(e) => {
+                          setNewTeamStatus(e.target.value);
+                          if (e.target.value === 'Active') {
+                            setNewTeamPrize('');
+                          }
+                        }}
+                        className="w-full h-11 px-4 border border-slate-200 bg-white rounded-2xl text-sm focus:border-indigo-600 outline-none transition font-semibold text-slate-700"
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Completed">Completed</option>
+                      </select>
+                    </div>
+
+                    {newTeamStatus === 'Completed' && (
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Prize Announced</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., 1st Prize, Winner, Runner Up"
+                          value={newTeamPrize}
+                          onChange={(e) => setNewTeamPrize(e.target.value)}
+                          className="w-full h-11 px-4 border border-slate-200 bg-white rounded-2xl text-sm focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 outline-none transition"
+                        />
                       </div>
                     )}
 
@@ -875,7 +938,7 @@ export default function TeamManagement() {
                     <p className="text-xs text-slate-400 italic">No teams available</p>
                   ) : (
                     <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-2 bg-slate-50/50">
-                      {teams.map(team => (
+                      {teams.filter(t => t.status !== 'Completed').map(team => (
                         <label key={team._id} className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:text-indigo-600 transition">
                           <input
                             type="checkbox"
@@ -1042,9 +1105,9 @@ export default function TeamManagement() {
                     <option value="">-- Choose Team --</option>
                     {(() => {
                       const currentChal = challenges.find(c => c._id === selectedGradeChallenge);
-                      const displayTeams = currentChal && currentChal.associatedTeams && currentChal.associatedTeams.length > 0
+                      const displayTeams = (currentChal && currentChal.associatedTeams && currentChal.associatedTeams.length > 0
                         ? teams.filter(t => currentChal.associatedTeams.some(at => (typeof at === 'object' ? at._id : at) === t._id))
-                        : teams;
+                        : teams).filter(t => t.status !== 'Completed');
                       
                       return displayTeams.map(t => (
                         <option key={t._id} value={t._id}>{t.name} ({t.members.length} members)</option>

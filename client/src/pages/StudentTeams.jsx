@@ -166,11 +166,27 @@ export default function StudentTeams() {
               {/* Guild Summary Card */}
               <SurfaceCard className="p-6 md:col-span-1 border border-slate-100 flex flex-col justify-between bg-gradient-to-br from-white to-indigo-50/10">
                 <div>
-                  <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                    My Guild - {myTeam.track}
-                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      My Guild - {myTeam.track}
+                    </span>
+                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                      (myTeam.status || 'Active') === 'Completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
+                    }`}>
+                      {myTeam.status || 'Active'}
+                    </span>
+                  </div>
                   <h3 className="text-2xl font-black text-slate-900 mt-3">{myTeam.name}</h3>
                   <p className="text-xs text-slate-400 mt-1">Formed on {new Date(myTeam.createdAt).toLocaleDateString()}</p>
+
+                  {myTeam.prize && (
+                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2 text-amber-800 shadow-2xs">
+                      <Crown size={16} className="text-amber-500 shrink-0" />
+                      <div className="text-xs">
+                        <span className="font-bold">Prize Awarded:</span> {myTeam.prize}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="border-t border-slate-100 pt-6 mt-6">

@@ -98,10 +98,11 @@ const populateTeamMembers = async (teamsOrTeam) => {
 // GET all teams (with members populated) - Accessible to admin, coordinator, student, placement
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const { track, batch } = req.query;
+    const { track, batch, status } = req.query;
     let query = {};
     if (track && track !== 'All') query.track = track;
     if (batch && batch !== 'All') query.batch = batch;
+    if (status && status !== 'All') query.status = status;
 
     const teams = await Team.find(query).lean();
     const populated = await populateTeamMembers(teams);
@@ -155,14 +156,18 @@ router.post('/', authMiddleware, async (req, res) => {
       name: name.trim(),
       members: members || [],
       track: req.body.track || 'Regular',
-      batch: req.body.batch || ''
+      batch: req.body.batch || '',
+      status: req.body.status || 'Active',
+      prize: req.body.prize || ''
     });
 
     await team.save();
 
     if (members && members.length > 0) {
+      const activeTeams = await Team.find({ status: 'Active' }, '_id').lean();
+      const activeTeamIds = activeTeams.map(t => t._id);
       await Team.updateMany(
-        { _id: { $ne: team._id } },
+        { _id: { $ne: team._id, $in: activeTeamIds } },
         { $pull: { members: { $in: members } } }
       );
     }
@@ -182,7 +187,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Access Denied: Admins only' });
     }
 
-    const { name, members, track, batch } = req.body;
+    const { name, members, track, batch, status, prize } = req.body;
     const team = await Team.findById(req.params.id);
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
@@ -203,12 +208,20 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (batch !== undefined) {
       team.batch = batch;
     }
+    if (status !== undefined) {
+      team.status = status;
+    }
+    if (prize !== undefined) {
+      team.prize = prize;
+    }
 
     if (members) {
       team.members = members;
       if (members.length > 0) {
+        const activeTeams = await Team.find({ status: 'Active' }, '_id').lean();
+        const activeTeamIds = activeTeams.map(t => t._id);
         await Team.updateMany(
-          { _id: { $ne: team._id } },
+          { _id: { $ne: team._id, $in: activeTeamIds } },
           { $pull: { members: { $in: members } } }
         );
       }

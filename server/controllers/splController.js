@@ -25,6 +25,20 @@ export const createRegistration = async (req, res) => {
       regularStudent = await Student.findOne({ email, enrollments: 'Regular' });
     }
 
+    if (!regularStudent) {
+      return res.status(400).json({ message: 'Registration is only open to existing Regular students of Batch 1 to Batch 9.' });
+    }
+
+    if (regularStudent.isFrontend || regularStudent.studentType === 'Frontend') {
+      return res.status(400).json({ message: 'Frontend students are not eligible to register for the SPL class.' });
+    }
+
+    const studentBatch = String(regularStudent.batch || '').trim();
+    const isBatch1to9 = /^Batch\s*[1-9]$/i.test(studentBatch);
+    if (!isBatch1to9) {
+      return res.status(400).json({ message: 'Only students belonging to Batch 1 to Batch 9 are allowed to register.' });
+    }
+
     const payload = {
       ...req.body,
       email,
@@ -306,6 +320,14 @@ export const uploadRegistrations = async (req, res) => {
       if (!regularStudent && email) {
         regularStudent = await Student.findOne({ email, enrollments: 'Regular' });
       }
+
+      if (!regularStudent) continue;
+
+      if (regularStudent.isFrontend || regularStudent.studentType === 'Frontend') continue;
+
+      const studentBatch = String(regularStudent.batch || '').trim();
+      const isBatch1to9 = /^Batch\s*[1-9]$/i.test(studentBatch);
+      if (!isBatch1to9) continue;
 
       let resultRecord = null;
 

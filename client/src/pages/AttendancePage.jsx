@@ -43,7 +43,7 @@ export default function AttendancePage() {
     if (!summary || !summary.byStudent) return ['All'];
     const batches = Object.values(summary.byStudent)
       .map(s => String(s.batch || '').trim())
-      .filter(Boolean);
+      .filter(b => b && !/frontend/i.test(b));
     return ['All', ...new Set(batches)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }, [summary]);
 
@@ -98,7 +98,9 @@ export default function AttendancePage() {
   const [leaveRemarks, setLeaveRemarks] = useState({});
 
   const uniqueLeaveBatches = useMemo(() => {
-    const batches = students.map(s => String(s.batch || '').trim()).filter(Boolean);
+    const batches = students
+      .map(s => String(s.batch || '').trim())
+      .filter(b => b && !/frontend/i.test(b));
     return ['All', ...new Set(batches)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }, [students]);
 

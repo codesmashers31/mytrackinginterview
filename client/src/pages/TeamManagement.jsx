@@ -385,7 +385,7 @@ export default function TeamManagement() {
 
   // Get unique batches from student list (filtering out 4-digit years)
   const uniqueBatches = [...new Set(students.map(s => s.batch ? s.batch.trim() : '').filter(Boolean))]
-    .filter(b => !/^\d{4}$/.test(b))
+    .filter(b => !/^\d{4}$/.test(b) && !/frontend/i.test(b))
     .sort();
 
   // Filtered teams list for Teams list view

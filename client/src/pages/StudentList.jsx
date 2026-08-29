@@ -295,7 +295,9 @@ export default function StudentList() {
     students
       .map(student => String(student.batch || '').trim())
       .filter(Boolean)
-  )].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  )]
+    .filter(batch => !/frontend/i.test(batch))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
   const availableStatuses = [...new Set(
     students

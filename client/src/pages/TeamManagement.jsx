@@ -109,6 +109,9 @@ export default function TeamManagement() {
 
       const mappedTeams = teamsData.map(team => {
         if (team.track === 'Frontend') {
+          if (team.batch && team.batch.startsWith('Frontend')) {
+            return { ...team, track: team.batch };
+          }
           const firstMemberId = team.members[0];
           if (firstMemberId) {
             const memberObj = mappedStudents.find(s => String(s._id) === String(firstMemberId));
@@ -154,14 +157,17 @@ export default function TeamManagement() {
         : buildApiUrl('/teams');
       const method = editingTeamId ? 'PUT' : 'POST';
 
+      const payloadTrack = newTeamTrack.startsWith('Frontend') ? 'Frontend' : newTeamTrack;
+      const payloadBatch = newTeamTrack.startsWith('Frontend') ? newTeamTrack : newTeamBatch;
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           name: newTeamName.trim(),
           members: selectedStudents,
-          track: newTeamTrack,
-          batch: newTeamBatch,
+          track: payloadTrack,
+          batch: payloadBatch,
           status: newTeamStatus,
           prize: newTeamPrize
         })

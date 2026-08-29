@@ -655,13 +655,16 @@ router.post('/bulk-delete', authMiddleware, async (req, res) => {
 // POST Eligibility Checker (protected)
 router.post('/eligible', authMiddleware, async (req, res) => {
     try {
-        const { degrees, years, statuses, page = 1, limit = 10, fetchAll = false } = req.body;
+        const { degrees, years, skills, statuses, page = 1, limit = 10, fetchAll = false } = req.body;
         
         let studentQuery = { studentType: { $ne: 'SPL' } };
         let splQuery = {};
 
         if (degrees && degrees.length > 0) {
-            const regexes = degrees.map(d => new RegExp(`^${d}$`, 'i'));
+            const regexes = degrees.map(d => {
+                const escaped = d.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                return new RegExp(`(^|[^a-zA-Z0-9])${escaped}($|[^a-zA-Z0-9])`, 'i');
+            });
             studentQuery.degree = { $in: regexes };
             splQuery.degree = { $in: regexes };
         }
@@ -675,6 +678,15 @@ router.post('/eligible', authMiddleware, async (req, res) => {
              const stringYears = years.map(y => String(y));
              studentQuery.passedOutYear = { $in: stringYears };
              splQuery.batch = { $in: stringYears };
+        }
+
+        if (skills && skills.length > 0) {
+            const skillRegexes = skills.map(s => {
+                const escaped = s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                return new RegExp(escaped, 'i');
+            });
+            studentQuery.$or = skillRegexes.map(rx => ({ skills: rx }));
+            splQuery.$or = skillRegexes.map(rx => ({ skills: rx }));
         }
 
         const students = await Student.find(studentQuery).select('-resumeData').lean();

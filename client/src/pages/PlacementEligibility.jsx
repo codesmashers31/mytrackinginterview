@@ -24,7 +24,7 @@ export default function PlacementEligibility() {
 
   const refreshSearch = async (targetPage = page) => {
     if (lastSearchCriteria) {
-      await performSearch(lastSearchCriteria.degrees, lastSearchCriteria.years, targetPage, null);
+      await performSearch(lastSearchCriteria.degrees, lastSearchCriteria.years, lastSearchCriteria.skills, targetPage, null);
     }
   };
 
@@ -42,12 +42,13 @@ export default function PlacementEligibility() {
       "Eligibility Criteria:\n" +
       "- Must hold a B.E, B.Tech, or MCA degree.\n" +
       "- Passing out batch should be 2023 or 2024.\n" +
+      "- Should have basic knowledge of Node.js, Python, or SQL.\n" +
       "- Immediate joiners are preferred.\n\n" +
       "If you fit these requirements, we would love to review your application!"
     );
   };
 
-  const performSearch = async (degrees, years, pageNumber, criteria = null) => {
+  const performSearch = async (degrees, years, skills, pageNumber, criteria = null) => {
     setInternalLoading(true);
     try {
       const res = await fetch(buildApiUrl('/students/eligible'), {
@@ -56,6 +57,7 @@ export default function PlacementEligibility() {
         body: JSON.stringify({ 
             degrees, 
             years, 
+            skills,
             statuses: ['Job Seeker'], 
             page: pageNumber, 
             limit: 10 
@@ -73,7 +75,7 @@ export default function PlacementEligibility() {
 
       if (criteria) {
         setParsedCriteria(criteria);
-        setLastSearchCriteria({ degrees, years });
+        setLastSearchCriteria({ degrees, years, skills });
         toast.success(`Matched ${data.count} candidates`);
       }
     } catch (err) {
@@ -93,6 +95,7 @@ export default function PlacementEligibility() {
       { display: 'M.Tech / M.E', regex: /\b(m\.?tech|m\.?e\.?|me|master of technology)\b/i, variants: ['M.Tech', 'MTech', 'M.E', 'ME', 'M.E.'] },
       { display: 'BCA', regex: /\b(bca|b\.c\.a\.?|bachelor of computer applications)\b/i, variants: ['BCA', 'B.C.A'] },
       { display: 'MCA', regex: /\b(mca|m\.c\.a\.?|master of computer applications)\b/i, variants: ['MCA', 'M.C.A'] },
+      { display: 'Frontend', regex: /\b(frontend|front-end|web developer|ui developer)\b/i, variants: ['Frontend', 'Front-End', 'Front End'] },
       { display: 'B.Sc', regex: /\b(bsc|b\.sc\.?|b\.s\.?|bachelor of science)\b/i, variants: ['B.Sc', 'BSc', 'B.S.'] },
       { display: 'M.Sc', regex: /\b(msc|m\.sc\.?|m\.s\.?|master of science)\b/i, variants: ['M.Sc', 'MSc', 'M.S.'] },
       { display: 'B.Com', regex: /\b(bcom|b\.com\.?|bachelor of commerce)\b/i, variants: ['B.Com', 'BCom'] },
@@ -116,17 +119,48 @@ export default function PlacementEligibility() {
     const yearMatches = jobDescription.match(/\b(20[1-3][0-9])\b/g) || [];
     const years = [...new Set(yearMatches)].map(Number);
     
+    // Skill Mappings
+    const skillMappings = [
+      { display: 'React', regex: /\b(react|react\.js|reactjs)\b/i, value: 'React' },
+      { display: 'Node.js', regex: /\b(node|node\.js|nodejs)\b/i, value: 'Node' },
+      { display: 'Express', regex: /\b(express|express\.js|expressjs)\b/i, value: 'Express' },
+      { display: 'MongoDB', regex: /\b(mongo|mongodb)\b/i, value: 'MongoDB' },
+      { display: 'SQL', regex: /\b(sql|mysql|postgresql|postgres)\b/i, value: 'SQL' },
+      { display: 'Python', regex: /\b(python|django|flask)\b/i, value: 'Python' },
+      { display: 'Java', regex: /\b(java|spring|springboot)\b/i, value: 'Java' },
+      { display: 'JavaScript', regex: /\b(javascript|js)\b/i, value: 'JavaScript' },
+      { display: 'TypeScript', regex: /\b(typescript|ts)\b/i, value: 'TypeScript' },
+      { display: 'HTML/CSS', regex: /\b(html|css|tailwind|bootstrap)\b/i, value: 'HTML' },
+      { display: 'Flutter', regex: /\b(flutter|dart)\b/i, value: 'Flutter' },
+      { display: 'Figma', regex: /\b(figma|ui\/ux|design)\b/i, value: 'Figma' },
+      { display: 'Git', regex: /\b(git|github)\b/i, value: 'Git' }
+    ];
+
+    let matchedSkills = new Set();
+    let displaySkills = [];
+
+    skillMappings.forEach(mapping => {
+      if (mapping.regex.test(jobDescription)) {
+        displaySkills.push(mapping.display);
+        matchedSkills.add(mapping.value);
+      }
+    });
+
+    const finalSkillsPayload = Array.from(matchedSkills);
+    
     const criteria = { 
       degreesForDisplay: displayDegrees, 
       degreesPayload: finalDegreesPayload,
-      years 
+      years,
+      skills: displaySkills,
+      skillsPayload: finalSkillsPayload
     };
 
     setParsedCriteria(criteria);
-    setLastSearchCriteria({ degrees: finalDegreesPayload, years });
+    setLastSearchCriteria({ degrees: finalDegreesPayload, years: years, skills: finalSkillsPayload });
 
     // Always start at page 1 for a new search
-    await performSearch(finalDegreesPayload, years, 1, criteria);
+    await performSearch(finalDegreesPayload, years, finalSkillsPayload, 1, criteria);
     setLoading(false);
   };
 
@@ -176,6 +210,7 @@ export default function PlacementEligibility() {
         body: JSON.stringify({ 
             degrees: lastSearchCriteria.degrees, 
             years: lastSearchCriteria.years, 
+            skills: lastSearchCriteria.skills,
             statuses: ['Job Seeker'], 
             fetchAll: true
         }),
@@ -267,6 +302,14 @@ export default function PlacementEligibility() {
                          {parsedCriteria.years.length > 0 ? parsedCriteria.years.join(', ') : 'Any / Not Detected'}
                        </span>
                      </p>
+                     {parsedCriteria.skills && parsedCriteria.skills.length > 0 && (
+                        <p className="text-sm text-blue-900 flex items-start gap-2">
+                          <span className="font-bold w-16 shrink-0 mt-0.5">Skills:</span> 
+                          <span className="bg-white px-2 py-0.5 rounded-md shadow-sm border border-blue-100 text-[13px]">
+                            {parsedCriteria.skills.join(', ') || 'Any / Not Detected'}
+                          </span>
+                        </p>
+                     )}
                   </div>
                </div>
             )}

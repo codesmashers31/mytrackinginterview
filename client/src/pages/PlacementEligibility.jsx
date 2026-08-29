@@ -95,7 +95,6 @@ export default function PlacementEligibility() {
       { display: 'M.Tech / M.E', regex: /\b(m\.?tech|m\.?e\.?|me|master of technology)\b/i, variants: ['M.Tech', 'MTech', 'M.E', 'ME', 'M.E.'] },
       { display: 'BCA', regex: /\b(bca|b\.c\.a\.?|bachelor of computer applications)\b/i, variants: ['BCA', 'B.C.A'] },
       { display: 'MCA', regex: /\b(mca|m\.c\.a\.?|master of computer applications)\b/i, variants: ['MCA', 'M.C.A'] },
-      { display: 'Frontend', regex: /\b(frontend|front-end|web developer|ui developer)\b/i, variants: ['Frontend', 'Front-End', 'Front End'] },
       { display: 'B.Sc', regex: /\b(bsc|b\.sc\.?|b\.s\.?|bachelor of science)\b/i, variants: ['B.Sc', 'BSc', 'B.S.'] },
       { display: 'M.Sc', regex: /\b(msc|m\.sc\.?|m\.s\.?|master of science)\b/i, variants: ['M.Sc', 'MSc', 'M.S.'] },
       { display: 'B.Com', regex: /\b(bcom|b\.com\.?|bachelor of commerce)\b/i, variants: ['B.Com', 'BCom'] },

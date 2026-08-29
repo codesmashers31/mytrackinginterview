@@ -657,7 +657,7 @@ router.post('/eligible', authMiddleware, async (req, res) => {
     try {
         const { degrees, years, skills, statuses, page = 1, limit = 10, fetchAll = false } = req.body;
         
-        let studentQuery = { studentType: { $ne: 'SPL' } };
+        let studentQuery = { studentType: 'Regular', isFrontend: { $ne: true } };
         let splQuery = {};
 
         if (degrees && degrees.length > 0) {

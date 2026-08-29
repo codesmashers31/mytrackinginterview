@@ -969,9 +969,27 @@ function StudentFormModal({ onClose, onRefresh, student, editMode, students }) {
                    <input value={formData.passedOutYear} onChange={e => setFormData({...formData, passedOutYear: e.target.value})} className="crm-input" />
                 </div>
                 <div>
-                   <label className="crm-label">Institute Batch</label>
-                   <input value={formData.batch} onChange={e => setFormData({...formData, batch: e.target.value})} className="crm-input" placeholder="2024-A / Morning / Section A" />
-                </div>
+                    <label className="crm-label">Institute Batch</label>
+                    <select 
+                       value={formData.batch} 
+                       onChange={e => setFormData({...formData, batch: e.target.value})} 
+                       className="crm-input font-medium text-slate-700"
+                    >
+                       <option value="">-- Select Batch --</option>
+                       <option value="Batch 1">Batch 1</option>
+                       <option value="Batch 2">Batch 2</option>
+                       <option value="Batch 3">Batch 3</option>
+                       <option value="Batch 4">Batch 4</option>
+                       <option value="Batch 5">Batch 5</option>
+                       <option value="Batch 6">Batch 6</option>
+                       <option value="Batch 7">Batch 7</option>
+                       <option value="Batch 8">Batch 8</option>
+                       <option value="Batch 9">Batch 9</option>
+                       <option value="Frontend Batch 1">Frontend Batch 1</option>
+                       <option value="Frontend Batch 2">Frontend Batch 2</option>
+                       <option value="Frontend Batch 3">Frontend Batch 3</option>
+                    </select>
+                 </div>
                 {/* Student classification defaults to Regular */}
                 <div>
                    <label className="crm-label">Student Grade</label>

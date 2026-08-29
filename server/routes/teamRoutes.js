@@ -474,7 +474,7 @@ router.get('/leaderboard', authMiddleware, async (req, res) => {
     if (track && track !== 'All') {
       query.track = track;
     } else {
-      query.track = { $ne: 'Frontend' };
+      query.track = { $not: /^Frontend/ };
     }
     if (batch && batch !== 'All') query.batch = batch;
 

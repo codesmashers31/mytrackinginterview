@@ -87,19 +87,40 @@ export default function TeamManagement() {
         fetch(buildApiUrl('/teams/performances'), { headers: authHeaders() })
       ]);
 
-      if (teamsRes.ok) setTeams(await teamsRes.json());
+      let teamsData = [];
+      if (teamsRes.ok) teamsData = await teamsRes.json();
       if (chalRes.ok) setChallenges(await chalRes.json());
       if (leadRes.ok) setLeaderboard(await leadRes.json());
       if (perfRes.ok) setTeamPerformances(await perfRes.json());
 
       const allStudentsData = frontRes.ok ? await frontRes.json() : [];
-      setStudents(allStudentsData.map(s => {
+      const mappedStudents = allStudentsData.map(s => {
         let track = 'Regular';
-        if (s.isFrontend) track = 'Frontend';
-        else if (s.enrollments && s.enrollments.includes('SPL')) track = 'SPL';
-        else if (s.studentType === 'SPL') track = 'SPL';
+        if (s.isFrontend) {
+          track = String(s.batch || '').trim() || 'Frontend Batch 1';
+        } else if (s.enrollments && s.enrollments.includes('SPL')) {
+          track = 'SPL';
+        } else if (s.studentType === 'SPL') {
+          track = 'SPL';
+        }
         return { ...s, track };
-      }));
+      });
+      setStudents(mappedStudents);
+
+      const mappedTeams = teamsData.map(team => {
+        if (team.track === 'Frontend') {
+          const firstMemberId = team.members[0];
+          if (firstMemberId) {
+            const memberObj = mappedStudents.find(s => String(s._id) === String(firstMemberId));
+            if (memberObj) {
+              return { ...team, track: memberObj.track };
+            }
+          }
+          return { ...team, track: 'Frontend Batch 1' };
+        }
+        return team;
+      });
+      setTeams(mappedTeams);
     } catch (err) {
       toast.error('Failed to sync team data');
     } finally {
@@ -365,15 +386,15 @@ export default function TeamManagement() {
 
     // 4. Team Track and Batch Constraints
     let matchesTrackAndBatch = false;
-    if (newTeamTrack === 'Frontend') {
-      matchesTrackAndBatch = student.track === 'Frontend';
+    if (newTeamTrack.startsWith('Frontend')) {
+      matchesTrackAndBatch = student.track === newTeamTrack;
     } else if (newTeamTrack === 'SPL') {
       matchesTrackAndBatch = student.track === 'SPL';
     } else {
-      // Regular track: student must be Regular or SPL, and match the selected team batch
-      const isRegularOrSpl = student.track === 'Regular' || student.track === 'SPL';
+      // Regular track: student must be Regular, and match the selected team batch
+      const isRegular = student.track === 'Regular';
       const matchesBatch = student.batch === newTeamBatch;
-      matchesTrackAndBatch = isRegularOrSpl && matchesBatch;
+      matchesTrackAndBatch = isRegular && matchesBatch;
     }
 
     return matchesSearch && matchesDegree && matchesStatus && matchesTrackAndBatch;
@@ -391,7 +412,7 @@ export default function TeamManagement() {
   // Filtered teams list for Teams list view
   const filteredTeams = teams.filter(team => {
     const matchesTrack = filterTeamTrack === 'All' || team.track === filterTeamTrack;
-    const matchesBatch = filterTeamTrack === 'Frontend' || filterTeamTrack === 'SPL' || filterTeamBatch === 'All' || team.batch === filterTeamBatch;
+    const matchesBatch = filterTeamTrack.startsWith('Frontend') || filterTeamTrack === 'SPL' || filterTeamBatch === 'All' || team.batch === filterTeamBatch;
     const matchesStatus = filterTeamStatus === 'All' || (team.status || 'Active') === filterTeamStatus;
     return matchesTrack && matchesBatch && matchesStatus;
   });
@@ -474,7 +495,7 @@ export default function TeamManagement() {
                     value={filterTeamTrack}
                     onChange={(e) => {
                       setFilterTeamTrack(e.target.value);
-                      if (e.target.value === 'Frontend' || e.target.value === 'SPL') {
+                      if (e.target.value !== 'Regular' && e.target.value !== 'All') {
                         setFilterTeamBatch('All');
                       }
                     }}
@@ -482,12 +503,14 @@ export default function TeamManagement() {
                   >
                     <option value="All">All Tracks</option>
                     <option value="Regular">Regular</option>
-                    <option value="Frontend">Frontend</option>
                     <option value="SPL">SPL</option>
+                    <option value="Frontend Batch 1">Frontend Batch 1</option>
+                    <option value="Frontend Batch 2">Frontend Batch 2</option>
+                    <option value="Frontend Batch 3">Frontend Batch 3</option>
                   </select>
                 </div>
 
-                {filterTeamTrack !== 'Frontend' && filterTeamTrack !== 'SPL' && (
+                {filterTeamTrack === 'Regular' && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-slate-500">Filter Batch:</span>
                     <select
@@ -648,7 +671,7 @@ export default function TeamManagement() {
                         value={newTeamTrack}
                         onChange={(e) => {
                           setNewTeamTrack(e.target.value);
-                          if (e.target.value === 'Frontend' || e.target.value === 'SPL') {
+                          if (e.target.value !== 'Regular') {
                             setNewTeamBatch('');
                           }
                           setSelectedStudents([]);
@@ -656,8 +679,10 @@ export default function TeamManagement() {
                         className="w-full h-11 px-4 border border-slate-200 bg-white rounded-2xl text-sm focus:border-indigo-600 outline-none transition font-semibold text-slate-700"
                       >
                         <option value="Regular">Regular</option>
-                        <option value="Frontend">Frontend</option>
                         <option value="SPL">SPL</option>
+                        <option value="Frontend Batch 1">Frontend Batch 1</option>
+                        <option value="Frontend Batch 2">Frontend Batch 2</option>
+                        <option value="Frontend Batch 3">Frontend Batch 3</option>
                       </select>
                     </div>
 
@@ -1234,7 +1259,7 @@ export default function TeamManagement() {
                 value={filterLeaderboardTrack}
                 onChange={(e) => {
                   setFilterLeaderboardTrack(e.target.value);
-                  if (e.target.value === 'Frontend' || e.target.value === 'SPL') {
+                  if (e.target.value !== 'Regular' && e.target.value !== 'All') {
                     setFilterLeaderboardBatch('All');
                   }
                 }}
@@ -1242,12 +1267,14 @@ export default function TeamManagement() {
               >
                 <option value="All">All Tracks</option>
                 <option value="Regular">Regular</option>
-                <option value="Frontend">Frontend</option>
                 <option value="SPL">SPL</option>
+                <option value="Frontend Batch 1">Frontend Batch 1</option>
+                <option value="Frontend Batch 2">Frontend Batch 2</option>
+                <option value="Frontend Batch 3">Frontend Batch 3</option>
               </select>
             </div>
 
-            {filterLeaderboardTrack !== 'Frontend' && filterLeaderboardTrack !== 'SPL' && (
+            {filterLeaderboardTrack === 'Regular' && (
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-slate-500">Filter Batch:</span>
                 <select

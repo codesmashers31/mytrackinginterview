@@ -113,6 +113,7 @@ const buildNavigationGroups = (role, studentType, onLogout) => {
         { to: '/students', label: 'Regular Students', icon: Users },
         { to: '/admin/frontend-students', label: 'Frontend Students', icon: Users },
         { to: '/spl-registrations', label: 'SPL Class Students', icon: Users },
+        { to: '/placement/eligibility', label: 'Placement Eligibility', icon: CheckCircle2 },
         { to: '/attendance', label: 'Attendance & Leaves', icon: Calendar },
         { to: '/tasks', label: 'Tasks & Mock Board', icon: ClipboardList },
         { to: '/admin/teams', label: 'Team Activity Hub', icon: Gamepad2 },

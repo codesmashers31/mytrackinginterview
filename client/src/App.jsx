@@ -78,7 +78,7 @@ function App() {
         <Route path="/spl-registration/success" element={<SplSuccess />} />
         <Route path="/spl-registrations" element={<RoleRoute roles={[ 'admin', 'coordinator', 'placement' ]}><SplRegistrations /></RoleRoute>} />
         <Route path="/placement/dashboard" element={<RoleRoute roles={[ 'placement' ]}><PlacementDashboard /></RoleRoute>} />
-        <Route path="/placement/eligibility" element={<RoleRoute roles={[ 'placement' ]}><PlacementEligibility /></RoleRoute>} />
+        <Route path="/placement/eligibility" element={<RoleRoute roles={[ 'placement', 'admin' ]}><PlacementEligibility /></RoleRoute>} />
         <Route path="/placement/spl-classes" element={<RoleRoute roles={[ 'placement' ]}><PlacementSplClasses /></RoleRoute>} />
         <Route path="/attendance" element={<RoleRoute roles={[ 'admin', 'coordinator' ]}><AttendancePage /></RoleRoute>} />
         <Route path="/tasks" element={<RoleRoute roles={[ 'admin' ]}><TaskManagement /></RoleRoute>} />

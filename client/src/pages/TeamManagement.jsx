@@ -112,9 +112,10 @@ export default function TeamManagement() {
           if (team.batch && team.batch.startsWith('Frontend')) {
             return { ...team, track: team.batch };
           }
-          const firstMemberId = team.members[0];
-          if (firstMemberId) {
-            const memberObj = mappedStudents.find(s => String(s._id) === String(firstMemberId));
+          const firstMember = team.members[0];
+          if (firstMember) {
+            const memberId = firstMember._id || firstMember;
+            const memberObj = mappedStudents.find(s => String(s._id) === String(memberId));
             if (memberObj) {
               return { ...team, track: memberObj.track };
             }

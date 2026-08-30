@@ -63,7 +63,8 @@ function SearchableDegreeSelect({ value, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
 
-  const isEmpty = !value || value.toLowerCase() === 'need to filled' || value.toLowerCase() === 'need to be filled';
+  const isEmpty = !value || 
+    ['need to filled', 'need to be filled', 'not provided', 'null', 'undefined', 'n/a'].includes(value.toLowerCase().trim());
   const isCustom = !isEmpty && !DEGREE_OPTIONS.includes(value);
   const displayVal = isEmpty ? '' : (isCustom ? 'Other' : value);
 

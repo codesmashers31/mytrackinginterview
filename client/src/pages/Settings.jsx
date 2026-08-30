@@ -63,8 +63,9 @@ function SearchableDegreeSelect({ value, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
 
-  const isCustom = value && !DEGREE_OPTIONS.includes(value);
-  const displayVal = value ? (isCustom ? 'Other' : value) : '';
+  const isEmpty = !value || value.toLowerCase() === 'need to filled' || value.toLowerCase() === 'need to be filled';
+  const isCustom = !isEmpty && !DEGREE_OPTIONS.includes(value);
+  const displayVal = isEmpty ? '' : (isCustom ? 'Other' : value);
 
   const filteredOptions = DEGREE_OPTIONS.filter(opt =>
     opt.toLowerCase().includes(search.toLowerCase())
@@ -85,9 +86,11 @@ function SearchableDegreeSelect({ value, onChange }) {
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className="w-full h-11 px-4 border border-slate-200 bg-white rounded-2xl text-left text-sm font-semibold text-slate-700 hover:border-indigo-600 focus:border-indigo-600 outline-none transition flex items-center justify-between shadow-sm"
+        className="w-full h-11 px-4 border border-slate-200 bg-white rounded-2xl text-left text-sm hover:border-indigo-600 focus:border-indigo-600 outline-none transition flex items-center justify-between shadow-sm"
       >
-        <span className="truncate">{displayVal || '-- Select Degree --'}</span>
+        <span className={`truncate ${!displayVal ? 'text-slate-400 font-normal' : 'text-slate-700 font-semibold'}`}>
+          {displayVal || '-- Select Degree --'}
+        </span>
         <svg
           className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
@@ -113,6 +116,17 @@ function SearchableDegreeSelect({ value, onChange }) {
             />
           </div>
           <div className="overflow-y-auto flex-1 max-h-48 custom-scrollbar">
+            <button
+              type="button"
+              onClick={() => {
+                onChange('');
+                setIsOpen(false);
+                setSearch('');
+              }}
+              className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-slate-50 transition"
+            >
+              -- Select Degree --
+            </button>
             {filteredOptions.length === 0 ? (
               <div className="p-3 text-center text-xs text-slate-450 italic">No matches found</div>
             ) : (

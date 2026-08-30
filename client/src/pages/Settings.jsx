@@ -5,6 +5,167 @@ import { AppShell, SectionTabs, SurfaceCard } from '../components/AppShell';
 import { authHeaders, logout } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
 
+const DEGREE_OPTIONS = [
+  // UG Degrees
+  'B.E / Computer Science & Engineering',
+  'B.E / Information Technology',
+  'B.E / Electronics & Communication Engineering',
+  'B.E / Electrical & Electronics Engineering',
+  'B.E / Mechanical Engineering',
+  'B.E / Civil Engineering',
+  'B.E',
+  'B.Tech / Information Technology',
+  'B.Tech / Computer Science & Engineering',
+  'B.Tech / Artificial Intelligence & Data Science',
+  'B.Tech / Biotechnology',
+  'B.Tech',
+  'BCA (Bachelor of Computer Applications)',
+  'B.Sc / Computer Science',
+  'B.Sc / Information Technology',
+  'B.Sc / Mathematics',
+  'B.Sc / Physics',
+  'B.Sc / Chemistry',
+  'B.Sc',
+  'B.Com (Bachelor of Commerce)',
+  'B.Com / Computer Applications',
+  'BBA (Bachelor of Business Administration)',
+  'B.A (Bachelor of Arts)',
+  'B.Pharm (Bachelor of Pharmacy)',
+  'B.Arch (Bachelor of Architecture)',
+  'BFA (Bachelor of Fine Arts)',
+  
+  // PG Degrees
+  'M.E / Computer Science & Engineering',
+  'M.E',
+  'M.Tech / Computer Science & Engineering',
+  'M.Tech',
+  'MCA (Master of Computer Applications)',
+  'M.Sc / Computer Science',
+  'M.Sc / Information Technology',
+  'M.Sc',
+  'M.Com (Master of Commerce)',
+  'MBA (Master of Business Administration)',
+  'M.A (Master of Arts)',
+  'M.Pharm (Master of Pharmacy)',
+  'M.Arch (Master of Architecture)',
+  
+  // Diploma & Vocational
+  'Diploma in Computer Science & Engineering',
+  'Diploma in Information Technology',
+  'Diploma in Mechanical Engineering',
+  'Diploma in Civil Engineering',
+  'Diploma in Electrical & Electronics Engineering',
+  'Diploma',
+  'PG Diploma',
+];
+
+function SearchableDegreeSelect({ value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const isCustom = value && !DEGREE_OPTIONS.includes(value);
+  const displayVal = value ? (isCustom ? 'Other' : value) : '';
+
+  const filteredOptions = DEGREE_OPTIONS.filter(opt =>
+    opt.toLowerCase().includes(search.toLowerCase())
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClose = () => setIsOpen(false);
+    document.addEventListener('click', handleClose);
+    return () => document.removeEventListener('click', handleClose);
+  }, [isOpen]);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
+        className="w-full h-11 px-4 border border-slate-200 bg-white rounded-2xl text-left text-sm font-semibold text-slate-700 hover:border-indigo-600 focus:border-indigo-600 outline-none transition flex items-center justify-between shadow-sm"
+      >
+        <span className="truncate">{displayVal || '-- Select Degree --'}</span>
+        <svg
+          className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          className="absolute z-50 left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-64"
+        >
+          <div className="p-2 border-b border-slate-100 bg-slate-50">
+            <input
+              type="text"
+              placeholder="Search degrees..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs focus:border-indigo-600 outline-none transition"
+            />
+          </div>
+          <div className="overflow-y-auto flex-1 max-h-48 custom-scrollbar">
+            {filteredOptions.length === 0 ? (
+              <div className="p-3 text-center text-xs text-slate-450 italic">No matches found</div>
+            ) : (
+              filteredOptions.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt);
+                    setIsOpen(false);
+                    setSearch('');
+                  }}
+                  className={`w-full text-left px-4 py-2 text-xs font-semibold transition ${
+                    value === opt ? 'bg-indigo-50 text-indigo-700' : 'text-slate-650 hover:bg-slate-50'
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                onChange('Other');
+                setIsOpen(false);
+                setSearch('');
+              }}
+              className={`w-full text-left px-4 py-2 text-xs font-bold border-t border-slate-100 transition ${
+                isCustom ? 'bg-indigo-50 text-indigo-700' : 'text-indigo-600 hover:bg-indigo-50'
+              }`}
+            >
+              Other / Custom Degree
+            </button>
+          </div>
+        </div>
+      )}
+
+      {(isCustom || value === 'Other') && (
+        <div className="mt-3">
+          <label className="crm-label text-[11px] text-slate-500 font-semibold mb-1 block">Specify Custom Degree / Course</label>
+          <input
+            type="text"
+            value={value === 'Other' ? '' : value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Enter your custom degree (e.g. B.Sc Psychology)"
+            className="crm-input"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Settings() {
   const [loading, setLoading] = useState(false);
 
@@ -253,11 +414,9 @@ export default function Settings() {
 
                     <div>
                       <label className="crm-label">Degree / Course</label>
-                      <input
-                        type="text"
+                      <SearchableDegreeSelect
                         value={profileData.degree || ''}
-                        onChange={e => setProfileData({ ...profileData, degree: e.target.value })}
-                        className="crm-input"
+                        onChange={(val) => setProfileData({ ...profileData, degree: val })}
                       />
                     </div>
 

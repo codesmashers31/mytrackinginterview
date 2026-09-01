@@ -170,37 +170,180 @@ export default function StudentTimetable() {
     }
   };
 
-  // Generate Smart Timetable Slots
-  const handleGenerateSmartTimetable = async () => {
+  // Helper to generate unique slot IDs
+  const generateSlotId = () => 'slot_' + Math.random().toString(36).substr(2, 9);
+
+  // Instant Client-Side Smart Schedule Builder
+  const generateSmartSlots = ({
+    sleepStartTime = '23:00',
+    sleepEndTime = '06:00',
+    workOrJobHours = 0,
+    technicalClassHours = 2,
+    communicationClassHours = 1,
+    aptitudeClassHours = 1,
+    selectedSubjects = ['JavaScript', 'React', 'SQL', 'Aptitude', 'Communication']
+  }) => {
+    const slots = [];
+
+    // 1. Sleep Block
+    slots.push({
+      id: generateSlotId(),
+      title: 'Rest & Deep Sleep',
+      category: 'Sleep',
+      subject: 'Rest',
+      startTime: sleepStartTime,
+      endTime: sleepEndTime,
+      durationMinutes: 420,
+      targetDescription: 'Recharge body and mind for high-focus learning',
+      daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    });
+
+    // 2. Early Morning: Aptitude & Logical Reasoning (Fresh Mind)
+    slots.push({
+      id: generateSlotId(),
+      title: 'Aptitude & Quantitative Problem Solving',
+      category: 'Aptitude Practice',
+      subject: 'Aptitude',
+      startTime: '06:30',
+      endTime: '07:45',
+      durationMinutes: 75,
+      targetDescription: 'Solve 15-20 Quant & Logical reasoning questions + Speed Math',
+      daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    });
+
+    // 3. Morning: Communication & English Speaking Practice
+    slots.push({
+      id: generateSlotId(),
+      title: 'Communication & Verbal English Practice',
+      category: 'Communication Practice',
+      subject: 'Communication',
+      startTime: '08:00',
+      endTime: '09:00',
+      durationMinutes: 60,
+      targetDescription: 'Self-intro practice, JAM / Extempore topic recording, vocabulary drill',
+      daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    });
+
+    // 4. Morning Technical Class
+    slots.push({
+      id: generateSlotId(),
+      title: 'Technical Masterclass & Core Lecture',
+      category: 'Technical Class',
+      subject: selectedSubjects[0] || 'Technical Training',
+      startTime: '09:30',
+      endTime: '11:30',
+      durationMinutes: 120,
+      targetDescription: 'Attend live lecture, take notes, understand architecture & concepts',
+      daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+    });
+
+    // 5. Midday: Concept Review & Theory Revision
+    const theorySub = selectedSubjects[1] || selectedSubjects[0] || 'Web Technologies';
+    slots.push({
+      id: generateSlotId(),
+      title: `${theorySub} Theory & Documentation Revision`,
+      category: 'Theory & Concepts',
+      subject: theorySub,
+      startTime: '11:45',
+      endTime: '12:45',
+      durationMinutes: 60,
+      targetDescription: `Review official documentation, syntax notes, and interview flashcards for ${theorySub}`,
+      daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+    });
+
+    // 6. Lunch & Routine Break
+    slots.push({
+      id: generateSlotId(),
+      title: 'Lunch & Recharge Break',
+      category: 'Break / Meals',
+      subject: 'Nutrition',
+      startTime: '13:00',
+      endTime: '14:00',
+      durationMinutes: 60,
+      targetDescription: 'Healthy meal, light walk, and mental relaxation',
+      daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    });
+
+    // 7. Afternoon: Technical Hands-on Coding Practice
+    const codeSub = selectedSubjects[0] || 'React';
+    slots.push({
+      id: generateSlotId(),
+      title: `${codeSub} Hands-on Coding & Project Building`,
+      category: 'Technical Practice',
+      subject: codeSub,
+      startTime: '14:30',
+      endTime: '17:00',
+      durationMinutes: 150,
+      targetDescription: `Build interactive components, write clean modular code, and commit to GitHub`,
+      daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+    });
+
+    // 8. Late Afternoon / Evening Work / College or Secondary Subject
+    if (workOrJobHours > 0) {
+      slots.push({
+        id: generateSlotId(),
+        title: 'Work / Part-time / College Commitment',
+        category: 'Work / College',
+        subject: 'Work',
+        startTime: '17:00',
+        endTime: '19:00',
+        durationMinutes: workOrJobHours * 60,
+        targetDescription: 'Professional or educational commitments',
+        daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+      });
+    } else {
+      const dbSub = selectedSubjects.find(s => ['SQL', 'Java', 'Python', 'Node.js', 'DSA'].includes(s)) || 'SQL';
+      slots.push({
+        id: generateSlotId(),
+        title: `${dbSub} Problem Solving & Practice`,
+        category: 'Technical Practice',
+        subject: dbSub,
+        startTime: '17:30',
+        endTime: '19:00',
+        durationMinutes: 90,
+        targetDescription: `Execute queries, solve algorithm challenges, and practice interview code`,
+        daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+      });
+    }
+
+    // 9. Night: Daily Review, Mock Assessment & Tomorrow Planning
+    slots.push({
+      id: generateSlotId(),
+      title: 'Daily Review, Mock Challenge & Task Logging',
+      category: 'Technical Practice',
+      subject: 'Daily Review',
+      startTime: '20:30',
+      endTime: '22:00',
+      durationMinutes: 90,
+      targetDescription: 'Log daily company applications, complete day activity notes, prepare for tomorrow',
+      daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    });
+
+    return slots;
+  };
+
+  // Generate Smart Timetable Slots (Instant Local Generation)
+  const handleGenerateSmartTimetable = () => {
     setGeneratingPreview(true);
     try {
-      const res = await fetch(buildApiUrl('/timetables/generate'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({
-          sleepHours: Number(commitments.sleepHours),
-          sleepStartTime: commitments.sleepStartTime,
-          sleepEndTime: commitments.sleepEndTime,
-          workOrJobHours: Number(commitments.workOrJobHours),
-          personalRoutineHours: Number(commitments.personalRoutineHours),
-          technicalClassHours: Number(commitments.technicalClassHours),
-          communicationClassHours: Number(commitments.communicationClassHours),
-          aptitudeClassHours: Number(commitments.aptitudeClassHours),
-          selectedSubjects: commitments.selectedSubjects
-        })
+      const generatedSlots = generateSmartSlots({
+        sleepStartTime: commitments.sleepStartTime,
+        sleepEndTime: commitments.sleepEndTime,
+        workOrJobHours: Number(commitments.workOrJobHours),
+        technicalClassHours: Number(commitments.technicalClassHours),
+        communicationClassHours: Number(commitments.communicationClassHours),
+        aptitudeClassHours: Number(commitments.aptitudeClassHours),
+        selectedSubjects: commitments.selectedSubjects
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Generation failed');
 
       setCommitments(prev => ({
         ...prev,
-        slots: data.slots
+        slots: generatedSlots
       }));
 
-      toast.success('Smart timetable generated! Review and save below.');
+      toast.success('✨ Smart timetable generated! Click "Save & Activate Timetable" below.');
     } catch (err) {
-      toast.error(err.message);
+      toast.error('Failed to generate timetable: ' + err.message);
     } finally {
       setGeneratingPreview(false);
     }
@@ -233,11 +376,17 @@ export default function StudentTimetable() {
         })
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Saving timetable failed');
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        throw new Error(`Server returned status ${res.status}. Please check backend connection.`);
+      }
+
+      if (!res.ok) throw new Error(data?.message || 'Saving timetable failed');
 
       setTimetable(data);
-      toast.success('Study timetable updated successfully!');
+      toast.success('🎉 Study timetable saved and activated!');
       setActiveTab('checklist');
       fetchTimetable();
     } catch (err) {

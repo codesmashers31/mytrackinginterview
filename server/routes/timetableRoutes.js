@@ -12,12 +12,12 @@ import {
 const router = express.Router();
 
 // Student endpoints
-router.post('/generate', authMiddleware, roleMiddleware(['student']), generatePreviewTimetable);
-router.get('/my', authMiddleware, roleMiddleware(['student']), getMyTimetable);
-router.post('/', authMiddleware, roleMiddleware(['student']), saveMyTimetable);
-router.put('/my', authMiddleware, roleMiddleware(['student']), saveMyTimetable);
-router.post('/my/check-slot', authMiddleware, roleMiddleware(['student']), toggleSlotCheck);
-router.delete('/my', authMiddleware, roleMiddleware(['student']), deleteMyTimetable);
+router.post('/generate', authMiddleware, roleMiddleware(['student', 'admin', 'coordinator', 'placement']), generatePreviewTimetable);
+router.get('/my', authMiddleware, roleMiddleware(['student', 'admin', 'coordinator', 'placement']), getMyTimetable);
+router.post('/', authMiddleware, roleMiddleware(['student', 'admin', 'coordinator', 'placement']), saveMyTimetable);
+router.put('/my', authMiddleware, roleMiddleware(['student', 'admin', 'coordinator', 'placement']), saveMyTimetable);
+router.post('/my/check-slot', authMiddleware, roleMiddleware(['student', 'admin', 'coordinator', 'placement']), toggleSlotCheck);
+router.delete('/my', authMiddleware, roleMiddleware(['student', 'admin', 'coordinator', 'placement']), deleteMyTimetable);
 
 // Admin & Coordinator endpoints
 router.get('/admin', authMiddleware, roleMiddleware(['admin', 'coordinator', 'placement']), getAllStudentTimetables);

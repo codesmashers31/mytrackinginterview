@@ -24,6 +24,8 @@ import leaveRoutes from './routes/leaveRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import timetableRoutes from './routes/timetableRoutes.js';
+import aptitudeRoutes from './routes/aptitudeRoutes.js';
+import communicationRoutes from './routes/communicationRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 import { runStudentMigration, runTeamMigration } from './utils/migration.js';
 
@@ -39,7 +41,8 @@ const __dirname = path.dirname(__filename);
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
@@ -58,6 +61,8 @@ app.use('/api/leaves', leaveRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/timetables', timetableRoutes);
+app.use('/api/aptitude', aptitudeRoutes);
+app.use('/api/communication', communicationRoutes);
 app.use(errorHandler);
 
 // Database Connection

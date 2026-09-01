@@ -18,7 +18,9 @@ import {
   FileText,
   Gamepad2,
   Trophy,
-  Cpu
+  Cpu,
+  Brain,
+  MessageSquare
 } from 'lucide-react';
 import { logout, authHeaders } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
@@ -29,6 +31,8 @@ const buildNavigationGroups = (role, studentType, onLogout) => {
   if (role === 'student') {
     const workspaceItems = [
       { to: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { to: '/student/ai-aptitude', label: 'AI Aptitude Practice', icon: Brain },
+      { to: '/student/ai-communication', label: 'AI Communication Coach', icon: MessageSquare },
       { to: '/student/ai-mentorship', label: 'AI Mentorship', icon: Cpu },
       { to: '/student/timetable', label: 'Study Timetable', icon: Clock },
       { to: '/student/tasks', label: 'Tasks & Mocks', icon: ClipboardList },
@@ -62,6 +66,7 @@ const buildNavigationGroups = (role, studentType, onLogout) => {
         title: 'Workspace',
         items: [
           { to: '/coordinator/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { to: '/admin/ai-learning', label: 'AI Learning Hub', icon: Brain },
           { to: '/admin/ai-mentorship', label: 'AI Mentorship', icon: Cpu },
           { to: '/students', label: 'Regular Students', icon: Users },
           { to: '/admin/frontend-students', label: 'Frontend Students', icon: Users },
@@ -89,6 +94,7 @@ const buildNavigationGroups = (role, studentType, onLogout) => {
         title: 'Workspace',
         items: [
           { to: '/placement/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { to: '/admin/ai-learning', label: 'AI Learning Hub', icon: Brain },
           { to: '/admin/ai-mentorship', label: 'AI Mentorship', icon: Cpu },
           { to: '/placement/eligibility', label: 'Eligible Students', icon: CheckCircle2 },
           { to: '/placement/spl-classes', label: 'SPL Classes', icon: Users },
@@ -110,6 +116,7 @@ const buildNavigationGroups = (role, studentType, onLogout) => {
       title: 'Workspace',
       items: [
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { to: '/admin/ai-learning', label: 'AI Learning Hub', icon: Brain },
         { to: '/admin/ai-mentorship', label: 'AI Mentorship', icon: Cpu },
         { to: '/students', label: 'Regular Students', icon: Users },
         { to: '/admin/frontend-students', label: 'Frontend Students', icon: Users },

@@ -32,6 +32,9 @@ const StudentAiMentorship = lazy(() => import('./pages/StudentAiMentorship'));
 const AdminAiMentorship = lazy(() => import('./pages/AdminAiMentorship'));
 const StudentTimetable = lazy(() => import('./pages/StudentTimetable'));
 const AdminTimetables = lazy(() => import('./pages/AdminTimetables'));
+const StudentAiAptitude = lazy(() => import('./pages/StudentAiAptitude'));
+const StudentAiCommunication = lazy(() => import('./pages/StudentAiCommunication'));
+const AdminAiLearning = lazy(() => import('./pages/AdminAiLearning'));
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
 import { isAuthenticated } from './utils/auth';
@@ -99,6 +102,9 @@ function App() {
         <Route path="/student/teams" element={<RoleRoute roles={[ 'student' ]}><StudentTeams /></RoleRoute>} />
         <Route path="/student/ai-mentorship" element={<RoleRoute roles={[ 'student' ]}><StudentAiMentorship /></RoleRoute>} />
         <Route path="/admin/ai-mentorship" element={<RoleRoute roles={[ 'admin', 'coordinator', 'placement' ]}><AdminAiMentorship /></RoleRoute>} />
+        <Route path="/student/ai-aptitude" element={<RoleRoute roles={[ 'student' ]}><StudentAiAptitude /></RoleRoute>} />
+        <Route path="/student/ai-communication" element={<RoleRoute roles={[ 'student' ]}><StudentAiCommunication /></RoleRoute>} />
+        <Route path="/admin/ai-learning" element={<RoleRoute roles={[ 'admin', 'coordinator', 'placement' ]}><AdminAiLearning /></RoleRoute>} />
         <Route path="/student/timetable" element={<RoleRoute roles={[ 'student' ]}><StudentTimetable /></RoleRoute>} />
         <Route path="/admin/timetables" element={<RoleRoute roles={[ 'admin', 'coordinator', 'placement' ]}><AdminTimetables /></RoleRoute>} />
       </Routes>

@@ -142,6 +142,18 @@ export default function StudentTimetable() {
     fetchTimetable(selectedDate);
   }, [selectedDate]);
 
+  // Lock background body scroll when modal is open to prevent page scroll underneath
+  useEffect(() => {
+    if (isSlotModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isSlotModalOpen]);
+
   // Date Navigation Handlers
   const handleShiftDate = (days) => {
     const d = new Date(selectedDate);
@@ -1183,14 +1195,26 @@ export default function StudentTimetable() {
       {/* MODAL: ADD / EDIT SLOT */}
       {/* ---------------------------------------------------- */}
       {isSlotModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-lg overflow-hidden">
+        <div 
+          onClick={() => setIsSlotModalOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto overscroll-contain animate-in fade-in duration-150"
+        >
+          <div 
+            onClick={e => e.stopPropagation()}
+            className="bg-white rounded-[24px] shadow-2xl w-full max-w-lg overflow-hidden my-auto animate-in zoom-in-95 duration-150"
+          >
             <div className="p-5 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
               <div>
                 <h3 className="text-sm font-black text-slate-900">{editingSlotIndex >= 0 ? 'Edit Time Slot' : 'Add Custom Time Slot'}</h3>
                 <p className="text-xs text-slate-400">Configure learning goals and time duration</p>
               </div>
-              <button onClick={() => setIsSlotModalOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-700">✕</button>
+              <button 
+                type="button"
+                onClick={() => setIsSlotModalOpen(false)} 
+                className="h-8 w-8 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center transition"
+              >
+                ✕
+              </button>
             </div>
 
             <form onSubmit={handleSaveSlotModal} className="p-6 space-y-4 text-xs">

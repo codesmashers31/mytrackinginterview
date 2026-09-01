@@ -60,6 +60,18 @@ export default function AdminTimetables() {
     fetchTimetables();
   }, []);
 
+  // Lock background body scroll when inspect modal is open
+  useEffect(() => {
+    if (inspectedTimetable) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [inspectedTimetable]);
+
   // Filtered List
   const filteredTimetables = useMemo(() => {
     return timetables.filter(t => {
@@ -304,14 +316,26 @@ export default function AdminTimetables() {
       {/* MODAL: INSPECT STUDENT 24H SCHEDULE */}
       {/* ---------------------------------------------------- */}
       {inspectedTimetable && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+        <div 
+          onClick={() => setInspectedTimetable(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto overscroll-contain animate-in fade-in duration-150"
+        >
+          <div 
+            onClick={e => e.stopPropagation()}
+            className="bg-white rounded-[24px] shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto animate-in zoom-in-95 duration-150"
+          >
             <div className="p-5 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
               <div>
                 <h3 className="text-base font-black text-slate-900">{inspectedTimetable.studentName}'s 24-Hour Study Routine</h3>
                 <p className="text-xs text-slate-400">{inspectedTimetable.studentEmail} • {inspectedTimetable.batch || 'Batch 1'}</p>
               </div>
-              <button onClick={() => setInspectedTimetable(null)} className="p-1.5 text-slate-400 hover:text-slate-700">✕</button>
+              <button 
+                type="button"
+                onClick={() => setInspectedTimetable(null)} 
+                className="h-8 w-8 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center transition"
+              >
+                ✕
+              </button>
             </div>
 
             <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">

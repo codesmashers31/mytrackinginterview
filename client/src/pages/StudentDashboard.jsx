@@ -24,7 +24,8 @@ import {
   X,
   CheckCircle,
   AlertCircle,
-  LogOut
+  LogOut,
+  Sparkles
 } from 'lucide-react';
 
 export default function StudentDashboard() {

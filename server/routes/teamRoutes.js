@@ -117,12 +117,12 @@ router.get('/my-team', authMiddleware, async (req, res) => {
   try {
     const studentId = await getStudentIdFromUser(req.user);
     if (!studentId) {
-      return res.status(404).json({ message: 'Student profile not found' });
+      return res.json(null);
     }
 
     const team = await Team.findOne({ members: studentId }).lean();
     if (!team) {
-      return res.status(404).json({ message: 'You are not assigned to any team yet.' });
+      return res.json(null);
     }
 
     const populated = await populateTeamMembers(team);
@@ -442,12 +442,12 @@ router.get('/performances/my-team', authMiddleware, async (req, res) => {
   try {
     const studentId = await getStudentIdFromUser(req.user);
     if (!studentId) {
-      return res.status(404).json({ message: 'Student profile not found' });
+      return res.json({ team: null, performances: [] });
     }
 
     const teamDoc = await Team.findOne({ members: studentId }).lean();
     if (!teamDoc) {
-      return res.status(404).json({ message: 'You are not assigned to a team.' });
+      return res.json({ team: null, performances: [] });
     }
 
     const team = await populateTeamMembers(teamDoc);

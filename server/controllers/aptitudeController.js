@@ -1,9 +1,17 @@
-﻿import AptitudeTopic, { DEFAULT_APTITUDE_TOPICS } from '../models/AptitudeTopic.js';
+import AptitudeTopic, { DEFAULT_APTITUDE_TOPICS } from '../models/AptitudeTopic.js';
 import AptitudeAttempt from '../models/AptitudeAttempt.js';
 import StudentAIProgress from '../models/StudentAIProgress.js';
 import Student from '../models/Student.js';
 import User from '../models/User.js';
 import aiProvider from '../services/aiProvider.js';
+import {
+  FRACTION_TO_PERCENTAGE_TABLE,
+  SQUARES_TABLE,
+  CUBES_TABLE,
+  DIVISIBILITY_RULES,
+  SPEED_MATH_SHORTCUTS
+} from '../utils/aptitudeFoundationsData.js';
+import { TOPIC_GUIDES } from '../utils/aptitudeTopicGuides.js';
 
 // Seed topics if collection is empty
 const ensureDefaultTopics = async () => {
@@ -337,5 +345,86 @@ export const getAdminAptitudeOverview = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch admin aptitude data', error: err.message });
+  }
+};
+
+/**
+ * 7. AI Question Solver with Root-Cause Explanation
+ */
+export const solveAptitudeQuestion = async (req, res) => {
+  try {
+    const { questionText, topicHint = '' } = req.body;
+    if (!questionText || !questionText.trim()) {
+      return res.status(400).json({ message: 'Question statement is required' });
+    }
+
+    const solution = await aiProvider.solveAptitudeQuestionWithRootCause({
+      questionText: questionText.trim(),
+      topicHint: topicHint.trim()
+    });
+
+    res.json(solution);
+  } catch (err) {
+    console.error('Error solving aptitude question:', err);
+    res.status(500).json({ message: 'Failed to solve question', error: err.message });
+  }
+};
+
+/**
+ * 8. Get Math Foundations & Speed Math Toolkit
+ */
+export const getAptitudeFoundations = async (req, res) => {
+  try {
+    res.json({
+      fractionsToPercentages: FRACTION_TO_PERCENTAGE_TABLE,
+      squares: SQUARES_TABLE,
+      cubes: CUBES_TABLE,
+      divisibilityRules: DIVISIBILITY_RULES,
+      speedMathShortcuts: SPEED_MATH_SHORTCUTS
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch foundations data', error: err.message });
+  }
+};
+
+/**
+ * 9. Get Topic Study Guide, Formulas & Worked Examples
+ */
+export const getAptitudeTopicGuide = async (req, res) => {
+  try {
+    const { topicName } = req.params;
+    const guide = TOPIC_GUIDES[topicName];
+
+    if (guide) {
+      return res.json(guide);
+    }
+
+    // Default fallback guide if topic not pre-seeded in static map
+    res.json({
+      topicName,
+      category: 'Quantitative Aptitude',
+      coreIntuition: `Mastering ${topicName} requires understanding fundamental ratios, linear proportions, and speed calculation shortcuts.`,
+      formulas: [
+        { name: `${topicName} Fundamental Principle`, formula: 'Output = (Input Factor) * (Rate of Progression)', note: 'Base equation' },
+        { name: 'Direct & Inverse Variation', formula: 'y = kx OR y = k/x', note: 'Proportionality balance' }
+      ],
+      shortcuts: [
+        { title: 'Option Elimination Technique', tip: 'Use units digit matching and approximate bounds to eliminate at least 2 options immediately.' },
+        { title: 'Vedic Math Approximation', tip: 'Round off numbers to nearest multiple of 10 or 100 for fast mental estimation.' }
+      ],
+      workedExamples: [
+        {
+          difficulty: 'Easy',
+          question: `Sample placement problem on ${topicName}`,
+          rootLogic: 'Apply standard linear formulation.',
+          givenData: 'Parameters extracted from problem statement',
+          stepByStep: 'Step 1: Set up the equation.\\nStep 2: Simplify fractions.\\nStep 3: Calculate final answer.',
+          shortcutTrick: 'Use ratio scaling to solve directly.',
+          answer: 'Verified solution'
+        }
+      ]
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch topic guide', error: err.message });
   }
 };

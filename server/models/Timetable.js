@@ -33,6 +33,7 @@ const slotSchema = new mongoose.Schema({
 const dailyChecklistSchema = new mongoose.Schema({
   date: { type: String, required: true }, // "YYYY-MM-DD"
   completedSlotIds: { type: [String], default: [] },
+  slotsSnapshot: { type: [slotSchema], default: [] }, // Preserved historical slots for past dates
   totalCount: { type: Number, default: 0 },
   completedCount: { type: Number, default: 0 },
   completionRate: { type: Number, default: 0 }, // Percentage

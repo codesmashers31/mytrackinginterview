@@ -199,25 +199,31 @@ export const generatePreviewTimetable = async (req, res) => {
   }
 };
 
-// Get current student's timetable + today's checklist
+// Get current student's timetable + date-specific checklist
 export const getMyTimetable = async (req, res) => {
   try {
     const studentId = req.user.id;
+    const targetDate = req.query.date || new Date().toISOString().split('T')[0];
     let timetable = await Timetable.findOne({ studentId });
 
     if (!timetable) {
       return res.json(null);
     }
 
-    // Today's Date String YYYY-MM-DD
-    const todayStr = new Date().toISOString().split('T')[0];
-    let todayChecklist = timetable.dailyChecklists.find(c => c.date === todayStr);
+    let dateChecklist = timetable.dailyChecklists.find(c => c.date === targetDate);
 
-    if (!todayChecklist) {
-      const activeSlotsCount = timetable.slots.filter(s => s.category !== 'Sleep').length;
-      todayChecklist = {
-        date: todayStr,
+    // Determine slots for this date: if past date has a snapshot, preserve and use it!
+    const dateSlots = (dateChecklist && dateChecklist.slotsSnapshot && dateChecklist.slotsSnapshot.length > 0)
+      ? dateChecklist.slotsSnapshot
+      : timetable.slots;
+
+    const activeSlotsCount = dateSlots.filter(s => s.category !== 'Sleep').length;
+
+    if (!dateChecklist) {
+      dateChecklist = {
+        date: targetDate,
         completedSlotIds: [],
+        slotsSnapshot: timetable.slots,
         totalCount: activeSlotsCount,
         completedCount: 0,
         completionRate: 0,
@@ -227,14 +233,16 @@ export const getMyTimetable = async (req, res) => {
 
     res.json({
       ...timetable.toObject(),
-      todayChecklist
+      selectedDate: targetDate,
+      dateSlots,
+      todayChecklist: dateChecklist
     });
   } catch (error) {
     res.status(500).json({ message: 'Failed to retrieve timetable', error: error.message });
   }
 };
 
-// Save or Update Timetable
+// Save or Update Timetable (Preserves past history, updates today & future)
 export const saveMyTimetable = async (req, res) => {
   try {
     const studentId = req.user.id;
@@ -282,38 +290,76 @@ export const saveMyTimetable = async (req, res) => {
       id: s.id || generateSlotId()
     }));
 
-    const timetable = await Timetable.findOneAndUpdate(
-      { studentId },
-      {
-        $set: {
-          studentName,
-          studentEmail,
-          batch,
-          sleepHours,
-          sleepStartTime,
-          sleepEndTime,
-          workOrJobHours,
-          workDetails,
-          personalRoutineHours,
-          technicalClassHours,
-          communicationClassHours,
-          aptitudeClassHours,
-          availableSelfStudyHours,
-          selectedSubjects,
-          slots: preparedSlots,
-          isActive: true
-        }
-      },
-      { upsert: true, returnDocument: 'after' }
-    );
+    const todayStr = new Date().toISOString().split('T')[0];
 
+    const timetable = await Timetable.findOne({ studentId });
+
+    if (!timetable) {
+      const newTimetable = new Timetable({
+        studentId,
+        studentName,
+        studentEmail,
+        batch,
+        sleepHours,
+        sleepStartTime,
+        sleepEndTime,
+        workOrJobHours,
+        workDetails,
+        personalRoutineHours,
+        technicalClassHours,
+        communicationClassHours,
+        aptitudeClassHours,
+        availableSelfStudyHours,
+        selectedSubjects,
+        slots: preparedSlots,
+        dailyChecklists: [{
+          date: todayStr,
+          completedSlotIds: [],
+          slotsSnapshot: preparedSlots,
+          totalCount: preparedSlots.filter(s => s.category !== 'Sleep').length,
+          completedCount: 0,
+          completionRate: 0,
+          notes: ''
+        }],
+        isActive: true
+      });
+      await newTimetable.save();
+      return res.json(newTimetable);
+    }
+
+    // Update ongoing active fields
+    timetable.studentName = studentName;
+    timetable.studentEmail = studentEmail;
+    if (batch) timetable.batch = batch;
+    timetable.sleepHours = sleepHours;
+    timetable.sleepStartTime = sleepStartTime;
+    timetable.sleepEndTime = sleepEndTime;
+    timetable.workOrJobHours = workOrJobHours;
+    timetable.workDetails = workDetails;
+    timetable.personalRoutineHours = personalRoutineHours;
+    timetable.technicalClassHours = technicalClassHours;
+    timetable.communicationClassHours = communicationClassHours;
+    timetable.aptitudeClassHours = aptitudeClassHours;
+    timetable.availableSelfStudyHours = availableSelfStudyHours;
+    timetable.selectedSubjects = selectedSubjects;
+    timetable.slots = preparedSlots;
+
+    // Update today's checklist snapshot if it exists (or leave past dates untouched!)
+    const todayChecklist = timetable.dailyChecklists.find(c => c.date === todayStr);
+    if (todayChecklist) {
+      todayChecklist.slotsSnapshot = preparedSlots;
+      todayChecklist.totalCount = preparedSlots.filter(s => s.category !== 'Sleep').length;
+      todayChecklist.completionRate = Math.round(((todayChecklist.completedSlotIds?.length || 0) / Math.max(1, todayChecklist.totalCount)) * 100);
+    }
+
+    await timetable.save();
     res.json(timetable);
   } catch (error) {
     res.status(500).json({ message: 'Failed to save timetable', error: error.message });
   }
 };
 
-// Check or Uncheck Slot for Today
+// Check or Uncheck Slot for Specific Date
 export const toggleSlotCheck = async (req, res) => {
   try {
     const studentId = req.user.id;
@@ -323,21 +369,28 @@ export const toggleSlotCheck = async (req, res) => {
       return res.status(400).json({ message: 'Slot ID is required' });
     }
 
-    const todayStr = date || new Date().toISOString().split('T')[0];
+    const targetDate = date || new Date().toISOString().split('T')[0];
     const timetable = await Timetable.findOne({ studentId });
 
     if (!timetable) {
       return res.status(404).json({ message: 'Timetable not found. Please create one first.' });
     }
 
-    let checklist = timetable.dailyChecklists.find(c => c.date === todayStr);
-    const activeSlots = timetable.slots.filter(s => s.category !== 'Sleep');
-    const totalCount = Math.max(1, activeSlots.length);
+    let checklist = timetable.dailyChecklists.find(c => c.date === targetDate);
+
+    // If checklist exists with snapshot, use it; otherwise lock in current active slots as snapshot
+    const activeSlots = (checklist && checklist.slotsSnapshot && checklist.slotsSnapshot.length > 0)
+      ? checklist.slotsSnapshot
+      : timetable.slots;
+
+    const nonSleepSlots = activeSlots.filter(s => s.category !== 'Sleep');
+    const totalCount = Math.max(1, nonSleepSlots.length);
 
     if (!checklist) {
       checklist = {
-        date: todayStr,
+        date: targetDate,
         completedSlotIds: [slotId],
+        slotsSnapshot: timetable.slots,
         totalCount: totalCount,
         completedCount: 1,
         completionRate: Math.round((1 / totalCount) * 100),
@@ -345,6 +398,9 @@ export const toggleSlotCheck = async (req, res) => {
       };
       timetable.dailyChecklists.push(checklist);
     } else {
+      if (!checklist.slotsSnapshot || checklist.slotsSnapshot.length === 0) {
+        checklist.slotsSnapshot = timetable.slots;
+      }
       const existsIndex = checklist.completedSlotIds.indexOf(slotId);
       if (existsIndex > -1) {
         checklist.completedSlotIds.splice(existsIndex, 1);
@@ -358,6 +414,7 @@ export const toggleSlotCheck = async (req, res) => {
 
     await timetable.save();
     res.json({
+      selectedDate: targetDate,
       todayChecklist: checklist,
       dailyChecklists: timetable.dailyChecklists
     });

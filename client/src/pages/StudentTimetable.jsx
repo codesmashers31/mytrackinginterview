@@ -45,6 +45,8 @@ const STANDARD_SKILLS = [
 ];
 
 export default function StudentTimetable() {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(todayStr);
   const [timetable, setTimetable] = useState(null);
   const [todayChecklist, setTodayChecklist] = useState({
     completedSlotIds: [],
@@ -89,9 +91,9 @@ export default function StudentTimetable() {
     targetDescription: ''
   });
 
-  const fetchTimetable = async () => {
+  const fetchTimetable = async (targetDate = selectedDate) => {
     try {
-      const res = await fetch(buildApiUrl('/timetables/my'), {
+      const res = await fetch(buildApiUrl(`/timetables/my?date=${targetDate}`), {
         headers: authHeaders()
       });
 
@@ -101,7 +103,13 @@ export default function StudentTimetable() {
       }
 
       if (res.ok) {
-        const data = await res.json();
+        let data = null;
+        try {
+          data = await res.json();
+        } catch (e) {
+          return;
+        }
+
         if (data) {
           setTimetable(data);
           if (data.todayChecklist) {
@@ -131,8 +139,16 @@ export default function StudentTimetable() {
   };
 
   useEffect(() => {
-    fetchTimetable();
-  }, []);
+    fetchTimetable(selectedDate);
+  }, [selectedDate]);
+
+  // Date Navigation Handlers
+  const handleShiftDate = (days) => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + days);
+    const newDateStr = d.toISOString().split('T')[0];
+    setSelectedDate(newDateStr);
+  };
 
   // Compute remaining study hours
   const calculatedStudyHours = Math.max(
@@ -147,17 +163,23 @@ export default function StudentTimetable() {
     )
   );
 
-  // Toggle Slot Check for Today
+  // Toggle Slot Check for Selected Date
   const handleToggleSlotCheck = async (slotId) => {
     try {
       const res = await fetch(buildApiUrl('/timetables/my/check-slot'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ slotId })
+        body: JSON.stringify({ slotId, date: selectedDate })
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed to update progress');
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        throw new Error('Failed to parse response');
+      }
+
+      if (!res.ok) throw new Error(data?.message || 'Failed to update progress');
 
       setTodayChecklist(data.todayChecklist);
       if (data.todayChecklist.completedSlotIds.includes(slotId)) {
@@ -507,7 +529,10 @@ export default function StudentTimetable() {
     }
   };
 
-  const activeSlots = timetable?.slots?.filter(s => s.category !== 'Sleep') || [];
+  const dateSlots = (timetable?.dateSlots && timetable.dateSlots.length > 0)
+    ? timetable.dateSlots
+    : (timetable?.slots || []);
+  const activeSlots = dateSlots.filter(s => s.category !== 'Sleep');
   const filteredChecklistSlots = activeSlots.filter(s => {
     const isCompleted = todayChecklist.completedSlotIds?.includes(s.id);
     if (slotFilter === 'Pending') return !isCompleted;
@@ -542,7 +567,7 @@ export default function StudentTimetable() {
           icon={<Clock size={20} />}
         />
         <MetricCard
-          title="Today's Completion"
+          title="Day's Completion"
           value={`${todayChecklist.completionRate || 0}%`}
           helper={`${todayChecklist.completedCount || 0} of ${todayChecklist.totalCount || activeSlots.length} tasks completed`}
           tone="success"
@@ -575,7 +600,7 @@ export default function StudentTimetable() {
           }`}
         >
           <CheckCircle2 size={16} />
-          <span>Today's Action Plan & Checklist</span>
+          <span>Daily Action Plan & Checklist</span>
         </button>
 
         <button
@@ -596,6 +621,80 @@ export default function StudentTimetable() {
       {/* ---------------------------------------------------- */}
       {activeTab === 'checklist' && (
         <div className="space-y-6">
+          {/* Interactive Date Selector & Day Versioning Bar */}
+          <SurfaceCard className="p-4 border border-slate-200">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                  <Calendar size={18} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                      Checklist Date: <span className="text-blue-600">{new Date(selectedDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    </h3>
+                    {selectedDate === todayStr ? (
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                        🌟 Today
+                      </span>
+                    ) : selectedDate < todayStr ? (
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                        📜 Past Log (Preserved)
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                        🔮 Future Day
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    {selectedDate < todayStr 
+                      ? 'Viewing historical completion records. Past days keep their original schedule.' 
+                      : selectedDate === todayStr 
+                      ? 'Active today. Edit routine tab to adjust future schedule.' 
+                      : 'Upcoming day plan using your active timetable schedule.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick Date Shift Buttons & Native Date Input */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleShiftDate(-1)}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+                >
+                  ← Prev Day
+                </button>
+
+                {selectedDate !== todayStr && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDate(todayStr)}
+                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl transition"
+                  >
+                    Go to Today
+                  </button>
+                )}
+
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={e => setSelectedDate(e.target.value)}
+                  className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-blue-500"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => handleShiftDate(1)}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+                >
+                  Next Day →
+                </button>
+              </div>
+            </div>
+          </SurfaceCard>
+
           {/* Visual 24-Hour Day Budget Bar */}
           <SurfaceCard className="p-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
@@ -658,7 +757,7 @@ export default function StudentTimetable() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <span className="text-[10px] uppercase font-black tracking-widest text-blue-200">Daily Study Milestone</span>
-                <h3 className="text-xl font-black mt-0.5">Today's Study Checklist</h3>
+                <h3 className="text-xl font-black mt-0.5">{selectedDate === todayStr ? "Today's Study Checklist" : `Checklist for ${selectedDate}`}</h3>
                 <p className="text-xs text-blue-100 mt-1">Check off each session as you finish it to maintain your daily streak!</p>
               </div>
 

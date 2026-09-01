@@ -27,7 +27,8 @@ import {
   Check,
   ChevronRight,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Trophy
 } from 'lucide-react';
 
 const STANDARD_SKILLS = [

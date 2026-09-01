@@ -185,26 +185,30 @@ export default function Dashboard() {
     return ['All', ...new Set(batches)].sort();
   }, [allStudents]);
 
-  // Dynamic Metrics
+  // Dynamic Metrics - ONLY Regular Candidates are part of the Placement Overview!
   const dynamicStats = useMemo(() => {
     if (!stats) return { total: 0, placed: 0, seekers: 0, needToFilled: 0, rate: 0 };
     
-    if (allStudents.length === 0) {
-      const tot = (stats.total || 0) + (stats.frontendTotal || 0);
-      const plc = (stats.placed || 0) + (stats.frontendPlaced || 0);
-      return {
-        total: tot,
-        placed: plc,
-        seekers: (stats.jobSeekers || 0) + (stats.frontendJobSeekers || 0),
-        needToFilled: stats.needToFilled || 0,
-        rate: tot > 0 ? Math.round((plc / tot) * 100) : 0
-      };
-    }
+    // When track filter is 'All', default strictly to Regular candidates only (excluding Frontend)
+    const targetStudents = filteredStudents.filter(s => {
+      if (filterType === 'All') {
+        return !s.isFrontend && s.studentType !== 'Frontend';
+      }
+      return true;
+    });
 
-    const tot = filteredStudents.length;
-    const plc = filteredStudents.filter(s => (s.currentStatus || s.status)?.toLowerCase() === 'placed').length;
-    const seekers = filteredStudents.filter(s => (s.currentStatus || s.status)?.toLowerCase() === 'job seeker').length;
-    const needsUpdate = filteredStudents.filter(s => (s.currentStatus || s.status)?.toLowerCase() === 'need to filled' || !s.currentStatus).length;
+    const tot = filterType === 'All' && allStudents.length === 0 
+      ? (stats.total || 0) 
+      : targetStudents.length;
+    const plc = filterType === 'All' && allStudents.length === 0 
+      ? (stats.placed || 0) 
+      : targetStudents.filter(s => (s.currentStatus || s.status)?.toLowerCase() === 'placed').length;
+    const seekers = filterType === 'All' && allStudents.length === 0 
+      ? (stats.jobSeekers || 0) 
+      : targetStudents.filter(s => (s.currentStatus || s.status)?.toLowerCase() === 'job seeker').length;
+    const needsUpdate = filterType === 'All' && allStudents.length === 0 
+      ? (stats.needToFilled || 0) 
+      : targetStudents.filter(s => (s.currentStatus || s.status)?.toLowerCase() === 'need to filled' || !s.currentStatus).length;
 
     return {
       total: tot,
@@ -213,7 +217,7 @@ export default function Dashboard() {
       needToFilled: needsUpdate,
       rate: tot > 0 ? Math.round((plc / tot) * 100) : 0
     };
-  }, [filteredStudents, allStudents, stats]);
+  }, [filteredStudents, allStudents, filterType, stats]);
 
   // Telemetry safe access
   const telemetry = stats?.telemetry || {
@@ -290,23 +294,23 @@ export default function Dashboard() {
       {/* Top Level Metric KPIs */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6">
         <MetricCard
-          title="Total Candidates"
+          title="Placement Candidates"
           value={dynamicStats.total}
-          helper="Active tracked students"
+          helper="Regular placement pool"
           icon={<Users size={20} />}
           tone="neutral"
         />
         <MetricCard
           title="Placement Rate"
           value={`${dynamicStats.rate}%`}
-          helper={`${dynamicStats.placed} placed candidates`}
+          helper={`${dynamicStats.placed} regular placed`}
           tone="success"
           icon={<TrendingUp size={20} />}
         />
         <MetricCard
           title="Active Job Seekers"
           value={dynamicStats.seekers}
-          helper="Seeking placement drives"
+          helper="Regular drive candidates"
           tone="primary"
           icon={<BriefcaseBusiness size={20} />}
         />

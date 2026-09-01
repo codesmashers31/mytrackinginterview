@@ -48,9 +48,9 @@ export default function PlacementDashboard() {
   const pipelineBreakdown = useMemo(() => {
     if (!stats) return [];
 
-    const total = Math.max((stats.total || 0) + (stats.frontendTotal || 0), 1);
-    const placed = (stats.placed || 0) + (stats.frontendPlaced || 0);
-    const seekers = (stats.jobSeekers || 0) + (stats.frontendJobSeekers || 0);
+    const total = Math.max(stats.total || 0, 1);
+    const placed = stats.placed || 0;
+    const seekers = stats.jobSeekers || 0;
 
     return [
       { label: 'Placed Candidates', value: placed, tone: 'success' },
@@ -108,23 +108,23 @@ export default function PlacementDashboard() {
       {/* Metric Cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6">
         <MetricCard
-          title="Total Candidates"
-          value={(stats.total || 0) + (stats.frontendTotal || 0)}
-          helper="Regular + Frontend candidates"
+          title="Placement Candidates"
+          value={stats.total || 0}
+          helper="Regular placement pool"
           icon={<Users size={20} />}
           tone="neutral"
         />
         <MetricCard
           title="Placed Students"
-          value={(stats.placed || 0) + (stats.frontendPlaced || 0)}
-          helper="Successfully placed"
+          value={stats.placed || 0}
+          helper="Regular placed candidates"
           tone="success"
           icon={<CheckCircle2 size={20} />}
         />
         <MetricCard
           title="Active Seekers"
-          value={(stats.jobSeekers || 0) + (stats.frontendJobSeekers || 0)}
-          helper="Actively seeking roles"
+          value={stats.jobSeekers || 0}
+          helper="Regular job seekers"
           tone="primary"
           icon={<BriefcaseBusiness size={20} />}
         />
@@ -144,8 +144,8 @@ export default function PlacementDashboard() {
         />
         <MetricCard
           title="Conversion Rate"
-          value={`${stats.total ? Math.round(((stats.placed + stats.frontendPlaced) / Math.max(1, stats.total + stats.frontendTotal)) * 100) : 0}%`}
-          helper="Overall placement rate"
+          value={`${stats.total ? Math.round(((stats.placed || 0) / Math.max(1, stats.total)) * 100) : 0}%`}
+          helper="Regular placement rate"
           tone="success"
           icon={<TrendingUp size={20} />}
         />

@@ -38,6 +38,8 @@ export default function StudentDashboard() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [profile, setProfile] = useState(null);
   const [todayAttendance, setTodayAttendance] = useState(null);
+  const [myTimetable, setMyTimetable] = useState(null);
+  const [markingAllRoutine, setMarkingAllRoutine] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updatingProfile, setUpdatingProfile] = useState(false);
@@ -83,14 +85,15 @@ export default function StudentDashboard() {
         ? buildApiUrl(`/teams/leaderboard?track=${track}`)
         : buildApiUrl(`/teams/leaderboard?track=${track}&batch=${batch}`);
 
-      // 2. Fetch the rest of the endpoints including filtered leaderboard and today's attendance
-      const [logsRes, attendanceRes, tasksRes, teamRes, leadRes, todayAttRes] = await Promise.all([
+      // 2. Fetch the rest of the endpoints including filtered leaderboard, attendance, and timetable
+      const [logsRes, attendanceRes, tasksRes, teamRes, leadRes, todayAttRes, timetableRes] = await Promise.all([
         fetch(buildApiUrl('/daily-activities/my'), { headers: authHeaders() }),
         fetch(buildApiUrl(`/attendance/student/${studentId}`), { headers: authHeaders() }),
         fetch(buildApiUrl('/tasks/my/list'), { headers: authHeaders() }),
         fetch(buildApiUrl('/teams/performances/my-team'), { headers: authHeaders() }),
         fetch(leadUrl, { headers: authHeaders() }),
-        fetch(buildApiUrl('/attendance/today'), { headers: authHeaders() })
+        fetch(buildApiUrl('/attendance/today'), { headers: authHeaders() }),
+        fetch(buildApiUrl('/timetables/my'), { headers: authHeaders() })
       ]);
 
       if (logsRes.status === 401 || attendanceRes.status === 401 || tasksRes.status === 401) {
@@ -104,10 +107,12 @@ export default function StudentDashboard() {
       const teamData = teamRes.ok ? await teamRes.json() : null;
       const leadData = leadRes.ok ? await leadRes.json() : [];
       const todayAttData = todayAttRes.ok ? await todayAttRes.json() : null;
+      const timetableData = timetableRes.ok ? await timetableRes.json() : null;
 
       setLogs(logsData);
       setAttendance(attendanceData);
       setTasks(tasksData);
+      setMyTimetable(timetableData);
       if (meData.grade) setGrade(meData.grade);
       
       if (teamData) {
@@ -369,6 +374,202 @@ export default function StudentDashboard() {
     );
   };
 
+  const handleDashboardToggleSlotCheck = async (slotId) => {
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const res = await fetch(buildApiUrl('/timetables/my/check-slot'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ slotId, date: todayStr })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || 'Failed to update progress');
+
+      setMyTimetable(prev => ({
+        ...prev,
+        todayChecklist: data.todayChecklist,
+        streak: data.streak ?? prev?.streak,
+        xpPoints: data.xpPoints ?? prev?.xpPoints,
+        unlockedBadges: data.unlockedBadges ?? prev?.unlockedBadges
+      }));
+
+      if (data.todayChecklist.completedSlotIds.includes(slotId)) {
+        toast.success('🎯 Great job! Slot completed! +5 XP 🌟');
+      } else {
+        toast('Slot unchecked', { icon: '↩️' });
+      }
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleDashboardMarkAllRoutine = async (unmarkAll = false) => {
+    setMarkingAllRoutine(true);
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const res = await fetch(buildApiUrl('/timetables/my/check-all'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ date: todayStr, unmarkAll })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || 'Failed to update all slots');
+
+      setMyTimetable(prev => ({
+        ...prev,
+        todayChecklist: data.todayChecklist,
+        streak: data.streak ?? prev?.streak,
+        xpPoints: data.xpPoints ?? prev?.xpPoints,
+        unlockedBadges: data.unlockedBadges ?? prev?.unlockedBadges
+      }));
+
+      if (unmarkAll) {
+        toast('Tasks reset for today', { icon: '🔄' });
+      } else {
+        toast.success('🎉 Fantastic! All daily study tasks marked complete! +25 Bonus XP! 🌟', {
+          duration: 4000
+        });
+      }
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setMarkingAllRoutine(false);
+    }
+  };
+
+  const renderTodayRoutineWidget = () => {
+    if (!myTimetable || !myTimetable.slots || myTimetable.slots.length === 0) {
+      return (
+        <div className="rounded-[2rem] bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-white border border-blue-500/20 p-5 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="h-11 w-11 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xl">
+              📅
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-slate-800">Set Up Your Daily Study Routine</h4>
+              <p className="text-xs text-slate-500 mt-0.5">Budget your 24 hours, choose your skills, and earn XP badges!</p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/student/timetable')}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 shrink-0"
+          >
+            <span>Create Study Timetable</span>
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      );
+    }
+
+    const checklist = myTimetable.todayChecklist || {
+      completedSlotIds: [],
+      totalCount: myTimetable.slots.filter(s => s.category !== 'Sleep').length,
+      completedCount: 0,
+      completionRate: 0
+    };
+
+    const activeSlots = myTimetable.slots.filter(s => s.category !== 'Sleep');
+
+    return (
+      <SurfaceCard className="p-6 mb-8 border border-slate-200 shadow-sm bg-white rounded-[2rem] relative overflow-hidden">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+              <Clock size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-black text-slate-900">Today's Study Action Plan</h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  {checklist.completedCount} of {activeSlots.length} Done ({checklist.completionRate || 0}%)
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">1-click task tracker & placement discipline engine</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleDashboardMarkAllRoutine(false)}
+              disabled={markingAllRoutine || activeSlots.length === 0 || checklist.completionRate === 100}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-200 transition disabled:opacity-50 active:scale-95"
+            >
+              <Sparkles size={13} />
+              <span>{markingAllRoutine ? 'Updating...' : '⚡ 1-Click Mark All Done (+25 XP)'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/student/timetable')}
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded-xl transition flex items-center gap-1"
+            >
+              <span>Full Plan</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+        </div>
+
+        {/* Progress Bar & Gamification Badges */}
+        <div className="my-4">
+          <div className="flex justify-between items-center text-xs font-bold mb-1.5">
+            <span className="text-slate-600 flex items-center gap-1.5">
+              <span>Streak:</span>
+              <span className="text-amber-600 font-black">🔥 {myTimetable.streak || 0} Days</span>
+              <span className="text-slate-300">•</span>
+              <span>XP:</span>
+              <span className="text-indigo-600 font-black">🌟 {myTimetable.xpPoints || 0} Points</span>
+            </span>
+            <span className="text-blue-700">{checklist.completionRate || 0}% Completed</span>
+          </div>
+
+          <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-500"
+              style={{ width: `${checklist.completionRate || 0}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Compact Slots Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-2">
+          {activeSlots.slice(0, 6).map((slot, idx) => {
+            const isCompleted = checklist.completedSlotIds?.includes(slot.id);
+            return (
+              <button
+                key={slot.id || idx}
+                type="button"
+                onClick={() => handleDashboardToggleSlotCheck(slot.id)}
+                className={`p-3 rounded-2xl text-left border transition flex items-center gap-2.5 ${
+                  isCompleted
+                    ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900 shadow-sm'
+                    : 'bg-slate-50 hover:bg-slate-100/80 border-slate-200/80 text-slate-800'
+                }`}
+              >
+                <div className={`h-5 w-5 rounded-lg flex items-center justify-center shrink-0 transition ${
+                  isCompleted ? 'bg-emerald-600 text-white' : 'border-2 border-slate-300 bg-white'
+                }`}>
+                  {isCompleted && <CheckCircle2 size={14} />}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-black truncate">{slot.title}</div>
+                  <div className="text-[10px] font-semibold text-slate-500 flex items-center gap-1 mt-0.5">
+                    <span>{slot.startTime}–{slot.endTime}</span>
+                    {slot.subject && <span>• {slot.subject}</span>}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </SurfaceCard>
+    );
+  };
+
   const renderJourneyStepper = () => {
     const isLoggingActive = parseFloat(telemetry.totalHours) > 0 || telemetry.streak > 0;
     const isAssignedTeam = !!myTeam;
@@ -618,6 +819,9 @@ export default function StudentDashboard() {
 
       {/* Today's Attendance Process Card */}
       {profile && renderTodayAttendanceCard()}
+
+      {/* Today's Study Routine & 1-Click Action Widget */}
+      {profile && renderTodayRoutineWidget()}
 
 
 

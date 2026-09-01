@@ -86,6 +86,19 @@ const timetableSchema = new mongoose.Schema({
   },
 
   streak: { type: Number, default: 0 },
+  xpPoints: { type: Number, default: 0 },
+  unlockedBadges: {
+    type: [
+      {
+        id: String,
+        name: String,
+        description: String,
+        icon: String,
+        unlockedAt: { type: Date, default: Date.now }
+      }
+    ],
+    default: []
+  },
   isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 

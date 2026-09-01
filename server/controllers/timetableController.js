@@ -199,6 +199,78 @@ export const generatePreviewTimetable = async (req, res) => {
   }
 };
 
+// Helper to compute consistency streak, XP points, and unlocked badges
+export const calculateTimetableRewards = (timetable) => {
+  const sorted = [...(timetable.dailyChecklists || [])].sort((a, b) => a.date.localeCompare(b.date));
+  
+  // Calculate total XP Points
+  let totalXp = 0;
+  sorted.forEach(c => {
+    totalXp += (c.completedCount || 0) * 5;
+    if (c.completionRate >= 80) {
+      totalXp += 20; // Daily mastery bonus
+    }
+  });
+
+  // Calculate Streak (Consecutive days >= 50% completion)
+  let streak = 0;
+  const today = new Date();
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    const check = sorted.find(c => c.date === dateStr);
+    if (check && check.completionRate >= 50) {
+      streak++;
+    } else if (i === 0) {
+      // today might be in progress
+      continue;
+    } else {
+      break;
+    }
+  }
+
+  // Determine Badges
+  const badges = [];
+  if (streak >= 3 || totalXp >= 50) {
+    badges.push({
+      id: 'streak_3',
+      name: 'Consistency Starter',
+      description: 'Maintained 3+ days active study routine',
+      icon: '🔥'
+    });
+  }
+  if (streak >= 7 || totalXp >= 150) {
+    badges.push({
+      id: 'streak_7',
+      name: 'Habit Champion',
+      description: '1 full week of uninterrupted daily learning',
+      icon: '🏆'
+    });
+  }
+  if (streak >= 14 || totalXp >= 400) {
+    badges.push({
+      id: 'streak_14',
+      name: 'Placement Warrior',
+      description: '2 weeks continuous interview prep streak',
+      icon: '⚡'
+    });
+  }
+  if (streak >= 30 || totalXp >= 1000) {
+    badges.push({
+      id: 'streak_30',
+      name: 'Placement Master',
+      description: '30-day elite consistency master',
+      icon: '👑'
+    });
+  }
+
+  timetable.streak = streak;
+  timetable.xpPoints = totalXp;
+  timetable.unlockedBadges = badges;
+  return { streak, totalXp, badges };
+};
+
 // Get current student's timetable + date-specific checklist
 export const getMyTimetable = async (req, res) => {
   try {
@@ -209,6 +281,10 @@ export const getMyTimetable = async (req, res) => {
     if (!timetable) {
       return res.json(null);
     }
+
+    // Refresh streak and XP calculation
+    calculateTimetableRewards(timetable);
+    await timetable.save();
 
     let dateChecklist = timetable.dailyChecklists.find(c => c.date === targetDate);
 
@@ -292,10 +368,10 @@ export const saveMyTimetable = async (req, res) => {
 
     const todayStr = new Date().toISOString().split('T')[0];
 
-    const timetable = await Timetable.findOne({ studentId });
+    let timetable = await Timetable.findOne({ studentId });
 
     if (!timetable) {
-      const newTimetable = new Timetable({
+      timetable = new Timetable({
         studentId,
         studentName,
         studentEmail,
@@ -323,35 +399,32 @@ export const saveMyTimetable = async (req, res) => {
         }],
         isActive: true
       });
-      await newTimetable.save();
-      return res.json(newTimetable);
+    } else {
+      timetable.studentName = studentName;
+      timetable.studentEmail = studentEmail;
+      if (batch) timetable.batch = batch;
+      timetable.sleepHours = sleepHours;
+      timetable.sleepStartTime = sleepStartTime;
+      timetable.sleepEndTime = sleepEndTime;
+      timetable.workOrJobHours = workOrJobHours;
+      timetable.workDetails = workDetails;
+      timetable.personalRoutineHours = personalRoutineHours;
+      timetable.technicalClassHours = technicalClassHours;
+      timetable.communicationClassHours = communicationClassHours;
+      timetable.aptitudeClassHours = aptitudeClassHours;
+      timetable.availableSelfStudyHours = availableSelfStudyHours;
+      timetable.selectedSubjects = selectedSubjects;
+      timetable.slots = preparedSlots;
+
+      const todayChecklist = timetable.dailyChecklists.find(c => c.date === todayStr);
+      if (todayChecklist) {
+        todayChecklist.slotsSnapshot = preparedSlots;
+        todayChecklist.totalCount = preparedSlots.filter(s => s.category !== 'Sleep').length;
+        todayChecklist.completionRate = Math.round(((todayChecklist.completedSlotIds?.length || 0) / Math.max(1, todayChecklist.totalCount)) * 100);
+      }
     }
 
-    // Update ongoing active fields
-    timetable.studentName = studentName;
-    timetable.studentEmail = studentEmail;
-    if (batch) timetable.batch = batch;
-    timetable.sleepHours = sleepHours;
-    timetable.sleepStartTime = sleepStartTime;
-    timetable.sleepEndTime = sleepEndTime;
-    timetable.workOrJobHours = workOrJobHours;
-    timetable.workDetails = workDetails;
-    timetable.personalRoutineHours = personalRoutineHours;
-    timetable.technicalClassHours = technicalClassHours;
-    timetable.communicationClassHours = communicationClassHours;
-    timetable.aptitudeClassHours = aptitudeClassHours;
-    timetable.availableSelfStudyHours = availableSelfStudyHours;
-    timetable.selectedSubjects = selectedSubjects;
-    timetable.slots = preparedSlots;
-
-    // Update today's checklist snapshot if it exists (or leave past dates untouched!)
-    const todayChecklist = timetable.dailyChecklists.find(c => c.date === todayStr);
-    if (todayChecklist) {
-      todayChecklist.slotsSnapshot = preparedSlots;
-      todayChecklist.totalCount = preparedSlots.filter(s => s.category !== 'Sleep').length;
-      todayChecklist.completionRate = Math.round(((todayChecklist.completedSlotIds?.length || 0) / Math.max(1, todayChecklist.totalCount)) * 100);
-    }
-
+    calculateTimetableRewards(timetable);
     await timetable.save();
     res.json(timetable);
   } catch (error) {
@@ -378,7 +451,6 @@ export const toggleSlotCheck = async (req, res) => {
 
     let checklist = timetable.dailyChecklists.find(c => c.date === targetDate);
 
-    // If checklist exists with snapshot, use it; otherwise lock in current active slots as snapshot
     const activeSlots = (checklist && checklist.slotsSnapshot && checklist.slotsSnapshot.length > 0)
       ? checklist.slotsSnapshot
       : timetable.slots;
@@ -412,14 +484,94 @@ export const toggleSlotCheck = async (req, res) => {
       checklist.completionRate = Math.round((checklist.completedCount / totalCount) * 100);
     }
 
+    calculateTimetableRewards(timetable);
     await timetable.save();
+
     res.json({
       selectedDate: targetDate,
       todayChecklist: checklist,
+      streak: timetable.streak,
+      xpPoints: timetable.xpPoints,
+      unlockedBadges: timetable.unlockedBadges,
       dailyChecklists: timetable.dailyChecklists
     });
   } catch (error) {
     res.status(500).json({ message: 'Failed to update slot progress', error: error.message });
+  }
+};
+
+// 1-Click "Mark All Done Today" / "Reset All Today"
+export const markAllSlots = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { date, unmarkAll = false } = req.body;
+
+    const targetDate = date || new Date().toISOString().split('T')[0];
+    const timetable = await Timetable.findOne({ studentId });
+
+    if (!timetable) {
+      return res.status(404).json({ message: 'Timetable not found. Please create one first.' });
+    }
+
+    let checklist = timetable.dailyChecklists.find(c => c.date === targetDate);
+
+    const activeSlots = (checklist && checklist.slotsSnapshot && checklist.slotsSnapshot.length > 0)
+      ? checklist.slotsSnapshot
+      : timetable.slots;
+
+    const nonSleepSlots = activeSlots.filter(s => s.category !== 'Sleep');
+    const allSlotIds = nonSleepSlots.map(s => s.id);
+    const totalCount = Math.max(1, nonSleepSlots.length);
+
+    if (!checklist) {
+      checklist = {
+        date: targetDate,
+        completedSlotIds: unmarkAll ? [] : allSlotIds,
+        slotsSnapshot: timetable.slots,
+        totalCount: totalCount,
+        completedCount: unmarkAll ? 0 : allSlotIds.length,
+        completionRate: unmarkAll ? 0 : 100,
+        notes: ''
+      };
+      timetable.dailyChecklists.push(checklist);
+    } else {
+      if (!checklist.slotsSnapshot || checklist.slotsSnapshot.length === 0) {
+        checklist.slotsSnapshot = timetable.slots;
+      }
+      checklist.completedSlotIds = unmarkAll ? [] : allSlotIds;
+      checklist.totalCount = totalCount;
+      checklist.completedCount = unmarkAll ? 0 : allSlotIds.length;
+      checklist.completionRate = unmarkAll ? 0 : 100;
+    }
+
+    calculateTimetableRewards(timetable);
+    await timetable.save();
+
+    res.json({
+      selectedDate: targetDate,
+      todayChecklist: checklist,
+      streak: timetable.streak,
+      xpPoints: timetable.xpPoints,
+      unlockedBadges: timetable.unlockedBadges,
+      dailyChecklists: timetable.dailyChecklists
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to mark all slots', error: error.message });
+  }
+};
+
+// Timetable Streak & XP Leaderboard
+export const getTimetableLeaderboard = async (req, res) => {
+  try {
+    const list = await Timetable.find({ isActive: true })
+      .select('studentName studentEmail batch streak xpPoints unlockedBadges')
+      .sort({ xpPoints: -1, streak: -1 })
+      .limit(50)
+      .lean();
+
+    res.json(list);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to retrieve routine leaderboard', error: error.message });
   }
 };
 

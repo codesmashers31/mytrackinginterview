@@ -194,10 +194,55 @@ export default function StudentTimetable() {
       if (!res.ok) throw new Error(data?.message || 'Failed to update progress');
 
       setTodayChecklist(data.todayChecklist);
+      setTimetable(prev => ({
+        ...prev,
+        streak: data.streak ?? prev?.streak,
+        xpPoints: data.xpPoints ?? prev?.xpPoints,
+        unlockedBadges: data.unlockedBadges ?? prev?.unlockedBadges
+      }));
+
       if (data.todayChecklist.completedSlotIds.includes(slotId)) {
-        toast.success('🎯 Great job! Slot completed!');
+        toast.success('🎯 Great job! Slot completed! +5 XP 🌟');
       } else {
         toast('Slot unchecked', { icon: '↩️' });
+      }
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  // 1-Click Complete All or Reset All for Selected Date
+  const handleMarkAllSlots = async (unmarkAll = false) => {
+    try {
+      const res = await fetch(buildApiUrl('/timetables/my/check-all'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ date: selectedDate, unmarkAll })
+      });
+
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (e) {
+        throw new Error('Failed to update all slots');
+      }
+
+      if (!res.ok) throw new Error(data?.message || 'Failed to update all slots');
+
+      setTodayChecklist(data.todayChecklist);
+      setTimetable(prev => ({
+        ...prev,
+        streak: data.streak ?? prev?.streak,
+        xpPoints: data.xpPoints ?? prev?.xpPoints,
+        unlockedBadges: data.unlockedBadges ?? prev?.unlockedBadges
+      }));
+
+      if (unmarkAll) {
+        toast('All tasks reset for today', { icon: '🔄' });
+      } else {
+        toast.success('🎉 Awesome! All daily study tasks marked complete! +25 Bonus XP! 🌟', {
+          duration: 4000
+        });
       }
     } catch (err) {
       toast.error(err.message);
@@ -569,7 +614,7 @@ export default function StudentTimetable() {
       subtitle="Budget your 24-hour daily commitments, customize topic focus, and tick off tasks as you finish them."
       searchPlaceholder="Search study slots..."
     >
-      {/* Top Metric Cards */}
+      {/* Top Level Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <MetricCard
           title="Daily Study Budget"
@@ -586,18 +631,18 @@ export default function StudentTimetable() {
           icon={<CheckCircle2 size={20} />}
         />
         <MetricCard
-          title="Target Skills"
-          value={`${commitments.selectedSubjects.length} Skills`}
-          helper="HTML, React, SQL, Aptitude..."
+          title="Consistency Streak"
+          value={`${timetable?.streak || 0} Days 🔥`}
+          helper="Consecutive daily routine progress"
           tone="warning"
-          icon={<Target size={20} />}
+          icon={<Flame size={20} />}
         />
         <MetricCard
-          title="Consistency Streak"
-          value={`${timetable?.streak || 0} Days`}
-          helper="Consecutive daily routine progress"
+          title="Discipline XP Points"
+          value={`${timetable?.xpPoints || 0} XP 🌟`}
+          helper={`Level ${Math.floor((timetable?.xpPoints || 0) / 100) + 1} Habit Builder`}
           tone="neutral"
-          icon={<Flame size={20} />}
+          icon={<Award size={20} />}
         />
       </div>
 
@@ -707,60 +752,46 @@ export default function StudentTimetable() {
             </div>
           </SurfaceCard>
 
-          {/* Visual 24-Hour Day Budget Bar */}
-          <SurfaceCard className="p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-              <div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                  <Clock size={14} className="text-blue-600" />
-                  <span>24-Hour Daily Commitment Allocation</span>
-                </h3>
-                <p className="text-[11px] text-slate-500 font-medium">How your full 24-hour day is divided between routine and learning</p>
+          {/* Badges & Discipline Achievement Shelf */}
+          <SurfaceCard className="p-5 bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-blue-500/10 border border-indigo-100 rounded-2xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2">
+                <Trophy size={18} className="text-amber-500" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">Habit & Placement Consistency Badges</h3>
               </div>
-
-              <div className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-xl">
-                {timetable?.availableSelfStudyHours || calculatedStudyHours}h Dedicated Study Time
-              </div>
+              <span className="text-xs font-bold text-indigo-700">
+                {timetable?.unlockedBadges?.length || 0} of 4 Badges Unlocked 🌟
+              </span>
             </div>
 
-            {/* Segmented Color Bar */}
-            <div className="h-3 rounded-full bg-slate-100 overflow-hidden flex shadow-inner">
-              <div 
-                title={`Sleep: ${commitments.sleepHours}h`}
-                style={{ width: `${(commitments.sleepHours / 24) * 100}%` }}
-                className="bg-slate-800 transition-all duration-500" 
-              />
-              {commitments.workOrJobHours > 0 && (
-                <div 
-                  title={`Work/Job: ${commitments.workOrJobHours}h`}
-                  style={{ width: `${(commitments.workOrJobHours / 24) * 100}%` }}
-                  className="bg-amber-500 transition-all duration-500" 
-                />
-              )}
-              <div 
-                title={`Classes: ${Number(commitments.technicalClassHours) + Number(commitments.communicationClassHours) + Number(commitments.aptitudeClassHours)}h`}
-                style={{ width: `${((Number(commitments.technicalClassHours) + Number(commitments.communicationClassHours) + Number(commitments.aptitudeClassHours)) / 24) * 100}%` }}
-                className="bg-indigo-600 transition-all duration-500" 
-              />
-              <div 
-                title={`Routine/Meals: ${commitments.personalRoutineHours}h`}
-                style={{ width: `${(commitments.personalRoutineHours / 24) * 100}%` }}
-                className="bg-emerald-500 transition-all duration-500" 
-              />
-              <div 
-                title={`Dedicated Study: ${calculatedStudyHours}h`}
-                style={{ width: `${(calculatedStudyHours / 24) * 100}%` }}
-                className="bg-blue-500 transition-all duration-500" 
-              />
-            </div>
-
-            {/* Legend */}
-            <div className="flex flex-wrap gap-4 mt-3 text-[11px] font-semibold text-slate-600">
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-slate-800" /> Sleep ({commitments.sleepHours}h)</span>
-              {commitments.workOrJobHours > 0 && <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Work / Job ({commitments.workOrJobHours}h)</span>}
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-indigo-600" /> Classes ({Number(commitments.technicalClassHours) + Number(commitments.communicationClassHours) + Number(commitments.aptitudeClassHours)}h)</span>
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Routine / Meals ({commitments.personalRoutineHours}h)</span>
-              <span className="flex items-center gap-1.5 font-bold text-blue-600"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Self-Study & Practice ({calculatedStudyHours}h)</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { id: 'streak_3', name: 'Consistency Starter', req: '3-Day Streak', icon: '🔥', desc: 'Active 3 days' },
+                { id: 'streak_7', name: 'Habit Champion', req: '7-Day Streak', icon: '🏆', desc: '1 week discipline' },
+                { id: 'streak_14', name: 'Placement Warrior', req: '14-Day Streak', icon: '⚡', desc: '2 weeks focus' },
+                { id: 'streak_30', name: 'Placement Master', req: '30-Day Streak', icon: '👑', desc: 'Elite consistency' }
+              ].map(badge => {
+                const isUnlocked = timetable?.unlockedBadges?.some(b => b.id === badge.id) || (badge.id === 'streak_3' && (timetable?.streak || 0) >= 3);
+                return (
+                  <div
+                    key={badge.id}
+                    className={`p-3 rounded-xl border transition flex items-center gap-2.5 ${
+                      isUnlocked
+                        ? 'bg-white border-amber-300 shadow-sm'
+                        : 'bg-slate-100/60 border-slate-200 opacity-60'
+                    }`}
+                  >
+                    <div className="text-2xl shrink-0">{badge.icon}</div>
+                    <div>
+                      <div className="text-[11px] font-black text-slate-800 flex items-center gap-1">
+                        <span>{badge.name}</span>
+                        {isUnlocked && <span className="text-[9px] text-emerald-600 font-bold">✓</span>}
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-medium">{badge.req}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </SurfaceCard>
 
@@ -787,9 +818,9 @@ export default function StudentTimetable() {
             </div>
           </SurfaceCard>
 
-          {/* Filter Bar */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex gap-2">
+          {/* Action & Filter Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setSlotFilter('All')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
@@ -816,13 +847,28 @@ export default function StudentTimetable() {
               </button>
             </div>
 
-            <button
-              onClick={() => setActiveTab('customize')}
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-            >
-              <span>Edit Routine / Times</span>
-              <ChevronRight size={14} />
-            </button>
+            {/* 1-Click Fast Actions */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleMarkAllSlots(false)}
+                disabled={activeSlots.length === 0 || todayChecklist.completionRate === 100}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-200 transition disabled:opacity-50 active:scale-95"
+              >
+                <Sparkles size={14} />
+                <span>⚡ Mark All Done (+25 XP)</span>
+              </button>
+
+              {todayChecklist.completedCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => handleMarkAllSlots(true)}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition"
+                >
+                  ↩️ Reset
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Checklist Slot Cards */}

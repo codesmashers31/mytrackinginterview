@@ -5,6 +5,8 @@ import {
   getMyTimetable,
   saveMyTimetable,
   toggleSlotCheck,
+  markAllSlots,
+  getTimetableLeaderboard,
   deleteMyTimetable,
   getAllStudentTimetables
 } from '../controllers/timetableController.js';
@@ -20,6 +22,9 @@ router.put('/my', authMiddleware, roleMiddleware(['student', 'admin', 'coordinat
 router.put('/', authMiddleware, roleMiddleware(['student', 'admin', 'coordinator', 'placement']), saveMyTimetable);
 router.post('/my/check-slot', authMiddleware, roleMiddleware(['student', 'admin', 'coordinator', 'placement']), toggleSlotCheck);
 router.post('/check-slot', authMiddleware, roleMiddleware(['student', 'admin', 'coordinator', 'placement']), toggleSlotCheck);
+router.post('/my/check-all', authMiddleware, roleMiddleware(['student', 'admin', 'coordinator', 'placement']), markAllSlots);
+router.post('/check-all', authMiddleware, roleMiddleware(['student', 'admin', 'coordinator', 'placement']), markAllSlots);
+router.get('/leaderboard', authMiddleware, getTimetableLeaderboard);
 router.delete('/my', authMiddleware, roleMiddleware(['student', 'admin', 'coordinator', 'placement']), deleteMyTimetable);
 router.delete('/', authMiddleware, roleMiddleware(['student', 'admin', 'coordinator', 'placement']), deleteMyTimetable);
 

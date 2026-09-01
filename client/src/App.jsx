@@ -30,6 +30,8 @@ const FrontendStudentList = lazy(() => import('./pages/FrontendStudentList'));
 const SplRegistrations = lazy(() => import('./pages/SplRegistrations'));
 const StudentAiMentorship = lazy(() => import('./pages/StudentAiMentorship'));
 const AdminAiMentorship = lazy(() => import('./pages/AdminAiMentorship'));
+const StudentTimetable = lazy(() => import('./pages/StudentTimetable'));
+const AdminTimetables = lazy(() => import('./pages/AdminTimetables'));
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
 import { isAuthenticated } from './utils/auth';
@@ -97,6 +99,8 @@ function App() {
         <Route path="/student/teams" element={<RoleRoute roles={[ 'student' ]}><StudentTeams /></RoleRoute>} />
         <Route path="/student/ai-mentorship" element={<RoleRoute roles={[ 'student' ]}><StudentAiMentorship /></RoleRoute>} />
         <Route path="/admin/ai-mentorship" element={<RoleRoute roles={[ 'admin', 'coordinator', 'placement' ]}><AdminAiMentorship /></RoleRoute>} />
+        <Route path="/student/timetable" element={<RoleRoute roles={[ 'student' ]}><StudentTimetable /></RoleRoute>} />
+        <Route path="/admin/timetables" element={<RoleRoute roles={[ 'admin', 'coordinator', 'placement' ]}><AdminTimetables /></RoleRoute>} />
       </Routes>
       </Suspense>
     </BrowserRouter>

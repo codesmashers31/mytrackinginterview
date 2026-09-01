@@ -23,6 +23,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import leaveRoutes from './routes/leaveRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
+import timetableRoutes from './routes/timetableRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 import { runStudentMigration, runTeamMigration } from './utils/migration.js';
 
@@ -56,6 +57,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/leaves', leaveRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/timetables', timetableRoutes);
 app.use(errorHandler);
 
 // Database Connection

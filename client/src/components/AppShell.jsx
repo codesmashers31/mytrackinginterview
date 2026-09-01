@@ -30,6 +30,7 @@ const buildNavigationGroups = (role, studentType, onLogout) => {
     const workspaceItems = [
       { to: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { to: '/student/ai-mentorship', label: 'AI Mentorship', icon: Cpu },
+      { to: '/student/timetable', label: 'Study Timetable', icon: Clock },
       { to: '/student/tasks', label: 'Tasks & Mocks', icon: ClipboardList },
       { to: '/student/daily-activity', label: 'Daily Activity', icon: Clock },
       { to: '/student/attendance', label: 'Attendance & Leaves', icon: Calendar },
@@ -118,6 +119,7 @@ const buildNavigationGroups = (role, studentType, onLogout) => {
         { to: '/tasks', label: 'Tasks & Mock Board', icon: ClipboardList },
         { to: '/admin/teams', label: 'Team Activity Hub', icon: Gamepad2 },
         { to: '/admin/daily-activities', label: 'Daily Logs', icon: Clock },
+        { to: '/admin/timetables', label: 'Study Timetables', icon: Clock },
       ],
     },
     {

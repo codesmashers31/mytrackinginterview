@@ -582,10 +582,19 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
-// K.K. Nagar Office Approx Coordinates
-const TARGET_LAT = 13.0382;
-const TARGET_LNG = 80.1983;
-const MAX_RADIUS_METERS = 1000;
+const checkIfStudentIsSpl = async (student, userEmail = '') => {
+  if (!student) return false;
+  if (student.constructor && student.constructor.modelName === 'SplRegistration') return true;
+  if (student.studentType === 'SPL' || student.isSpl === true) return true;
+  if (Array.isArray(student.enrollments) && student.enrollments.includes('SPL')) return true;
+
+  const splEmail = (student.email || userEmail || '').toLowerCase().trim();
+  if (splEmail) {
+    const splRecord = await SplRegistration.findOne({ email: splEmail });
+    if (splRecord) return true;
+  }
+  return false;
+};
 
 export const studentCheckIn = async (req, res) => {
   try {
@@ -628,8 +637,7 @@ export const studentCheckIn = async (req, res) => {
       return res.status(404).json({ message: 'Student profile not found. Please contact administration.' });
     }
 
-    const isSpl = (student.enrollments && student.enrollments.includes('SPL')) || 
-                  (!student.enrollments);
+    const isSpl = await checkIfStudentIsSpl(student, user.email);
 
     if (!isSpl) {
       return res.status(403).json({ message: 'Access Denied: Attendance tracking is only available for SPL Class students.' });
@@ -723,8 +731,7 @@ export const studentCheckOut = async (req, res) => {
       return res.status(404).json({ message: 'Student profile not found.' });
     }
 
-    const isSpl = (student.enrollments && student.enrollments.includes('SPL')) || 
-                  (!student.enrollments);
+    const isSpl = await checkIfStudentIsSpl(student, user.email);
 
     if (!isSpl) {
       return res.status(403).json({ message: 'Access Denied: Attendance tracking is only available for SPL Class students.' });

@@ -294,6 +294,11 @@ export default function StudentDashboard() {
   };
 
   const renderTodayAttendanceCard = () => {
+    const isSpl = profile?.studentType === 'SPL' || 
+                  (Array.isArray(profile?.enrollments) && profile?.enrollments.includes('SPL')) || 
+                  profile?.isSpl === true;
+    if (!isSpl) return null;
+
     if (!todayAttendance) {
       return (
         <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-amber-500/10 via-amber-600/5 to-white border border-amber-500/25 p-5 mb-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">

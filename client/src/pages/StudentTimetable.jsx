@@ -178,6 +178,11 @@ export default function StudentTimetable() {
 
   // Toggle Slot Check for Selected Date
   const handleToggleSlotCheck = async (slotId) => {
+    if (selectedDate > todayStr) {
+      toast.error(`⚠️ You cannot mark future dates as completed in advance. Please wait until ${selectedDate}!`);
+      return;
+    }
+
     try {
       const res = await fetch(buildApiUrl('/timetables/my/check-slot'), {
         method: 'POST',
@@ -214,6 +219,11 @@ export default function StudentTimetable() {
 
   // 1-Click Complete All or Reset All for Selected Date
   const handleMarkAllSlots = async (unmarkAll = false) => {
+    if (selectedDate > todayStr) {
+      toast.error(`⚠️ You cannot mark future dates as completed in advance. Please wait until ${selectedDate}!`);
+      return;
+    }
+
     try {
       const res = await fetch(buildApiUrl('/timetables/my/check-all'), {
         method: 'POST',
@@ -853,14 +863,15 @@ export default function StudentTimetable() {
               <button
                 type="button"
                 onClick={() => handleMarkAllSlots(false)}
-                disabled={activeSlots.length === 0 || todayChecklist.completionRate === 100}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-200 transition disabled:opacity-50 active:scale-95"
+                disabled={activeSlots.length === 0 || todayChecklist.completionRate === 100 || selectedDate > todayStr}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-200 transition disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+                title={selectedDate > todayStr ? 'Cannot complete future tasks in advance' : 'Mark all today slots complete'}
               >
                 <Sparkles size={14} />
-                <span>⚡ Mark All Done (+25 XP)</span>
+                <span>{selectedDate > todayStr ? '🔒 Future Date (Plan Preview)' : '⚡ Mark All Done (+25 XP)'}</span>
               </button>
 
-              {todayChecklist.completedCount > 0 && (
+              {todayChecklist.completedCount > 0 && selectedDate <= todayStr && (
                 <button
                   type="button"
                   onClick={() => handleMarkAllSlots(true)}
@@ -893,7 +904,9 @@ export default function StudentTimetable() {
                   <SurfaceCard 
                     key={slot.id || index} 
                     className={`p-4 md:p-5 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 ${
-                      isCompleted 
+                      selectedDate > todayStr
+                        ? 'border-l-indigo-300 bg-slate-50/40 opacity-80'
+                        : isCompleted 
                         ? 'border-l-emerald-500 bg-emerald-50/20 opacity-90' 
                         : 'border-l-blue-500 hover:shadow-md'
                     }`}
@@ -902,12 +915,15 @@ export default function StudentTimetable() {
                       {/* Interactive Checkbox Button */}
                       <button
                         onClick={() => handleToggleSlotCheck(slot.id)}
+                        disabled={selectedDate > todayStr}
                         className={`h-7 w-7 rounded-xl flex items-center justify-center transition shrink-0 mt-0.5 ${
-                          isCompleted
+                          selectedDate > todayStr
+                            ? 'bg-slate-100 border border-slate-200 text-slate-300 cursor-not-allowed opacity-50'
+                            : isCompleted
                             ? 'bg-emerald-600 text-white shadow-md shadow-emerald-200'
                             : 'border-2 border-slate-300 hover:border-blue-500 text-transparent hover:text-slate-300'
                         }`}
-                        title={isCompleted ? 'Mark Pending' : 'Mark Completed'}
+                        title={selectedDate > todayStr ? 'Future date: Cannot complete in advance' : isCompleted ? 'Mark Pending' : 'Mark Completed'}
                       >
                         <Check size={16} strokeWidth={3} />
                       </button>

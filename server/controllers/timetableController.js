@@ -442,7 +442,16 @@ export const toggleSlotCheck = async (req, res) => {
       return res.status(400).json({ message: 'Slot ID is required' });
     }
 
-    const targetDate = date || new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split('T')[0];
+    const targetDate = date || todayStr;
+
+    // VALIDATION: Future dates cannot be marked as completed in advance!
+    if (targetDate > todayStr) {
+      return res.status(400).json({ 
+        message: `Cannot mark tasks for future dates in advance. Please wait until ${targetDate}!` 
+      });
+    }
+
     const timetable = await Timetable.findOne({ studentId });
 
     if (!timetable) {
@@ -506,7 +515,16 @@ export const markAllSlots = async (req, res) => {
     const studentId = req.user.id;
     const { date, unmarkAll = false } = req.body;
 
-    const targetDate = date || new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split('T')[0];
+    const targetDate = date || todayStr;
+
+    // VALIDATION: Future dates cannot be marked as completed in advance!
+    if (targetDate > todayStr) {
+      return res.status(400).json({ 
+        message: `Cannot mark tasks for future dates in advance. Please wait until ${targetDate}!` 
+      });
+    }
+
     const timetable = await Timetable.findOne({ studentId });
 
     if (!timetable) {

@@ -4,6 +4,11 @@ import SplRegistration from '../models/SplRegistration.js';
 import User from '../models/User.js';
 import Attendance from '../models/Attendance.js';
 import Task from '../models/Task.js';
+import JobApplication from '../models/JobApplication.js';
+import InterviewExperience from '../models/InterviewExperience.js';
+import DailyActivity from '../models/DailyActivity.js';
+import Team from '../models/Team.js';
+import Leave from '../models/Leave.js';
 import multer from 'multer';
 import xlsx from 'xlsx';
 import fs from 'fs';
@@ -287,7 +292,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
 
         const frontendQuery = { isFrontend: true };
         
-        // Calculate today's date boundary in UTC (matching attendance parseUTCDate)
+        // Calculate today's date boundary in UTC
         const d = new Date();
         const today = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
 
@@ -325,7 +330,19 @@ router.get('/stats', authMiddleware, async (req, res) => {
 
             // Year aggregations
             studentYearsAgg,
-            splYearsAgg
+            splYearsAgg,
+
+            // New: Applications, Interviews, Teams & Leaves
+            totalTeams,
+            applicationsTotal,
+            applicationsToday,
+            applicationsShortlisted,
+            recentApplications,
+            interviewsTotal,
+            interviewsCleared,
+            recentInterviews,
+            pendingLeavesCount,
+            recentDailyTasks
         ] = await Promise.all([
             Student.countDocuments(regularQuery),
             Student.aggregate([
@@ -369,7 +386,19 @@ router.get('/stats', authMiddleware, async (req, res) => {
             ]),
             SplRegistration.aggregate([
                 { $group: { _id: "$batch", count: { $sum: 1 } } }
-            ])
+            ]),
+
+            // New operational metrics
+            Team.countDocuments(),
+            JobApplication.countDocuments(),
+            JobApplication.countDocuments({ applyDate: { $gte: today } }),
+            JobApplication.countDocuments({ status: { $in: ['Shortlisted', 'Interview Scheduled', 'Offer Received'] } }),
+            JobApplication.find().sort({ applyDate: -1, createdAt: -1 }).limit(5).lean(),
+            InterviewExperience.countDocuments(),
+            InterviewExperience.countDocuments({ overallStatus: { $in: ['Cleared / Next Round', 'Selected / Offer'] } }),
+            InterviewExperience.find().sort({ interviewDate: -1, createdAt: -1 }).limit(5).lean(),
+            Leave.countDocuments({ status: 'Pending' }),
+            DailyActivity.find().sort({ date: -1, createdAt: -1 }).limit(5).lean()
         ]);
 
         // Map status counts from regular aggregation
@@ -426,7 +455,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
             frontendJobSeekers,
             recentFrontend,
             
-            // New operational metrics
+            // Operational & Activity Telemetry
             telemetry: {
                 attendance: {
                     checkedIn: attendanceCheckedIn,
@@ -437,7 +466,25 @@ router.get('/stats', authMiddleware, async (req, res) => {
                     completed: tasksCompleted,
                     pending: tasksPending,
                     review: tasksReview
-                }
+                },
+                applications: {
+                    total: applicationsTotal,
+                    today: applicationsToday,
+                    shortlisted: applicationsShortlisted,
+                    recent: recentApplications
+                },
+                interviews: {
+                    total: interviewsTotal,
+                    cleared: interviewsCleared,
+                    recent: recentInterviews
+                },
+                leaves: {
+                    pending: pendingLeavesCount
+                },
+                teams: {
+                    total: totalTeams
+                },
+                recentActivityLogs: recentDailyTasks
             },
             splStats: {
                 total: splTotal,

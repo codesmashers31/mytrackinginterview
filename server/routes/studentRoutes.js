@@ -8,7 +8,7 @@ import JobApplication from '../models/JobApplication.js';
 import InterviewExperience from '../models/InterviewExperience.js';
 import DailyActivity from '../models/DailyActivity.js';
 import Team from '../models/Team.js';
-import Leave from '../models/Leave.js';
+import LeaveRequest from '../models/LeaveRequest.js';
 import multer from 'multer';
 import xlsx from 'xlsx';
 import fs from 'fs';
@@ -397,7 +397,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
             InterviewExperience.countDocuments(),
             InterviewExperience.countDocuments({ overallStatus: { $in: ['Cleared / Next Round', 'Selected / Offer'] } }),
             InterviewExperience.find().sort({ interviewDate: -1, createdAt: -1 }).limit(5).lean(),
-            Leave.countDocuments({ status: 'Pending' }),
+            LeaveRequest.countDocuments({ status: 'Pending' }),
             DailyActivity.find().sort({ date: -1, createdAt: -1 }).limit(5).lean()
         ]);
 

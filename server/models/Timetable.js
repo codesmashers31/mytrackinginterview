@@ -88,7 +88,6 @@ const timetableSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
-timetableSchema.index({ studentId: 1 });
 timetableSchema.index({ batch: 1 });
 
 export default mongoose.model('Timetable', timetableSchema);

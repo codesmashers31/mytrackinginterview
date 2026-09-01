@@ -155,11 +155,22 @@ export default function StudentTimetable() {
     };
   }, [isSlotModalOpen]);
 
+  // Timetable start / creation date boundary
+  const timetableStartDate = timetable?.createdAt 
+    ? new Date(timetable.createdAt).toISOString().split('T')[0] 
+    : (timetable?.dailyChecklists?.[0]?.date || todayStr);
+
   // Date Navigation Handlers
   const handleShiftDate = (days) => {
-    const d = new Date(selectedDate);
+    const d = new Date(selectedDate + 'T00:00:00');
     d.setDate(d.getDate() + days);
     const newDateStr = d.toISOString().split('T')[0];
+
+    if (days < 0 && newDateStr < timetableStartDate) {
+      toast(`Timetable started on ${timetableStartDate}. Cannot view dates prior to start date.`, { icon: 'ℹ️' });
+      return;
+    }
+
     setSelectedDate(newDateStr);
   };
 
@@ -730,7 +741,9 @@ export default function StudentTimetable() {
                 <button
                   type="button"
                   onClick={() => handleShiftDate(-1)}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+                  disabled={selectedDate <= timetableStartDate}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 font-bold text-xs rounded-xl transition"
+                  title={selectedDate <= timetableStartDate ? `Cannot navigate prior to start date (${timetableStartDate})` : 'Previous Day'}
                 >
                   ← Prev Day
                 </button>
@@ -747,8 +760,17 @@ export default function StudentTimetable() {
 
                 <input
                   type="date"
+                  min={timetableStartDate}
                   value={selectedDate}
-                  onChange={e => setSelectedDate(e.target.value)}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val && val < timetableStartDate) {
+                      toast.error(`Timetable was started on ${timetableStartDate}. Cannot select earlier dates.`);
+                      setSelectedDate(timetableStartDate);
+                    } else if (val) {
+                      setSelectedDate(val);
+                    }
+                  }}
                   className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-blue-500"
                 />
 

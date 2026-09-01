@@ -458,6 +458,16 @@ export const toggleSlotCheck = async (req, res) => {
       return res.status(404).json({ message: 'Timetable not found. Please create one first.' });
     }
 
+    const minAllowedDate = timetable.createdAt 
+      ? new Date(timetable.createdAt).toISOString().split('T')[0] 
+      : (timetable.dailyChecklists?.[0]?.date || todayStr);
+
+    if (targetDate < minAllowedDate) {
+      return res.status(400).json({ 
+        message: `Cannot modify tasks for dates prior to your timetable start date (${minAllowedDate})` 
+      });
+    }
+
     let checklist = timetable.dailyChecklists.find(c => c.date === targetDate);
 
     const activeSlots = (checklist && checklist.slotsSnapshot && checklist.slotsSnapshot.length > 0)
@@ -529,6 +539,16 @@ export const markAllSlots = async (req, res) => {
 
     if (!timetable) {
       return res.status(404).json({ message: 'Timetable not found. Please create one first.' });
+    }
+
+    const minAllowedDate = timetable.createdAt 
+      ? new Date(timetable.createdAt).toISOString().split('T')[0] 
+      : (timetable.dailyChecklists?.[0]?.date || todayStr);
+
+    if (targetDate < minAllowedDate) {
+      return res.status(400).json({ 
+        message: `Cannot modify tasks for dates prior to your timetable start date (${minAllowedDate})` 
+      });
     }
 
     let checklist = timetable.dailyChecklists.find(c => c.date === targetDate);

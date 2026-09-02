@@ -35,7 +35,12 @@ import {
   ArrowRight,
   ShieldAlert,
   Check,
-  X
+  X,
+  Globe,
+  CheckCheck,
+  Ban,
+  Hourglass,
+  PauseCircle
 } from 'lucide-react';
 
 export default function StudentDailyActivity() {
@@ -244,7 +249,7 @@ export default function StudentDailyActivity() {
         companyName: app.companyName || '',
         jobRole: app.jobRole || '',
         applyDate: app.applyDate ? new Date(app.applyDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        applicationType: app.applicationType || 'Email Outreach',
+        applicationType: app.applicationType || 'SLA Portal',
         hrName: app.hrDetails?.name || '',
         hrEmail: app.hrDetails?.email || '',
         hrPhone: app.hrDetails?.phone || '',
@@ -277,7 +282,23 @@ export default function StudentDailyActivity() {
   const handleSaveApplication = async (e) => {
     e.preventDefault();
     if (!appForm.companyName.trim()) {
-      toast.error('Company Name is required');
+      toast.error('Company Name is mandatory');
+      return;
+    }
+    if (!appForm.jobRole.trim()) {
+      toast.error('Job Role / Designation is mandatory');
+      return;
+    }
+    if (!appForm.applyDate) {
+      toast.error('Application Date is mandatory');
+      return;
+    }
+    if (!appForm.applicationType) {
+      toast.error('Application Channel is mandatory');
+      return;
+    }
+    if (!appForm.status) {
+      toast.error('Recruitment Status is mandatory');
       return;
     }
 
@@ -289,14 +310,14 @@ export default function StudentDailyActivity() {
         applyDate: appForm.applyDate,
         applicationType: appForm.applicationType,
         hrDetails: {
-          name: appForm.hrName.trim(),
-          email: appForm.hrEmail.trim(),
-          phone: appForm.hrPhone.trim(),
-          linkedin: appForm.hrLinkedin.trim()
+          name: appForm.hrName ? appForm.hrName.trim() : '',
+          email: appForm.hrEmail ? appForm.hrEmail.trim() : '',
+          phone: appForm.hrPhone ? appForm.hrPhone.trim() : '',
+          linkedin: appForm.hrLinkedin ? appForm.hrLinkedin.trim() : ''
         },
-        jobLink: appForm.jobLink.trim(),
+        jobLink: appForm.jobLink ? appForm.jobLink.trim() : '',
         status: appForm.status,
-        notes: appForm.notes.trim(),
+        notes: appForm.notes ? appForm.notes.trim() : '',
         followUpDate: appForm.followUpDate || null
       };
 
@@ -314,7 +335,7 @@ export default function StudentDailyActivity() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Saving application failed');
 
-      toast.success(editingApp ? 'Company application updated!' : '✨ New Company Application registered!');
+      toast.success(editingApp ? 'Company application updated!' : 'Company Application registered successfully!');
       setIsAppModalOpen(false);
       fetchAllData();
     } catch (err) {
@@ -343,9 +364,7 @@ export default function StudentDailyActivity() {
   // HANDLERS: STEP 2 - INTERVIEW ROUNDS FEEDBACK
   // ----------------------------------------------------
   const handleOpenInterviewModal = (target = null) => {
-    // Target can be an existing interview record OR a job application
     if (target && target._id) {
-      // Check if target is an interview record or application
       const isExistingInterview = interviews.some(i => i._id === target._id);
       
       if (isExistingInterview) {
@@ -390,7 +409,6 @@ export default function StudentDailyActivity() {
           tipsAndLearnings: int.tipsAndLearnings || ''
         });
       } else {
-        // Passed an application object! Look for an existing interview for this application or initialize
         const app = target;
         const matchingInterview = interviews.find(i => 
           (i.applicationId && i.applicationId === app._id) || 
@@ -438,7 +456,6 @@ export default function StudentDailyActivity() {
             tipsAndLearnings: matchingInterview.tipsAndLearnings || ''
           });
         } else {
-          // Initialize fresh interview feedback linked to this application
           setEditingInterview(null);
           setInterviewForm({
             applicationId: app._id,
@@ -596,7 +613,7 @@ export default function StudentDailyActivity() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Saving interview feedback failed');
 
-      toast.success(editingInterview ? 'Interview feedback updated!' : '🎉 Interview feedback & round logs saved!');
+      toast.success(editingInterview ? 'Interview feedback updated!' : 'Interview feedback & round logs saved!');
       setIsInterviewModalOpen(false);
       fetchAllData();
     } catch (err) {
@@ -701,10 +718,60 @@ export default function StudentDailyActivity() {
            (t.companyApply || '').toLowerCase().includes(taskSearch.toLowerCase());
   });
 
+  // Helper to render status badges with Lucide icons (No emojis)
+  const renderStatusBadge = (status) => {
+    if (['Placed', 'Offer Received', 'Selected / Placed'].includes(status)) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 font-bold text-xs rounded-full border border-emerald-200">
+          <Award size={13} className="text-emerald-600" />
+          <span>Placed / Offer</span>
+        </span>
+      );
+    }
+    if (status === 'Rejected') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-800 font-bold text-xs rounded-full border border-red-200">
+          <XCircle size={13} className="text-red-600" />
+          <span>Rejected</span>
+        </span>
+      );
+    }
+    if (['In Process', 'Interview Scheduled', 'Shortlisted'].includes(status)) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-800 font-bold text-xs rounded-full border border-blue-200">
+          <Zap size={13} className="text-blue-600" />
+          <span>In Process</span>
+        </span>
+      );
+    }
+    if (status === 'On Hold') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-800 font-bold text-xs rounded-full border border-amber-200">
+          <PauseCircle size={13} className="text-amber-600" />
+          <span>On Hold</span>
+        </span>
+      );
+    }
+    if (status === 'Pending Feedback') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-50 text-purple-800 font-bold text-xs rounded-full border border-purple-200">
+          <Hourglass size={13} className="text-purple-600" />
+          <span>Pending Feedback</span>
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 font-bold text-xs rounded-full border border-slate-200">
+        <Clock size={13} className="text-slate-500" />
+        <span>{status}</span>
+      </span>
+    );
+  };
+
   return (
     <AppShell
       title="Company Placement Pipeline & Daily Tracker"
-      subtitle="Register companies once, track interview rounds (Aptitude, Communication, Technical, Final HR), log outcomes, and record daily practice tasks."
+      subtitle="Register company applications, track interview rounds (Aptitude, Communication, Technical, Final HR), log outcomes, and record daily practice tasks."
       searchPlaceholder="Search company applications..."
     >
       {/* Metric Cards */}
@@ -750,7 +817,7 @@ export default function StudentDailyActivity() {
           }`}
         >
           <Building2 size={16} />
-          <span>🏢 Company Placement Pipeline ({applications.length})</span>
+          <span>Company Placement Pipeline ({applications.length})</span>
         </button>
 
         <button
@@ -762,7 +829,7 @@ export default function StudentDailyActivity() {
           }`}
         >
           <MessageSquare size={16} />
-          <span>🗣️ Interview Round Experiences ({interviews.length})</span>
+          <span>Interview Round Experiences ({interviews.length})</span>
         </button>
 
         <button
@@ -774,7 +841,7 @@ export default function StudentDailyActivity() {
           }`}
         >
           <FileText size={16} />
-          <span>📝 Daily Practice & Task Logs ({taskLogs.length})</span>
+          <span>Daily Practice & Task Logs ({taskLogs.length})</span>
         </button>
       </div>
 
@@ -786,7 +853,6 @@ export default function StudentDailyActivity() {
           {/* Action Bar & Filters */}
           <SurfaceCard className="p-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              {/* Search & Status Filters */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
                 <div className="relative w-full sm:w-80">
                   <Search size={15} className="absolute left-3 top-3 text-slate-400" />
@@ -822,10 +888,10 @@ export default function StudentDailyActivity() {
                 <button
                   type="button"
                   onClick={() => handleOpenAppModal(null)}
-                  className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs rounded-xl shadow-md shadow-blue-200 transition flex items-center gap-1.5 active:scale-95"
+                  className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-200 transition flex items-center gap-1.5 active:scale-95"
                 >
                   <Plus size={15} />
-                  <span>+ Register New Company (Step 1)</span>
+                  <span>Register Company (Step 1)</span>
                 </button>
               </div>
             </div>
@@ -837,7 +903,7 @@ export default function StudentDailyActivity() {
           ) : filteredApplications.length === 0 ? (
             <SurfaceCard className="p-12 text-center space-y-3">
               <Building2 size={36} className="mx-auto text-slate-300" />
-              <h3 className="text-base font-black text-slate-800">No company applications found</h3>
+              <h3 className="text-base font-bold text-slate-800">No company applications found</h3>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
                 Register a company you have applied to, and track its Aptitude, Communication, Technical, and HR rounds seamlessly.
               </p>
@@ -846,7 +912,7 @@ export default function StudentDailyActivity() {
                 onClick={() => handleOpenAppModal(null)}
                 className="px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl hover:bg-blue-700 transition"
               >
-                + Register First Company Application
+                Register First Company Application
               </button>
             </SurfaceCard>
           ) : (
@@ -855,64 +921,44 @@ export default function StudentDailyActivity() {
                 const interview = getInterviewForApp(app);
                 const isExpanded = expandedPipelineId === app._id;
 
-                const getStatusBadge = (status) => {
-                  if (['Placed', 'Offer Received', 'Selected / Placed'].includes(status)) {
-                    return <span className="px-3 py-1 bg-emerald-100 text-emerald-800 font-black text-xs rounded-full border border-emerald-300">🎉 Placed / Offer</span>;
-                  }
-                  if (status === 'Rejected') {
-                    return <span className="px-3 py-1 bg-red-100 text-red-800 font-black text-xs rounded-full border border-red-300">❌ Rejected</span>;
-                  }
-                  if (['In Process', 'Interview Scheduled', 'Shortlisted'].includes(status)) {
-                    return <span className="px-3 py-1 bg-blue-100 text-blue-800 font-black text-xs rounded-full border border-blue-300">⚡ In Process</span>;
-                  }
-                  if (status === 'On Hold') {
-                    return <span className="px-3 py-1 bg-amber-100 text-amber-800 font-black text-xs rounded-full border border-amber-300">⏸️ On Hold</span>;
-                  }
-                  if (status === 'Pending Feedback') {
-                    return <span className="px-3 py-1 bg-purple-100 text-purple-800 font-black text-xs rounded-full border border-purple-300">⏳ Pending Feedback</span>;
-                  }
-                  return <span className="px-3 py-1 bg-slate-100 text-slate-700 font-black text-xs rounded-full border border-slate-300">{status}</span>;
-                };
-
                 return (
                   <SurfaceCard key={app._id} className="p-5 space-y-4 hover:shadow-md transition">
                     {/* Header: Company Name, Role, Date, Status */}
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-slate-100 pb-3">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-base font-black text-slate-900">{app.companyName}</h3>
+                          <h3 className="text-base font-bold text-slate-900">{app.companyName}</h3>
                           <span className="text-xs font-bold text-slate-500">• {app.jobRole || 'Software Engineer'}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md">
+                          <span className="text-[10px] font-bold px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-md">
                             {app.applicationType}
                           </span>
                         </div>
 
                         <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-                          <span>Applied: {new Date(app.applyDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                          <span className="flex items-center gap-1">
+                            <Calendar size={12} className="text-slate-400" />
+                            Applied: {new Date(app.applyDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
                           {app.jobLink && (
-                            <a
-                              href={app.jobLink.startsWith('http') ? app.jobLink : `https://${app.jobLink}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-blue-600 font-bold hover:underline flex items-center gap-0.5"
-                            >
-                              <span>Job Link</span>
-                              <ExternalLink size={11} />
-                            </a>
+                            <span className="text-slate-500 flex items-center gap-1 font-medium">
+                              <FileText size={12} className="text-blue-500" />
+                              Job Details Included
+                            </span>
                           )}
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        {getStatusBadge(app.status)}
+                        {renderStatusBadge(app.status)}
                       </div>
                     </div>
 
                     {/* Stepper: Interview Rounds Progression */}
                     <div className="p-3.5 bg-slate-50/70 border border-slate-200/70 rounded-2xl">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                          Interview Progression Rounds (Step 2)
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                          <Layers size={13} className="text-slate-400" />
+                          <span>Interview Rounds Progression (Step 2)</span>
                         </span>
                         <button
                           type="button"
@@ -920,14 +966,14 @@ export default function StudentDailyActivity() {
                           className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
                         >
                           <Zap size={12} className="text-amber-500" />
-                          <span>{interview ? 'Update Round Feedback' : '+ Add Interview Feedback'}</span>
+                          <span>{interview ? 'Update Round Feedback' : 'Add Interview Feedback'}</span>
                         </button>
                       </div>
 
-                      {/* 4-Round Badges */}
+                      {/* 4-Round Badges with Clean Icons */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {/* Aptitude */}
-                        <div className={`p-2 rounded-xl border text-center text-xs ${
+                        <div className={`p-2.5 rounded-xl border text-center text-xs transition ${
                           interview?.aptitudeRound?.attended
                             ? interview.aptitudeRound.result === 'Cleared'
                               ? 'bg-emerald-50 border-emerald-200 text-emerald-900 font-bold'
@@ -936,14 +982,17 @@ export default function StudentDailyActivity() {
                               : 'bg-blue-50 border-blue-200 text-blue-900 font-bold'
                             : 'bg-white border-slate-200 text-slate-400'
                         }`}>
-                          <span className="text-[10px] block text-slate-500">Round 1: Aptitude</span>
-                          <span className="font-black">
+                          <div className="flex items-center justify-center gap-1 mb-0.5">
+                            <BookOpen size={12} className="text-slate-400" />
+                            <span className="text-[10px] text-slate-500">Round 1: Aptitude</span>
+                          </div>
+                          <span className="font-bold block">
                             {interview?.aptitudeRound?.attended ? (interview.aptitudeRound.result || 'Attended') : 'Not Started'}
                           </span>
                         </div>
 
                         {/* Communication / GD */}
-                        <div className={`p-2 rounded-xl border text-center text-xs ${
+                        <div className={`p-2.5 rounded-xl border text-center text-xs transition ${
                           interview?.communicationRound?.attended
                             ? interview.communicationRound.result === 'Cleared'
                               ? 'bg-emerald-50 border-emerald-200 text-emerald-900 font-bold'
@@ -952,14 +1001,17 @@ export default function StudentDailyActivity() {
                               : 'bg-blue-50 border-blue-200 text-blue-900 font-bold'
                             : 'bg-white border-slate-200 text-slate-400'
                         }`}>
-                          <span className="text-[10px] block text-slate-500">Round 2: Communication</span>
-                          <span className="font-black">
+                          <div className="flex items-center justify-center gap-1 mb-0.5">
+                            <MessageSquare size={12} className="text-slate-400" />
+                            <span className="text-[10px] text-slate-500">Round 2: Comm / GD</span>
+                          </div>
+                          <span className="font-bold block">
                             {interview?.communicationRound?.attended ? (interview.communicationRound.result || 'Attended') : 'Not Started'}
                           </span>
                         </div>
 
                         {/* Technical */}
-                        <div className={`p-2 rounded-xl border text-center text-xs ${
+                        <div className={`p-2.5 rounded-xl border text-center text-xs transition ${
                           interview?.technicalRound?.attended
                             ? interview.technicalRound.result === 'Cleared'
                               ? 'bg-emerald-50 border-emerald-200 text-emerald-900 font-bold'
@@ -968,14 +1020,17 @@ export default function StudentDailyActivity() {
                               : 'bg-blue-50 border-blue-200 text-blue-900 font-bold'
                             : 'bg-white border-slate-200 text-slate-400'
                         }`}>
-                          <span className="text-[10px] block text-slate-500">Round 3: Technical</span>
-                          <span className="font-black">
+                          <div className="flex items-center justify-center gap-1 mb-0.5">
+                            <Code2 size={12} className="text-slate-400" />
+                            <span className="text-[10px] text-slate-500">Round 3: Technical</span>
+                          </div>
+                          <span className="font-bold block">
                             {interview?.technicalRound?.attended ? (interview.technicalRound.result || 'Attended') : 'Not Started'}
                           </span>
                         </div>
 
                         {/* Final HR */}
-                        <div className={`p-2 rounded-xl border text-center text-xs ${
+                        <div className={`p-2.5 rounded-xl border text-center text-xs transition ${
                           interview?.hrRound?.attended
                             ? interview.hrRound.result === 'Cleared'
                               ? 'bg-emerald-50 border-emerald-200 text-emerald-900 font-bold'
@@ -984,8 +1039,11 @@ export default function StudentDailyActivity() {
                               : 'bg-blue-50 border-blue-200 text-blue-900 font-bold'
                             : 'bg-white border-slate-200 text-slate-400'
                         }`}>
-                          <span className="text-[10px] block text-slate-500">Round 4: Final HR</span>
-                          <span className="font-black">
+                          <div className="flex items-center justify-center gap-1 mb-0.5">
+                            <Briefcase size={12} className="text-slate-400" />
+                            <span className="text-[10px] text-slate-500">Round 4: Final HR</span>
+                          </div>
+                          <span className="font-bold block">
                             {interview?.hrRound?.attended ? (interview.hrRound.result || 'Attended') : 'Not Started'}
                           </span>
                         </div>
@@ -1012,6 +1070,17 @@ export default function StudentDailyActivity() {
                             <Phone size={13} className="text-slate-400" />
                             {app.hrDetails.phone}
                           </span>
+                        )}
+                        {app.hrDetails?.linkedin && (
+                          <a
+                            href={app.hrDetails.linkedin.startsWith('http') ? app.hrDetails.linkedin : `https://${app.hrDetails.linkedin}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1 text-blue-600 hover:underline"
+                          >
+                            <Globe size={13} />
+                            <span>LinkedIn</span>
+                          </a>
                         )}
                       </div>
 
@@ -1049,6 +1118,15 @@ export default function StudentDailyActivity() {
                     {/* Expanded Detail Audit View */}
                     {isExpanded && (
                       <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-3 animate-in fade-in">
+                        {app.jobLink && (
+                          <div>
+                            <span className="font-bold text-slate-800 block mb-0.5">Job Description / Posting Details:</span>
+                            <p className="text-slate-600 leading-relaxed whitespace-pre-line bg-white p-3 rounded-xl border border-slate-200">
+                              {app.jobLink}
+                            </p>
+                          </div>
+                        )}
+
                         {app.notes && (
                           <div>
                             <span className="font-bold text-slate-800 block mb-0.5">Application Notes:</span>
@@ -1079,8 +1157,11 @@ export default function StudentDailyActivity() {
                             )}
 
                             {interview.tipsAndLearnings && (
-                              <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-950">
-                                <span className="font-bold">Key Learnings for Peers:</span> {interview.tipsAndLearnings}
+                              <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-950 flex items-start gap-2">
+                                <Sparkles size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                                <div>
+                                  <span className="font-bold">Key Learnings for Peers:</span> {interview.tipsAndLearnings}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -1119,14 +1200,14 @@ export default function StudentDailyActivity() {
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5"
               >
                 <Plus size={15} />
-                <span>+ Log Interview Feedback</span>
+                <span>Log Interview Feedback</span>
               </button>
             </div>
           </SurfaceCard>
 
           {filteredInterviews.length === 0 ? (
             <SurfaceCard className="p-12 text-center text-slate-400 text-xs">
-              No interview experiences logged yet. Click "+ Log Interview Feedback" or log directly from your Company Pipeline cards!
+              No interview experiences logged yet. Click "Log Interview Feedback" or log directly from your Company Pipeline cards!
             </SurfaceCard>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1134,7 +1215,7 @@ export default function StudentDailyActivity() {
                 <SurfaceCard key={int._id} className="p-5 space-y-3">
                   <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
                     <div>
-                      <h4 className="text-base font-black text-slate-900">{int.companyName}</h4>
+                      <h4 className="text-base font-bold text-slate-900">{int.companyName}</h4>
                       <span className="text-xs text-slate-500 font-bold">{int.role || 'Software Engineer'} • {int.interviewMode}</span>
                     </div>
 
@@ -1190,9 +1271,10 @@ export default function StudentDailyActivity() {
                   )}
 
                   {int.tipsAndLearnings && (
-                    <p className="text-xs text-amber-800 font-medium bg-amber-50/60 p-2.5 rounded-xl border border-amber-200/60">
-                      💡 {int.tipsAndLearnings}
-                    </p>
+                    <div className="text-xs text-amber-900 font-medium bg-amber-50/60 p-2.5 rounded-xl border border-amber-200/60 flex items-start gap-1.5">
+                      <Sparkles size={13} className="text-amber-600 shrink-0 mt-0.5" />
+                      <span>{int.tipsAndLearnings}</span>
+                    </div>
                   )}
                 </SurfaceCard>
               ))}
@@ -1209,14 +1291,14 @@ export default function StudentDailyActivity() {
           {/* Left: Submit Log Form */}
           <div>
             <SurfaceCard className="p-5 space-y-4 sticky top-6">
-              <h3 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
                 <FileText size={16} className="text-blue-600" />
                 <span>Record Daily Task / Learning Log</span>
               </h3>
 
               <form onSubmit={handleSaveTask} className="space-y-3 text-xs">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Date</label>
+                  <label className="font-bold text-slate-700 block mb-1">Date *</label>
                   <input
                     type="date"
                     value={taskForm.date}
@@ -1250,7 +1332,7 @@ export default function StudentDailyActivity() {
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Remarks / Key Learnings</label>
+                  <label className="font-bold text-slate-700 block mb-1">Remarks / Key Learnings (Optional)</label>
                   <input
                     type="text"
                     placeholder="Optional remarks or blockers..."
@@ -1263,7 +1345,7 @@ export default function StudentDailyActivity() {
                 <button
                   type="submit"
                   disabled={submittingTask}
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl shadow-sm transition disabled:opacity-50"
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition disabled:opacity-50"
                 >
                   {submittingTask ? 'Saving...' : 'Save Daily Activity Log'}
                 </button>
@@ -1295,7 +1377,7 @@ export default function StudentDailyActivity() {
                 {filteredTasks.map(log => (
                   <SurfaceCard key={log._id} className="p-4 space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-black text-slate-900">{log.companyApply || 'Daily Learning'}</span>
+                      <span className="font-bold text-slate-900">{log.companyApply || 'Daily Learning'}</span>
                       <span className="text-slate-400 font-medium">
                         {new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
@@ -1324,8 +1406,11 @@ export default function StudentDailyActivity() {
           <div className="bg-white rounded-3xl p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-blue-600">Step 1: One-Time Company Registration</span>
-                <h3 className="text-base font-black text-slate-900">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1">
+                  <Building2 size={12} />
+                  <span>Step 1: One-Time Company Registration</span>
+                </span>
+                <h3 className="text-base font-bold text-slate-900">
                   {editingApp ? 'Edit Company Application' : 'Register New Company Application'}
                 </h3>
               </div>
@@ -1339,9 +1424,12 @@ export default function StudentDailyActivity() {
             </div>
 
             <form onSubmit={handleSaveApplication} className="space-y-4 text-xs">
+              {/* Mandatory Section */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Company Name *</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Company Name <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. Google, Zoho, TCS, Accenture..."
@@ -1353,34 +1441,43 @@ export default function StudentDailyActivity() {
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Job Role / Designation</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Job Role / Designation <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. Frontend Developer, SDE-1..."
                     value={appForm.jobRole}
                     onChange={e => setAppForm({ ...appForm, jobRole: e.target.value })}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium"
+                    required
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Application Date</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Application Date <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="date"
                     value={appForm.applyDate}
                     onChange={e => setAppForm({ ...appForm, applyDate: e.target.value })}
-                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium"
+                    required
                   />
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Application Channel</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Application Channel <span className="text-red-500">*</span>
+                  </label>
                   <select
                     value={appForm.applicationType}
                     onChange={e => setAppForm({ ...appForm, applicationType: e.target.value })}
-                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium"
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-bold text-blue-900"
+                    required
                   >
                     <option value="SLA Portal">SLA Portal (BuildX SLA / PlaceX)</option>
                     <option value="Email Outreach">Email Outreach</option>
@@ -1396,11 +1493,14 @@ export default function StudentDailyActivity() {
 
               {/* Status Selector */}
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Recruitment Status</label>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Recruitment Status <span className="text-red-500">*</span>
+                </label>
                 <select
                   value={appForm.status}
                   onChange={e => setAppForm({ ...appForm, status: e.target.value })}
                   className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-bold text-blue-900"
+                  required
                 >
                   <option value="Applied">Applied (Initial Submission)</option>
                   <option value="Mail Sent">Mail Sent / Awaiting Response</option>
@@ -1408,50 +1508,67 @@ export default function StudentDailyActivity() {
                   <option value="Pending Feedback">Pending Feedback</option>
                   <option value="On Hold">On Hold</option>
                   <option value="Shortlisted">Shortlisted</option>
-                  <option value="Placed">🎉 Placed / Offer Received</option>
-                  <option value="Rejected">❌ Rejected</option>
+                  <option value="Placed">Placed / Offer Received</option>
+                  <option value="Rejected">Rejected</option>
                 </select>
               </div>
 
-              {/* Job Link & HR Details */}
+              {/* Job Description / Posting Link - Optional Multi-line Text Box */}
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Job Description / Posting Link</label>
-                <input
-                  type="text"
-                  placeholder="https://linkedin.com/jobs/view/... or career site URL"
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-bold text-slate-700 flex items-center gap-1">
+                    <FileText size={13} className="text-slate-500" />
+                    <span>Job Description / Posting Link</span>
+                  </label>
+                  <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                    Optional
+                  </span>
+                </div>
+                <textarea
+                  rows={3}
+                  placeholder="Paste job posting URL link, requirements, eligibility criteria, or JD details here (optional)..."
                   value={appForm.jobLink}
                   onChange={e => setAppForm({ ...appForm, jobLink: e.target.value })}
-                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-xs leading-relaxed"
                 />
               </div>
 
+              {/* HR Contact Information - Optional */}
               <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-                <span className="font-black text-slate-800 block text-[11px]">HR Contact Information</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800 text-[11px] flex items-center gap-1">
+                    <UserCheck size={13} className="text-blue-600" />
+                    <span>HR Contact Information</span>
+                  </span>
+                  <span className="text-[10px] font-semibold text-slate-400 bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                    Optional
+                  </span>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <input
                     type="text"
-                    placeholder="HR Name"
+                    placeholder="HR Name (optional)"
                     value={appForm.hrName}
                     onChange={e => setAppForm({ ...appForm, hrName: e.target.value })}
                     className="p-2 bg-white border border-slate-200 rounded-lg text-xs"
                   />
                   <input
                     type="email"
-                    placeholder="HR Email (e.g. hr@company.com)"
+                    placeholder="HR Email (optional)"
                     value={appForm.hrEmail}
                     onChange={e => setAppForm({ ...appForm, hrEmail: e.target.value })}
                     className="p-2 bg-white border border-slate-200 rounded-lg text-xs"
                   />
                   <input
                     type="text"
-                    placeholder="HR Phone / Mobile"
+                    placeholder="HR Phone / Mobile (optional)"
                     value={appForm.hrPhone}
                     onChange={e => setAppForm({ ...appForm, hrPhone: e.target.value })}
                     className="p-2 bg-white border border-slate-200 rounded-lg text-xs"
                   />
                   <input
                     type="text"
-                    placeholder="HR LinkedIn Profile URL"
+                    placeholder="HR LinkedIn URL (optional)"
                     value={appForm.hrLinkedin}
                     onChange={e => setAppForm({ ...appForm, hrLinkedin: e.target.value })}
                     className="p-2 bg-white border border-slate-200 rounded-lg text-xs"
@@ -1459,11 +1576,17 @@ export default function StudentDailyActivity() {
                 </div>
               </div>
 
+              {/* Application Notes - Optional */}
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Application Notes</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-bold text-slate-700">Application Notes</label>
+                  <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                    Optional
+                  </span>
+                </div>
                 <textarea
                   rows={2}
-                  placeholder="Notes on resume version submitted, referral source, etc."
+                  placeholder="Notes on resume version submitted, referral contact, or follow-up schedule (optional)..."
                   value={appForm.notes}
                   onChange={e => setAppForm({ ...appForm, notes: e.target.value })}
                   className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500"
@@ -1481,7 +1604,7 @@ export default function StudentDailyActivity() {
                 <button
                   type="submit"
                   disabled={submittingApp}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-md transition disabled:opacity-50"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition disabled:opacity-50"
                 >
                   {submittingApp ? 'Saving...' : editingApp ? 'Update Company Record' : 'Save Company Application'}
                 </button>
@@ -1499,8 +1622,11 @@ export default function StudentDailyActivity() {
           <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600">Step 2: Log Interview Feedback & Rounds</span>
-                <h3 className="text-base font-black text-slate-900">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 flex items-center gap-1">
+                  <Layers size={12} />
+                  <span>Step 2: Log Interview Feedback & Rounds</span>
+                </span>
+                <h3 className="text-base font-bold text-slate-900">
                   {editingInterview ? 'Update Interview Round Logs' : 'Log Interview Experience & Rounds'}
                 </h3>
               </div>
@@ -1516,7 +1642,7 @@ export default function StudentDailyActivity() {
             <form onSubmit={handleSaveInterview} className="space-y-4 text-xs">
               {/* Company Selection or Entry */}
               <div className="p-3.5 bg-indigo-50/50 border border-indigo-200/60 rounded-2xl space-y-2">
-                <span className="font-black text-indigo-900 block text-xs">Select Registered Company or Type Name</span>
+                <span className="font-bold text-indigo-900 block text-xs">Select Registered Company or Type Name</span>
                 
                 {applications.length > 0 && (
                   <div className="mb-2">
@@ -1551,7 +1677,9 @@ export default function StudentDailyActivity() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">Company Name *</label>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Company Name <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
                       placeholder="Company Name"
@@ -1610,8 +1738,8 @@ export default function StudentDailyActivity() {
                     <option value="In Process">In Process / Scheduled</option>
                     <option value="Pending Feedback">Pending Feedback</option>
                     <option value="On Hold">On Hold</option>
-                    <option value="Placed / Selected">🎉 Placed / Selected</option>
-                    <option value="Rejected">❌ Rejected</option>
+                    <option value="Placed / Selected">Placed / Selected</option>
+                    <option value="Rejected">Rejected</option>
                   </select>
                 </div>
               </div>
@@ -1619,7 +1747,7 @@ export default function StudentDailyActivity() {
               {/* ROUND 1: APTITUDE ROUND */}
               <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="font-black text-slate-900 flex items-center gap-2 cursor-pointer">
+                  <label className="font-bold text-slate-900 flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={interviewForm.aptitudeAttended}
@@ -1635,9 +1763,9 @@ export default function StudentDailyActivity() {
                       onChange={e => setInterviewForm({ ...interviewForm, aptitudeResult: e.target.value })}
                       className="text-[11px] p-1 bg-white border border-slate-200 rounded-lg font-bold"
                     >
-                      <option value="Cleared">Cleared ✓</option>
+                      <option value="Cleared">Cleared</option>
                       <option value="Pending">Pending</option>
-                      <option value="Not Cleared">Not Cleared ✕</option>
+                      <option value="Not Cleared">Not Cleared</option>
                       <option value="N/A">N/A</option>
                     </select>
                   )}
@@ -1675,7 +1803,7 @@ export default function StudentDailyActivity() {
               {/* ROUND 2: COMMUNICATION / GD ROUND */}
               <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="font-black text-slate-900 flex items-center gap-2 cursor-pointer">
+                  <label className="font-bold text-slate-900 flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={interviewForm.commAttended}
@@ -1691,9 +1819,9 @@ export default function StudentDailyActivity() {
                       onChange={e => setInterviewForm({ ...interviewForm, commResult: e.target.value })}
                       className="text-[11px] p-1 bg-white border border-slate-200 rounded-lg font-bold"
                     >
-                      <option value="Cleared">Cleared ✓</option>
+                      <option value="Cleared">Cleared</option>
                       <option value="Pending">Pending</option>
-                      <option value="Not Cleared">Not Cleared ✕</option>
+                      <option value="Not Cleared">Not Cleared</option>
                       <option value="N/A">N/A</option>
                     </select>
                   )}
@@ -1722,7 +1850,7 @@ export default function StudentDailyActivity() {
               {/* ROUND 3: TECHNICAL ROUND */}
               <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="font-black text-slate-900 flex items-center gap-2 cursor-pointer">
+                  <label className="font-bold text-slate-900 flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={interviewForm.techAttended}
@@ -1738,9 +1866,9 @@ export default function StudentDailyActivity() {
                       onChange={e => setInterviewForm({ ...interviewForm, techResult: e.target.value })}
                       className="text-[11px] p-1 bg-white border border-slate-200 rounded-lg font-bold"
                     >
-                      <option value="Cleared">Cleared ✓</option>
+                      <option value="Cleared">Cleared</option>
                       <option value="Pending">Pending</option>
-                      <option value="Not Cleared">Not Cleared ✕</option>
+                      <option value="Not Cleared">Not Cleared</option>
                       <option value="N/A">N/A</option>
                     </select>
                   )}
@@ -1769,7 +1897,7 @@ export default function StudentDailyActivity() {
               {/* ROUND 4: FINAL HR / MANAGERIAL ROUND */}
               <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="font-black text-slate-900 flex items-center gap-2 cursor-pointer">
+                  <label className="font-bold text-slate-900 flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={interviewForm.hrAttended}
@@ -1785,9 +1913,9 @@ export default function StudentDailyActivity() {
                       onChange={e => setInterviewForm({ ...interviewForm, hrResult: e.target.value })}
                       className="text-[11px] p-1 bg-white border border-slate-200 rounded-lg font-bold"
                     >
-                      <option value="Cleared">Cleared ✓</option>
+                      <option value="Cleared">Cleared</option>
                       <option value="Pending">Pending</option>
-                      <option value="Not Cleared">Not Cleared ✕</option>
+                      <option value="Not Cleared">Not Cleared</option>
                       <option value="N/A">N/A</option>
                     </select>
                   )}
@@ -1829,7 +1957,7 @@ export default function StudentDailyActivity() {
                 <button
                   type="submit"
                   disabled={submittingInterview}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-md transition disabled:opacity-50"
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition disabled:opacity-50"
                 >
                   {submittingInterview ? 'Saving...' : editingInterview ? 'Update Interview Logs' : 'Save Interview Round Feedback'}
                 </button>

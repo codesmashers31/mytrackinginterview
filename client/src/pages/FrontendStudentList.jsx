@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, Download, Upload, Plus, Edit, Eye, Trash2, X, ChevronLeft, ChevronRight,
-  User, Mail, Phone, GraduationCap, Calendar, Users, MapPin, SlidersHorizontal, ChevronDown
+  User, Mail, Phone, GraduationCap, Calendar, Users, MapPin, SlidersHorizontal, ChevronDown,
+  Briefcase, Award, TrendingUp, AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
-import { AppShell, SectionTabs, StatusBadge, SurfaceCard } from '../components/AppShell';
+import { AppShell, SectionTabs, StatusBadge, SurfaceCard, MetricCard } from '../components/AppShell';
 import { authHeaders, logout } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
 
@@ -307,10 +308,25 @@ export default function FrontendStudentList() {
   const totalPages = Math.ceil(processedStudents.length / itemsPerPage);
   const currentItems = processedStudents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
+  const frontendStats = useMemo(() => {
+    const total = students.length;
+    const activeSeekers = students.filter(s => String(s.currentStatus || '').toLowerCase() === 'job seeker').length;
+    const needToFilled = students.filter(s => {
+      const st = String(s.currentStatus || '').toLowerCase();
+      return st === 'need to filled' || st === 'new' || !st;
+    }).length;
+    const placed = students.filter(s => String(s.currentStatus || '').toLowerCase() === 'placed').length;
+    const inactiveOrSuspend = students.filter(s => {
+      const st = String(s.currentStatus || '').toLowerCase();
+      return st.includes('inactive') || st.includes('suspend');
+    }).length;
+    return { total, activeSeekers, needToFilled, placed, inactiveOrSuspend };
+  }, [students]);
+
   return (
     <AppShell
-      title="Frontend Student Directory"
-      subtitle="Manage Frontend track records, excel bulk uploads, and location-based details."
+      title="Frontend Students"
+      subtitle="Manage Frontend Candidate Directory, track technical profiles, and handle batch records."
       searchPlaceholder="Search by name, email, mobile, batch, year, city..."
       searchValue={searchTerm}
       onSearchChange={setSearchTerm}
@@ -324,6 +340,38 @@ export default function FrontendStudentList() {
           { label: 'Eligibility', onClick: () => navigate('/eligibility') },
         ]}
       />
+
+      {/* Dashboard Summary for Frontend Track */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3 mb-5">
+        <MetricCard
+          title="Total Frontend Track"
+          value={frontendStats.total}
+          helper="Enrolled frontend candidates"
+          icon={<Users size={18} />}
+          tone="neutral"
+        />
+        <MetricCard
+          title="Active Job Seekers"
+          value={frontendStats.activeSeekers}
+          helper="Frontend drive candidates"
+          icon={<Briefcase size={18} />}
+          tone="primary"
+        />
+        <MetricCard
+          title="Pending Profile Details"
+          value={frontendStats.needToFilled}
+          helper="Need to filled status"
+          icon={<AlertCircle size={18} />}
+          tone="warning"
+        />
+        <MetricCard
+          title="Placed Frontend Engineers"
+          value={frontendStats.placed}
+          helper="Offers accepted & placed"
+          icon={<Award size={18} />}
+          tone="success"
+        />
+      </div>
 
       {/* Filter & Actions Toolbar */}
       <div className="mb-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 bg-white p-4 rounded-[20px] border border-slate-200/85 shadow-sm">

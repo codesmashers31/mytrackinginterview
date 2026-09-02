@@ -145,31 +145,46 @@ export const listRegistrations = async (req, res) => {
       isMergedStudent: false
     }));
 
-    // 2. Fetch from Student collection where enrollments contains 'SPL'
-    const mergedStudents = await Student.find({ enrollments: 'SPL' }).lean();
-    const mappedMergedStudents = mergedStudents.map(student => ({
-      _id: student._id,
-      name: student.name,
-      email: student.email,
-      mobile: student.mobile,
-      degree: student.degree,
-      batch: student.batch || '',
-      passedOutYear: student.passedOutYear || '',
-      stack: student.stack || '',
-      willingCompanyProcess: student.willingCompanyProcess,
-      willing30Days: student.willing30Days || '',
-      acceptOffer: student.acceptOffer || '',
-      fullEffort: student.fullEffort || '',
-      issues: student.issues || '',
-      needMost: student.needMost || '',
-      status: student.status || 'New',
-      statusReason: student.statusReason || '',
-      grade: student.grade || '',
-      resumeData: student.resumeData || {},
-      createdAt: student.createdAt,
-      updatedAt: student.updatedAt,
-      isMergedStudent: true
-    }));
+    const splEmailSet = new Set(splRegs.map(r => (r.email || '').toLowerCase().trim()).filter(Boolean));
+    const splMobileSet = new Set(splRegs.map(r => (r.mobile || '').trim()).filter(Boolean));
+
+    // 2. Fetch from Student collection where enrollments contains 'SPL' or studentType is 'SPL'
+    const mergedStudents = await Student.find({
+      $or: [
+        { enrollments: 'SPL' },
+        { studentType: 'SPL' }
+      ]
+    }).lean();
+
+    const mappedMergedStudents = mergedStudents
+      .filter(s => {
+        const email = (s.email || '').toLowerCase().trim();
+        const mobile = (s.mobile || '').trim();
+        return !(email && splEmailSet.has(email)) && !(mobile && splMobileSet.has(mobile));
+      })
+      .map(student => ({
+        _id: student._id,
+        name: student.name,
+        email: student.email,
+        mobile: student.mobile,
+        degree: student.degree,
+        batch: student.batch || '',
+        passedOutYear: student.passedOutYear || '',
+        stack: student.stack || '',
+        willingCompanyProcess: !!student.willingCompanyProcess,
+        willing30Days: student.willing30Days || '',
+        acceptOffer: student.acceptOffer || '',
+        fullEffort: student.fullEffort || '',
+        issues: student.issues || '',
+        needMost: student.needMost || '',
+        status: student.status || student.currentStatus || 'New',
+        statusReason: student.statusReason || '',
+        grade: student.grade || '',
+        resumeData: student.resumeData || {},
+        createdAt: student.createdAt,
+        updatedAt: student.updatedAt,
+        isMergedStudent: true
+      }));
 
     // 3. Combine and Sort by createdAt descending
     const combined = [...mappedSplRegs, ...mappedMergedStudents].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));

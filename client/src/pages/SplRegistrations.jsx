@@ -1,9 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { AppShell, SurfaceCard, StatusBadge } from '../components/AppShell';
+import { AppShell, SurfaceCard, StatusBadge, MetricCard, SectionTabs } from '../components/AppShell';
 import { authHeaders } from '../utils/auth';
 import { buildApiUrl, cachedGet, invalidateCache } from '../utils/api';
-import { Edit, Check, X, Trash2, ArrowLeft, ArrowRight, SlidersHorizontal, ChevronDown, Download, Upload } from 'lucide-react';
+import { 
+  Edit, Check, X, Trash2, ArrowLeft, ArrowRight, SlidersHorizontal, ChevronDown, Download, Upload,
+  Users, Briefcase, GraduationCap, CheckCircle2, Award
+} from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const STATUS_OPTIONS = ['New', 'Reviewed', 'Shortlisted', 'Rejected', 'Placed'];
@@ -18,6 +22,7 @@ const STANDARD_STACKS = [
 ];
 
 export default function SplRegistrations() {
+  const navigate = useNavigate();
   const [regs, setRegs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showColumnDropdown, setShowColumnDropdown] = useState(false);
@@ -62,7 +67,7 @@ export default function SplRegistrations() {
     setLoading(true);
     try {
       const data = await cachedGet('/spl-registration', { force });
-      setRegs(data);
+      setRegs(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error('Could not load registrations');
     } finally {
@@ -241,8 +246,58 @@ export default function SplRegistrations() {
     }
   }, [currentPage, totalPages]);
 
+  const splMetrics = useMemo(() => {
+    const total = regs.length;
+    const mergedRegular = regs.filter(r => r.isMergedStudent === true).length;
+    const directSpl = regs.filter(r => r.isMergedStudent === false).length;
+    const willingForDrive = regs.filter(r => !!r.willingCompanyProcess).length;
+    const placedOrShortlisted = regs.filter(r => ['Placed', 'Shortlisted', 'Reviewed'].includes(r.status)).length;
+    return { total, mergedRegular, directSpl, willingForDrive, placedOrShortlisted };
+  }, [regs]);
+
   return (
-    <AppShell title="SPL Registrations" subtitle="Submitted SPL class registrations">
+    <AppShell title="SPL Registrations" subtitle="Submitted SPL class candidates and cohort applications">
+      <SectionTabs
+        items={[
+          { label: 'Overview', onClick: () => navigate('/dashboard') },
+          { label: 'Regular Students', onClick: () => navigate('/students') },
+          { label: 'Frontend Students', onClick: () => navigate('/admin/frontend-students') },
+          { label: 'SPL Registrations', active: true },
+        ]}
+      />
+
+      {/* Dashboard Summary for SPL Track */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <MetricCard
+          title="Total SPL Candidates"
+          value={splMetrics.total}
+          helper="All registered SPL candidates"
+          icon={<Users size={18} />}
+          tone="neutral"
+        />
+        <MetricCard
+          title="Regular Track (SPL)"
+          value={splMetrics.mergedRegular}
+          helper="Regular students enrolled in SPL"
+          icon={<Briefcase size={18} />}
+          tone="primary"
+        />
+        <MetricCard
+          title="Direct SPL Applications"
+          value={splMetrics.directSpl}
+          helper="Direct form submissions"
+          icon={<GraduationCap size={18} />}
+          tone="warning"
+        />
+        <MetricCard
+          title="Willing for Drives"
+          value={splMetrics.willingForDrive}
+          helper="Accepted company process"
+          icon={<CheckCircle2 size={18} />}
+          tone="success"
+        />
+      </div>
+
       <SurfaceCard className="overflow-hidden">
         <div className="space-y-4 p-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

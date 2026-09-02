@@ -157,6 +157,8 @@ export default function Dashboard() {
       if (filterStatus !== 'All') {
         if (filterStatus === 'Needs Update') {
           if (status !== 'need to filled' && status !== 'new') return false;
+        } else if (filterStatus === 'Inactive/Suspend') {
+          if (!status.includes('inactive') && !status.includes('suspend')) return false;
         } else {
           if (status !== filterStatus.toLowerCase()) return false;
         }
@@ -187,7 +189,7 @@ export default function Dashboard() {
 
   // Dynamic Metrics - ONLY Regular Candidates are part of the Placement Overview!
   const dynamicStats = useMemo(() => {
-    if (!stats) return { total: 0, placed: 0, seekers: 0, needToFilled: 0, rate: 0 };
+    if (!stats) return { total: 0, placed: 0, seekers: 0, inactive: 0, needToFilled: 0, rate: 0 };
     
     // When track filter is 'All', default strictly to Regular candidates only (excluding Frontend)
     const targetStudents = filteredStudents.filter(s => {
@@ -206,6 +208,12 @@ export default function Dashboard() {
     const seekers = filterType === 'All' && allStudents.length === 0 
       ? (stats.jobSeekers || 0) 
       : targetStudents.filter(s => (s.currentStatus || s.status)?.toLowerCase() === 'job seeker').length;
+    const inact = filterType === 'All' && allStudents.length === 0 
+      ? (stats.inactiveUsers || 0) 
+      : targetStudents.filter(s => {
+          const st = (s.currentStatus || s.status || '').toLowerCase();
+          return st.includes('inactive') || st.includes('suspend');
+        }).length;
     const needsUpdate = filterType === 'All' && allStudents.length === 0 
       ? (stats.needToFilled || 0) 
       : targetStudents.filter(s => (s.currentStatus || s.status)?.toLowerCase() === 'need to filled' || !s.currentStatus).length;
@@ -214,6 +222,7 @@ export default function Dashboard() {
       total: tot,
       placed: plc,
       seekers: seekers,
+      inactive: inact,
       needToFilled: needsUpdate,
       rate: tot > 0 ? Math.round((plc / tot) * 100) : 0
     };
@@ -301,25 +310,25 @@ export default function Dashboard() {
           tone="neutral"
         />
         <MetricCard
-          title="Placement Rate"
-          value={`${dynamicStats.rate}%`}
-          helper={`${dynamicStats.placed} regular placed`}
-          tone="success"
-          icon={<TrendingUp size={20} />}
-        />
-        <MetricCard
           title="Active Job Seekers"
           value={dynamicStats.seekers}
-          helper="Regular drive candidates"
+          helper="Ready for interviews"
           tone="primary"
           icon={<BriefcaseBusiness size={20} />}
         />
         <MetricCard
-          title="Office Check-ins"
-          value={telemetry.attendance?.checkedIn || 0}
-          helper="Students present today"
+          title="Inactive / Suspended"
+          value={dynamicStats.inactive}
+          helper="Inactive or suspended"
+          tone="warning"
+          icon={<AlertCircle size={20} />}
+        />
+        <MetricCard
+          title="Placed Candidates"
+          value={dynamicStats.placed}
+          helper={`${dynamicStats.rate}% placement rate`}
           tone="success"
-          icon={<ShieldCheck size={20} />}
+          icon={<Award size={20} />}
         />
         <MetricCard
           title="Company Outreach"
@@ -332,8 +341,8 @@ export default function Dashboard() {
           title="Interviews Logged"
           value={telemetry.interviews?.total || 0}
           helper={`${telemetry.interviews?.cleared || 0} cleared / offers`}
-          tone="warning"
-          icon={<Award size={20} />}
+          tone="neutral"
+          icon={<TrendingUp size={20} />}
         />
       </div>
 

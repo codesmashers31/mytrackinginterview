@@ -1,4 +1,5 @@
 import InterviewExperience from '../models/InterviewExperience.js';
+import JobApplication from '../models/JobApplication.js';
 import Student from '../models/Student.js';
 
 // Helper to parse dates securely
@@ -24,6 +25,7 @@ export const createInterviewExperience = async (req, res) => {
     const {
       companyName,
       role,
+      applicationId,
       interviewDate,
       interviewMode,
       overallStatus,
@@ -57,11 +59,12 @@ export const createInterviewExperience = async (req, res) => {
       studentName,
       studentEmail,
       batch,
+      applicationId: applicationId || null,
       companyName: companyName.trim(),
       role: role ? role.trim() : '',
       interviewDate: interviewDate ? new Date(interviewDate) : new Date(),
       interviewMode: interviewMode || 'Online',
-      overallStatus: overallStatus || 'Attended / In Progress',
+      overallStatus: overallStatus || 'In Process',
       aptitudeRound: aptitudeRound || {},
       communicationRound: communicationRound || {},
       technicalRound: technicalRound || {},
@@ -71,6 +74,25 @@ export const createInterviewExperience = async (req, res) => {
     });
 
     await newExperience.save();
+
+    // Auto-sync status to matching JobApplication
+    const syncStatus = (status) => {
+      if (['Placed / Selected', 'Selected / Offer'].includes(status)) return 'Placed';
+      if (['Rejected'].includes(status)) return 'Rejected';
+      if (['In Process', 'Attended / In Progress', 'Cleared / Next Round'].includes(status)) return 'In Process';
+      if (['Pending Feedback'].includes(status)) return 'Pending Feedback';
+      if (['On Hold'].includes(status)) return 'On Hold';
+      return null;
+    };
+
+    const targetAppStatus = syncStatus(newExperience.overallStatus);
+    if (targetAppStatus) {
+      const appQuery = applicationId 
+        ? { _id: applicationId, studentId } 
+        : { studentId, companyName: new RegExp(`^${companyName.trim()}$`, 'i') };
+      await JobApplication.updateMany(appQuery, { $set: { status: targetAppStatus } });
+    }
+
     res.status(201).json(newExperience);
   } catch (error) {
     res.status(500).json({ message: 'Failed to save interview experience', error: error.message });
@@ -108,6 +130,26 @@ export const updateInterviewExperience = async (req, res) => {
 
     if (!experience) {
       return res.status(404).json({ message: 'Interview record not found or unauthorized' });
+    }
+
+    // Auto-sync status to matching JobApplication
+    if (experience.overallStatus) {
+      const syncStatus = (status) => {
+        if (['Placed / Selected', 'Selected / Offer'].includes(status)) return 'Placed';
+        if (['Rejected'].includes(status)) return 'Rejected';
+        if (['In Process', 'Attended / In Progress', 'Cleared / Next Round'].includes(status)) return 'In Process';
+        if (['Pending Feedback'].includes(status)) return 'Pending Feedback';
+        if (['On Hold'].includes(status)) return 'On Hold';
+        return null;
+      };
+
+      const targetAppStatus = syncStatus(experience.overallStatus);
+      if (targetAppStatus) {
+        const appQuery = experience.applicationId 
+          ? { _id: experience.applicationId } 
+          : { studentId: experience.studentId, companyName: new RegExp(`^${experience.companyName.trim()}$`, 'i') };
+        await JobApplication.updateMany(appQuery, { $set: { status: targetAppStatus } });
+      }
     }
 
     res.json(experience);

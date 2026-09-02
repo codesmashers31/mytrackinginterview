@@ -26,7 +26,7 @@ const jobApplicationSchema = new mongoose.Schema({
   jobLink: { type: String, default: '' },
   status: { 
     type: String, 
-    enum: ['Applied', 'Mail Sent', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Rejected', 'Offer Received'],
+    enum: ['Applied', 'Mail Sent', 'Under Review', 'In Process', 'Pending Feedback', 'On Hold', 'Shortlisted', 'Interview Scheduled', 'Rejected', 'Placed', 'Offer Received'],
     default: 'Applied' 
   },
   notes: { type: String, default: '' },

@@ -35,10 +35,15 @@ const interviewExperienceSchema = new mongoose.Schema({
     enum: ['Online', 'In-Person', 'Telephonic'], 
     default: 'Online' 
   },
+  applicationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'JobApplication',
+    default: null
+  },
   overallStatus: { 
     type: String, 
-    enum: ['Scheduled', 'Attended / In Progress', 'Cleared / Next Round', 'Rejected', 'Selected / Offer'],
-    default: 'Attended / In Progress' 
+    enum: ['Scheduled', 'In Process', 'Attended / In Progress', 'Pending Feedback', 'On Hold', 'Cleared / Next Round', 'Rejected', 'Placed / Selected', 'Selected / Offer'],
+    default: 'In Process' 
   },
   
   // Specific Rounds Breakdown

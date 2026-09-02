@@ -30,14 +30,15 @@ import errorHandler from './middleware/errorHandler.js';
 import { runStudentMigration, runTeamMigration } from './utils/migration.js';
 
 
-dotenv.config();
-
-const app = express();
-const PORT = process.env.PORT || 5000;
-
 // ESM __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config(); // fallback
+
+const app = express();
+const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());

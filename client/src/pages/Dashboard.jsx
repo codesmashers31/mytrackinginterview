@@ -24,7 +24,8 @@ import {
   Layers,
   ChevronRight,
   Eye,
-  Filter
+  Filter,
+  AlertCircle
 } from 'lucide-react';
 import { AppShell, MetricCard, SectionTabs, StatusBadge, SurfaceCard } from '../components/AppShell';
 import { authHeaders, logout } from '../utils/auth';

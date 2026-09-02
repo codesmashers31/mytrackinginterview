@@ -79,7 +79,7 @@ export default function StudentDailyActivity() {
     companyName: '',
     jobRole: '',
     applyDate: new Date().toISOString().split('T')[0],
-    applicationType: 'Email Outreach',
+    applicationType: 'SLA Portal',
     hrName: '',
     hrEmail: '',
     hrPhone: '',
@@ -260,7 +260,7 @@ export default function StudentDailyActivity() {
         companyName: '',
         jobRole: '',
         applyDate: new Date().toISOString().split('T')[0],
-        applicationType: 'Email Outreach',
+        applicationType: 'SLA Portal',
         hrName: '',
         hrEmail: '',
         hrPhone: '',
@@ -1382,6 +1382,7 @@ export default function StudentDailyActivity() {
                     onChange={e => setAppForm({ ...appForm, applicationType: e.target.value })}
                     className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium"
                   >
+                    <option value="SLA Portal">SLA Portal (BuildX SLA / PlaceX)</option>
                     <option value="Email Outreach">Email Outreach</option>
                     <option value="LinkedIn">LinkedIn</option>
                     <option value="Job Portal">Job Portal (Naukri/Indeed)</option>

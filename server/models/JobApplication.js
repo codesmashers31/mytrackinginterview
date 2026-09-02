@@ -14,8 +14,8 @@ const jobApplicationSchema = new mongoose.Schema({
   applyDate: { type: Date, required: true, default: Date.now },
   applicationType: { 
     type: String, 
-    enum: ['Job Portal', 'Email Outreach', 'LinkedIn', 'Referral', 'Career Site', 'Campus Drive', 'Other'],
-    default: 'Email Outreach' 
+    enum: ['SLA Portal', 'Job Portal', 'Email Outreach', 'LinkedIn', 'Referral', 'Career Site', 'Campus Drive', 'Other'],
+    default: 'SLA Portal' 
   },
   hrDetails: {
     name: { type: String, default: '' },

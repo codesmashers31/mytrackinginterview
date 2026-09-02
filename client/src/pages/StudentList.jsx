@@ -365,6 +365,8 @@ export default function StudentList() {
 
   const totalPages = Math.ceil(processedStudents.length / itemsPerPage);
   const currentItems = processedStudents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const hasStudents = students.length > 0;
+
   const regularStats = useMemo(() => {
     const total = students.length;
     const placed = students.filter(s => String(s.currentStatus || '').toLowerCase() === 'placed').length;

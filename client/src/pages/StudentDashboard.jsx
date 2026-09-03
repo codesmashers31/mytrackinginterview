@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard, MetricCard } from '../components/AppShell';
@@ -154,7 +154,7 @@ export default function StudentDashboard() {
     }
   }, [profile, showUpdateModal]);
 
-  const calculateTelemetry = () => {
+  const telemetry = useMemo(() => {
     // 1. Total Hours Invested
     const totalHours = attendance.reduce((sum, record) => sum + (record.totalHours || 0), 0);
 
@@ -199,22 +199,28 @@ export default function StudentDashboard() {
       (t.questions && t.questions.length > 0 && t.questions.every(q => q.status === 'Completed'))
     ).length;
 
+    // 4. Study Modules Logged
+    const totalLogsCount = logs.length;
+
     return {
       totalHours: totalHours.toFixed(1),
       streak: calculateStreak(),
+      completedTasks: completedTasksCount,
+      totalTasks: totalTasksCount,
       tasksSummary: totalTasksCount > 0 ? `${completedTasksCount} / ${totalTasksCount}` : '0 / 0',
-      completedPercent: totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0
+      completedPercent: totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0,
+      studyLogs: totalLogsCount
     };
-  };
-
-  const telemetry = calculateTelemetry();
+  }, [attendance, tasks, logs]);
 
   // Combine logs and tasks for recent activity feed
-  const recentActivities = [
-    ...logs.map(l => ({ type: 'log', date: new Date(l.date), title: 'Daily Log Created', desc: `${l.module} - ${l.topicCovered}`, id: l._id })),
-    ...attendance.filter(a => a.checkInTime).map(a => ({ type: 'attendance', date: new Date(a.date), title: 'Attendance Marked', desc: `Status: ${a.status} ${a.totalHours ? `(${a.totalHours} hrs)` : ''}`, id: a._id })),
-    ...tasks.filter(t => t.overallStatus === 'Completed' || (t.questions && t.questions.length > 0 && t.questions.every(q => q.status === 'Completed'))).map(t => ({ type: 'task', date: new Date(t.updatedAt || t.createdAt), title: 'Task Completed', desc: t.title, id: t._id }))
-  ].sort((a, b) => b.date - a.date).slice(0, 5);
+  const recentActivities = useMemo(() => {
+    return [
+      ...logs.map(l => ({ type: 'log', date: new Date(l.date), title: 'Daily Log Created', desc: `${l.module} - ${l.topicCovered}`, id: l._id })),
+      ...attendance.filter(a => a.checkInTime).map(a => ({ type: 'attendance', date: new Date(a.date), title: 'Attendance Marked', desc: `Status: ${a.status} ${a.totalHours ? `(${a.totalHours} hrs)` : ''}`, id: a._id })),
+      ...tasks.filter(t => t.overallStatus === 'Completed' || (t.questions && t.questions.length > 0 && t.questions.every(q => q.status === 'Completed'))).map(t => ({ type: 'task', date: new Date(t.updatedAt || t.createdAt), title: 'Task Completed', desc: t.title, id: t._id }))
+    ].sort((a, b) => b.date - a.date).slice(0, 5);
+  }, [logs, attendance, tasks]);
 
   // Toggle company process willingness from journey stepper
   const handleToggleWillingness = async () => {

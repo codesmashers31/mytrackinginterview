@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard, MetricCard } from '../components/AppShell';
 import { authHeaders, logout, getUserId } from '../utils/auth';
@@ -687,36 +687,42 @@ export default function StudentDailyActivity() {
     );
   };
 
-  const filteredApplications = applications.filter(app => {
-    const matchesSearch = (app.companyName || '').toLowerCase().includes(pipelineSearch.toLowerCase()) ||
-                          (app.jobRole || '').toLowerCase().includes(pipelineSearch.toLowerCase()) ||
-                          (app.hrDetails?.name || '').toLowerCase().includes(pipelineSearch.toLowerCase());
-    
-    if (pipelineStatusFilter === 'All') return matchesSearch;
-    if (pipelineStatusFilter === 'Placed') return matchesSearch && ['Placed', 'Offer Received', 'Selected / Placed'].includes(app.status);
-    if (pipelineStatusFilter === 'In Process') return matchesSearch && ['In Process', 'Interview Scheduled', 'Under Review', 'Shortlisted'].includes(app.status);
-    if (pipelineStatusFilter === 'Pending') return matchesSearch && ['Pending Feedback', 'Mail Sent'].includes(app.status);
-    if (pipelineStatusFilter === 'On Hold') return matchesSearch && app.status === 'On Hold';
-    if (pipelineStatusFilter === 'Rejected') return matchesSearch && app.status === 'Rejected';
-    if (pipelineStatusFilter === 'Applied') return matchesSearch && app.status === 'Applied';
+  const filteredApplications = useMemo(() => {
+    return applications.filter(app => {
+      const matchesSearch = (app.companyName || '').toLowerCase().includes(pipelineSearch.toLowerCase()) ||
+                            (app.jobRole || '').toLowerCase().includes(pipelineSearch.toLowerCase()) ||
+                            (app.hrDetails?.name || '').toLowerCase().includes(pipelineSearch.toLowerCase());
+      
+      if (pipelineStatusFilter === 'All') return matchesSearch;
+      if (pipelineStatusFilter === 'Placed') return matchesSearch && ['Placed', 'Offer Received', 'Selected / Placed'].includes(app.status);
+      if (pipelineStatusFilter === 'In Process') return matchesSearch && ['In Process', 'Interview Scheduled', 'Under Review', 'Shortlisted'].includes(app.status);
+      if (pipelineStatusFilter === 'Pending') return matchesSearch && ['Pending Feedback', 'Mail Sent'].includes(app.status);
+      if (pipelineStatusFilter === 'On Hold') return matchesSearch && app.status === 'On Hold';
+      if (pipelineStatusFilter === 'Rejected') return matchesSearch && app.status === 'Rejected';
+      if (pipelineStatusFilter === 'Applied') return matchesSearch && app.status === 'Applied';
 
-    return matchesSearch && app.status === pipelineStatusFilter;
-  });
+      return matchesSearch && app.status === pipelineStatusFilter;
+    });
+  }, [applications, pipelineSearch, pipelineStatusFilter]);
 
-  const filteredInterviews = interviews.filter(int => {
-    const matchesSearch = (int.companyName || '').toLowerCase().includes(interviewSearch.toLowerCase()) ||
-                          (int.role || '').toLowerCase().includes(interviewSearch.toLowerCase()) ||
-                          (int.technicalRound?.topicsCovered || '').toLowerCase().includes(interviewSearch.toLowerCase()) ||
-                          (int.technicalRound?.questionsAsked || '').toLowerCase().includes(interviewSearch.toLowerCase());
-    
-    if (interviewStatusFilter === 'All') return matchesSearch;
-    return matchesSearch && int.overallStatus === interviewStatusFilter;
-  });
+  const filteredInterviews = useMemo(() => {
+    return interviews.filter(int => {
+      const matchesSearch = (int.companyName || '').toLowerCase().includes(interviewSearch.toLowerCase()) ||
+                            (int.role || '').toLowerCase().includes(interviewSearch.toLowerCase()) ||
+                            (int.technicalRound?.topicsCovered || '').toLowerCase().includes(interviewSearch.toLowerCase()) ||
+                            (int.technicalRound?.questionsAsked || '').toLowerCase().includes(interviewSearch.toLowerCase());
+      
+      if (interviewStatusFilter === 'All') return matchesSearch;
+      return matchesSearch && int.overallStatus === interviewStatusFilter;
+    });
+  }, [interviews, interviewSearch, interviewStatusFilter]);
 
-  const filteredTasks = taskLogs.filter(t => {
-    return (t.taskWorkProcess || '').toLowerCase().includes(taskSearch.toLowerCase()) ||
-           (t.companyApply || '').toLowerCase().includes(taskSearch.toLowerCase());
-  });
+  const filteredTasks = useMemo(() => {
+    return taskLogs.filter(t => {
+      return (t.taskWorkProcess || '').toLowerCase().includes(taskSearch.toLowerCase()) ||
+             (t.companyApply || '').toLowerCase().includes(taskSearch.toLowerCase());
+    });
+  }, [taskLogs, taskSearch]);
 
   // Helper to render status badges with Lucide icons (No emojis)
   const renderStatusBadge = (status) => {

@@ -222,7 +222,8 @@ export function AppShell({
           headers: authHeaders()
         });
         if (res.ok) {
-          const attendance = await res.json();
+          const json = await res.json();
+          const attendance = json?.attendance || null;
 
           if (!attendance) {
             // Student has not checked in today

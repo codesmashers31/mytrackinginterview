@@ -18,6 +18,25 @@ import {
   ArrowRight
 } from 'lucide-react';
 
+function LiveClock() {
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <>
+      <div className="mb-2 text-slate-500 font-medium">
+        {time.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+      </div>
+      <div className="text-5xl font-bold text-slate-800 tracking-tight mb-8">
+        {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+      </div>
+    </>
+  );
+}
+
 export default function StudentAttendance() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('checkin'); // 'checkin' or 'leaves'
@@ -25,7 +44,6 @@ export default function StudentAttendance() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [locationLoading, setLocationLoading] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
 
   // Leaves management states
   const [requests, setRequests] = useState([]);
@@ -45,8 +63,6 @@ export default function StudentAttendance() {
   useEffect(() => {
     fetchProfileAndAttendance();
     fetchRequests();
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
   }, []);
 
   const fetchProfileAndAttendance = async () => {
@@ -290,12 +306,7 @@ export default function StudentAttendance() {
           ) : (
             <SurfaceCard className="p-8 shadow-sm">
               <div className="flex flex-col items-center justify-center text-center">
-                <div className="mb-2 text-slate-500 font-medium">
-                  {currentTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </div>
-                <div className="text-5xl font-bold text-slate-800 tracking-tight mb-8">
-                  {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                </div>
+                <LiveClock />
 
                 <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-6 mb-8">
                   <div className="flex justify-around items-center">

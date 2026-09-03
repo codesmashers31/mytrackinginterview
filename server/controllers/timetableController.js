@@ -16,6 +16,13 @@ export const generateSmartSlots = ({
 }) => {
   const slots = [];
 
+  // Separate technical/custom subjects from non-technical routine categories
+  const nonTech = ['Aptitude', 'Communication', 'Rest', 'Nutrition', 'Sleep', 'Break', 'Work'];
+  const techSubjects = selectedSubjects.filter(s => !nonTech.includes(s));
+  if (techSubjects.length === 0) {
+    techSubjects.push('Technical Practice', 'Core Concepts', 'Coding');
+  }
+
   // 1. Sleep Block
   slots.push({
     id: generateSlotId(),
@@ -56,20 +63,21 @@ export const generateSmartSlots = ({
   });
 
   // 4. Morning Technical Class
+  const classSub = techSubjects[0] || 'Technical Training';
   slots.push({
     id: generateSlotId(),
-    title: 'Technical Masterclass & Core Lecture',
+    title: `${classSub} Masterclass & Core Lecture`,
     category: 'Technical Class',
-    subject: selectedSubjects[0] || 'Technical Training',
+    subject: classSub,
     startTime: '09:30',
     endTime: '11:30',
     durationMinutes: 120,
-    targetDescription: 'Attend live lecture, take notes, understand architecture & concepts',
+    targetDescription: `Attend live lecture on ${classSub}, take notes, understand architecture & concepts`,
     daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
   });
 
   // 5. Midday: Concept Review & Theory Revision
-  const theorySub = selectedSubjects[1] || selectedSubjects[0] || 'Web Technologies';
+  const theorySub = techSubjects[1] || techSubjects[0] || 'Core Concepts';
   slots.push({
     id: generateSlotId(),
     title: `${theorySub} Theory & Documentation Revision`,
@@ -96,7 +104,7 @@ export const generateSmartSlots = ({
   });
 
   // 7. Afternoon: Technical Hands-on Coding Practice
-  const codeSub = selectedSubjects[0] || 'React';
+  const codeSub = techSubjects[2] || techSubjects[0] || 'Coding Practice';
   slots.push({
     id: generateSlotId(),
     title: `${codeSub} Hands-on Coding & Project Building`,
@@ -105,7 +113,7 @@ export const generateSmartSlots = ({
     startTime: '14:30',
     endTime: '17:00',
     durationMinutes: 150,
-    targetDescription: `Build interactive components, write clean modular code, and commit to GitHub`,
+    targetDescription: `Build interactive components and projects in ${codeSub}, write clean modular code, commit to GitHub`,
     daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
   });
 
@@ -123,7 +131,7 @@ export const generateSmartSlots = ({
       daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
     });
   } else {
-    const dbSub = selectedSubjects.find(s => ['SQL', 'Java', 'Python', 'Node.js', 'DSA'].includes(s)) || 'SQL';
+    const dbSub = techSubjects[3] || techSubjects.find(s => ['SQL', 'Java', 'Python', 'Node.js', 'DSA'].includes(s)) || techSubjects[1] || 'Problem Solving';
     slots.push({
       id: generateSlotId(),
       title: `${dbSub} Problem Solving & Practice`,
@@ -132,12 +140,13 @@ export const generateSmartSlots = ({
       startTime: '17:30',
       endTime: '19:00',
       durationMinutes: 90,
-      targetDescription: `Execute queries, solve algorithm challenges, and practice interview code`,
+      targetDescription: `Solve algorithm challenges, write queries/code in ${dbSub}, and practice interview questions`,
       daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
     });
   }
 
   // 9. Night: Daily Review, Mock Assessment & Tomorrow Planning
+  const allSkillsSummary = techSubjects.slice(0, 4).join(', ');
   slots.push({
     id: generateSlotId(),
     title: 'Daily Review, Mock Challenge & Task Logging',
@@ -146,7 +155,7 @@ export const generateSmartSlots = ({
     startTime: '20:30',
     endTime: '22:00',
     durationMinutes: 90,
-    targetDescription: 'Log daily company applications, complete day activity notes, prepare for tomorrow',
+    targetDescription: `Review today's learnings (${allSkillsSummary}), log daily company applications, prepare for tomorrow`,
     daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
   });
 

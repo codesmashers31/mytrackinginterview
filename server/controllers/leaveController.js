@@ -177,9 +177,12 @@ export const reviewLeaveRequest = async (req, res) => {
       let current = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
       const finalEnd = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
 
-      // Resolve student profile in Student to fetch the correct studentId
-      const student = await Student.findOne({ email: leaveRequest.studentEmail.toLowerCase() });
-      const splStudentId = student ? student._id : leaveRequest.studentId;
+      // Resolve student profile in Student or SplRegistration to fetch the correct studentId
+      let student = await Student.findOne({ email: leaveRequest.studentEmail.toLowerCase() });
+      if (!student) {
+        student = await SplRegistration.findOne({ email: leaveRequest.studentEmail.toLowerCase() });
+      }
+      const resolvedStudentId = student ? student._id : leaveRequest.studentId;
 
       const bulkOps = [];
       while (current <= finalEnd) {
@@ -187,12 +190,12 @@ export const reviewLeaveRequest = async (req, res) => {
         bulkOps.push({
           updateOne: {
             filter: {
-              studentId: splStudentId,
+              studentId: resolvedStudentId,
               date: attendanceDate
             },
             update: {
               $set: {
-                studentId: splStudentId,
+                studentId: resolvedStudentId,
                 studentName: leaveRequest.studentName,
                 studentEmail: leaveRequest.studentEmail.toLowerCase(),
                 status: 'Leave',

@@ -100,9 +100,12 @@ export default function AttendancePage() {
   const uniqueLeaveBatches = useMemo(() => {
     const batches = students
       .map(s => String(s.batch || '').trim())
-      .filter(b => b && !/frontend/i.test(b));
+      .filter(Boolean);
+    leaveRequests.forEach(r => {
+      if (r.studentBatch) batches.push(String(r.studentBatch).trim());
+    });
     return ['All', ...new Set(batches)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-  }, [students]);
+  }, [students, leaveRequests]);
 
   const uniqueLeaveYears = useMemo(() => {
     const years = students.map(s => String(s.passedOutYear || '').trim()).filter(Boolean);

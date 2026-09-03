@@ -44,6 +44,7 @@ export default function StudentAttendance() {
 
   useEffect(() => {
     fetchProfileAndAttendance();
+    fetchRequests();
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
@@ -258,46 +259,6 @@ export default function StudentAttendance() {
     return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const isSpl = profile?.studentType === 'SPL' || 
-                (Array.isArray(profile?.enrollments) && profile?.enrollments.includes('SPL')) || 
-                profile?.isSpl === true;
-
-  if (!loading && profile && !isSpl) {
-    return (
-      <AppShell
-        title="My Attendance"
-        subtitle="Track check-ins, leaves, and permission requests."
-      >
-        <SurfaceCard className="p-8 max-w-xl mx-auto text-center border border-amber-200 bg-gradient-to-b from-amber-50/50 to-white mt-12 rounded-3xl shadow-sm">
-          <div className="h-16 w-16 bg-amber-100 text-amber-700 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-inner">
-            <Lock size={32} />
-          </div>
-          <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 bg-amber-100 text-amber-800 rounded-full">
-            SPL Class Exclusive Feature
-          </span>
-          <h3 className="text-lg font-black text-slate-900 mt-3">Attendance Check-in is for SPL Students Only</h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto mt-2 leading-relaxed">
-            Daily office attendance check-in and geolocation tracking is designated exclusively for candidates enrolled in the <strong>SPL Class</strong> track. Regular track students follow the self-directed Study Timetable & Routine tracker.
-          </p>
-          <div className="flex flex-wrap justify-center gap-3 mt-6">
-            <button
-              onClick={() => navigate('/student/timetable')}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-1.5"
-            >
-              <span>📅 Open My Study Timetable</span>
-              <ArrowRight size={14} />
-            </button>
-            <button
-              onClick={() => navigate('/student/dashboard')}
-              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
-            >
-              🏠 Go to Dashboard
-            </button>
-          </div>
-        </SurfaceCard>
-      </AppShell>
-    );
-  }
 
   return (
     <AppShell

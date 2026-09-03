@@ -295,32 +295,27 @@ export default function StudentDashboard() {
   };
 
   const renderTodayAttendanceCard = () => {
-    const isSpl = profile?.studentType === 'SPL' || 
-                  (Array.isArray(profile?.enrollments) && profile?.enrollments.includes('SPL')) || 
-                  profile?.isSpl === true;
-    if (!isSpl) return null;
-
     if (!todayAttendance) {
       return (
         <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-amber-500/10 via-amber-600/5 to-white border border-amber-500/25 p-5 mb-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="absolute -right-10 -bottom-10 h-32 w-32 bg-amber-500/5 rounded-full blur-2xl" />
           <div className="flex items-start gap-3.5">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
-              <AlertCircle className="animate-bounce" size={22} />
+              <Calendar className="animate-pulse" size={22} />
             </div>
             <div>
               <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-2.5 py-0.5 rounded uppercase tracking-wider">
-                Attendance Pending
+                Attendance & Leaves
               </span>
-              <h4 className="text-sm font-bold text-slate-800 mt-1">Check-In Required Today</h4>
-              <p className="text-xs text-slate-500 mt-0.5">Please check in from the attendance portal to mark your presence.</p>
+              <h4 className="text-sm font-bold text-slate-800 mt-1">Attendance & Leave Management</h4>
+              <p className="text-xs text-slate-500 mt-0.5">Check in daily or apply for planned leaves and permissions.</p>
             </div>
           </div>
           <button
             onClick={() => navigate('/student/attendance')}
             className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-md transition shrink-0"
           >
-            Go to Check In <ArrowRight size={14} />
+            Attendance & Leaves <ArrowRight size={14} />
           </button>
         </div>
       );

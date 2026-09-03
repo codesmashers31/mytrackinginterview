@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard, MetricCard } from '../components/AppShell';
 import { authHeaders, logout, getUserId } from '../utils/auth';
@@ -79,6 +79,8 @@ export default function StudentTimetable() {
 
   const [savingTimetable, setSavingTimetable] = useState(false);
   const [generatingPreview, setGeneratingPreview] = useState(false);
+  const [showCustomSkillInput, setShowCustomSkillInput] = useState(false);
+  const customSkillInputRef = useRef(null);
 
   // Edit / Add Custom Slot Modal
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
@@ -286,6 +288,13 @@ export default function StudentTimetable() {
   }) => {
     const slots = [];
 
+    // Separate technical/custom subjects from non-technical routine categories
+    const nonTech = ['Aptitude', 'Communication', 'Rest', 'Nutrition', 'Sleep', 'Break', 'Work'];
+    const techSubjects = selectedSubjects.filter(s => !nonTech.includes(s));
+    if (techSubjects.length === 0) {
+      techSubjects.push('Technical Practice', 'Core Concepts', 'Coding');
+    }
+
     // 1. Sleep Block
     slots.push({
       id: generateSlotId(),
@@ -326,20 +335,21 @@ export default function StudentTimetable() {
     });
 
     // 4. Morning Technical Class
+    const classSub = techSubjects[0] || 'Technical Training';
     slots.push({
       id: generateSlotId(),
-      title: 'Technical Masterclass & Core Lecture',
+      title: `${classSub} Masterclass & Core Lecture`,
       category: 'Technical Class',
-      subject: selectedSubjects[0] || 'Technical Training',
+      subject: classSub,
       startTime: '09:30',
       endTime: '11:30',
       durationMinutes: 120,
-      targetDescription: 'Attend live lecture, take notes, understand architecture & concepts',
+      targetDescription: `Attend live lecture on ${classSub}, take notes, understand architecture & concepts`,
       daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
     });
 
     // 5. Midday: Concept Review & Theory Revision
-    const theorySub = selectedSubjects[1] || selectedSubjects[0] || 'Web Technologies';
+    const theorySub = techSubjects[1] || techSubjects[0] || 'Core Concepts';
     slots.push({
       id: generateSlotId(),
       title: `${theorySub} Theory & Documentation Revision`,
@@ -366,7 +376,7 @@ export default function StudentTimetable() {
     });
 
     // 7. Afternoon: Technical Hands-on Coding Practice
-    const codeSub = selectedSubjects[0] || 'React';
+    const codeSub = techSubjects[2] || techSubjects[0] || 'Coding Practice';
     slots.push({
       id: generateSlotId(),
       title: `${codeSub} Hands-on Coding & Project Building`,
@@ -375,7 +385,7 @@ export default function StudentTimetable() {
       startTime: '14:30',
       endTime: '17:00',
       durationMinutes: 150,
-      targetDescription: `Build interactive components, write clean modular code, and commit to GitHub`,
+      targetDescription: `Build interactive components and projects in ${codeSub}, write clean modular code, commit to GitHub`,
       daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
     });
 
@@ -393,7 +403,7 @@ export default function StudentTimetable() {
         daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
       });
     } else {
-      const dbSub = selectedSubjects.find(s => ['SQL', 'Java', 'Python', 'Node.js', 'DSA'].includes(s)) || 'SQL';
+      const dbSub = techSubjects[3] || techSubjects.find(s => ['SQL', 'Java', 'Python', 'Node.js', 'DSA'].includes(s)) || techSubjects[1] || 'Problem Solving';
       slots.push({
         id: generateSlotId(),
         title: `${dbSub} Problem Solving & Practice`,
@@ -402,12 +412,13 @@ export default function StudentTimetable() {
         startTime: '17:30',
         endTime: '19:00',
         durationMinutes: 90,
-        targetDescription: `Execute queries, solve algorithm challenges, and practice interview code`,
+        targetDescription: `Solve algorithm challenges, write queries/code in ${dbSub}, and practice interview questions`,
         daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
       });
     }
 
     // 9. Night: Daily Review, Mock Assessment & Tomorrow Planning
+    const allSkillsSummary = techSubjects.slice(0, 4).join(', ');
     slots.push({
       id: generateSlotId(),
       title: 'Daily Review, Mock Challenge & Task Logging',
@@ -416,7 +427,7 @@ export default function StudentTimetable() {
       startTime: '20:30',
       endTime: '22:00',
       durationMinutes: 90,
-      targetDescription: 'Log daily company applications, complete day activity notes, prepare for tomorrow',
+      targetDescription: `Review today's learnings (${allSkillsSummary}), log daily company applications, prepare for tomorrow`,
       daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     });
 
@@ -508,17 +519,34 @@ export default function StudentTimetable() {
     });
   };
 
+  const handleRemoveSkill = (skill) => {
+    setCommitments(prev => ({
+      ...prev,
+      selectedSubjects: prev.selectedSubjects.filter(s => s !== skill)
+    }));
+    toast(`Removed "${skill}"`, { icon: '🗑️' });
+  };
+
   const handleAddCustomSkill = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const skill = commitments.customSkillInput.trim();
-    if (!skill) return;
-    if (!commitments.selectedSubjects.includes(skill)) {
-      setCommitments(prev => ({
-        ...prev,
-        selectedSubjects: [...prev.selectedSubjects, skill],
-        customSkillInput: ''
-      }));
+    if (!skill) {
+      toast.error('Please enter a skill or subject name');
+      return;
     }
+    const alreadyExists = commitments.selectedSubjects.some(
+      s => s.toLowerCase().trim() === skill.toLowerCase().trim()
+    );
+    if (alreadyExists) {
+      toast(`"${skill}" is already added in your skills`, { icon: 'ℹ️' });
+      return;
+    }
+    setCommitments(prev => ({
+      ...prev,
+      selectedSubjects: [...prev.selectedSubjects, skill],
+      customSkillInput: ''
+    }));
+    toast.success(`Added "${skill}" to your target skills! 🎯`);
   };
 
   // Slot Management Modal Handlers
@@ -1126,50 +1154,113 @@ export default function StudentTimetable() {
 
           {/* Section 2: Target Skills & Subjects */}
           <SurfaceCard className="p-6">
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
-              <Code2 size={18} className="text-blue-600" />
-              <div>
-                <h3 className="text-sm font-black text-slate-900">Step 2: Choose Target Skills & Subjects</h3>
-                <p className="text-xs text-slate-400">Select the topics to include in your daily study slots</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Code2 size={18} className="text-blue-600" />
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">Step 2: Choose Target Skills & Subjects</h3>
+                  <p className="text-xs text-slate-400">Select standard topics or add custom extra skills to include in your daily study slots</p>
+                </div>
+              </div>
+              <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 self-start sm:self-auto">
+                {commitments.selectedSubjects.length} Target Skills Active
+              </span>
+            </div>
+
+            {/* Standard Skills & Other Button */}
+            <div className="space-y-3 mb-5">
+              <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Standard Skills (Click to Toggle)</div>
+              <div className="flex flex-wrap gap-2">
+                {STANDARD_SKILLS.map(skill => {
+                  const isSelected = commitments.selectedSubjects.includes(skill);
+                  return (
+                    <button
+                      key={skill}
+                      type="button"
+                      onClick={() => handleToggleSkill(skill)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        isSelected
+                          ? 'bg-blue-600 text-white shadow-sm shadow-blue-200 ring-2 ring-blue-500/20'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80'
+                      }`}
+                    >
+                      {isSelected ? <Check size={13} strokeWidth={3} /> : <Plus size={13} />}
+                      <span>{skill}</span>
+                    </button>
+                  );
+                })}
+
+                {/* Other / Extra Skill Trigger */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCustomSkillInput(true);
+                    setTimeout(() => customSkillInputRef.current?.focus(), 50);
+                  }}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border border-dashed ${
+                    showCustomSkillInput
+                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                      : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <Plus size={13} />
+                  <span>+ Other / Extra Skill</span>
+                </button>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-4">
-              {STANDARD_SKILLS.map(skill => {
-                const isSelected = commitments.selectedSubjects.includes(skill);
-                return (
-                  <button
-                    key={skill}
-                    type="button"
-                    onClick={() => handleToggleSkill(skill)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                      isSelected
-                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-200'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    {isSelected ? `✓ ${skill}` : `+ ${skill}`}
-                  </button>
-                );
-              })}
-            </div>
+            {/* Custom / Extra Skills Added */}
+            {commitments.selectedSubjects.filter(s => !STANDARD_SKILLS.includes(s)).length > 0 && (
+              <div className="space-y-2 mb-5 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/80">
+                <div className="text-[10px] font-black uppercase tracking-wider text-indigo-700 flex items-center gap-1.5">
+                  <Sparkles size={13} />
+                  <span>Custom / Extra Skills Added ({commitments.selectedSubjects.filter(s => !STANDARD_SKILLS.includes(s)).length})</span>
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {commitments.selectedSubjects
+                    .filter(s => !STANDARD_SKILLS.includes(s))
+                    .map(skill => (
+                      <div
+                        key={skill}
+                        className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-xl shadow-sm shadow-indigo-200 animate-in fade-in"
+                      >
+                        <Check size={12} strokeWidth={3} />
+                        <span>{skill}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSkill(skill)}
+                          className="ml-1 h-4 w-4 rounded-full bg-white/20 hover:bg-white/40 text-white flex items-center justify-center text-[10px] font-black transition"
+                          title={`Remove ${skill}`}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
 
-            {/* Custom Skill Input */}
-            <form onSubmit={handleAddCustomSkill} className="flex gap-2 max-w-md">
-              <input
-                type="text"
-                placeholder="Add custom skill (e.g. Node.js, Next.js, Redux)..."
-                value={commitments.customSkillInput}
-                onChange={e => setCommitments({...commitments, customSkillInput: e.target.value})}
-                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition"
-              >
-                Add Skill
-              </button>
-            </form>
+            {/* Custom Skill Input Form */}
+            <div className="pt-2">
+              <label className="block text-[11px] font-bold text-slate-600 mb-1.5">Add Custom Skill / Other Subject:</label>
+              <form onSubmit={handleAddCustomSkill} className="flex gap-2 max-w-lg">
+                <input
+                  ref={customSkillInputRef}
+                  type="text"
+                  placeholder="e.g. Next.js, TypeScript, Docker, Django, DSA, Kotlin, Spring Boot..."
+                  value={commitments.customSkillInput}
+                  onChange={e => setCommitments({...commitments, customSkillInput: e.target.value})}
+                  className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5 shrink-0"
+                >
+                  <Plus size={14} />
+                  <span>Add Skill</span>
+                </button>
+              </form>
+            </div>
           </SurfaceCard>
 
           {/* Section 3: Smart Timetable Generator & Slot List */}
@@ -1344,6 +1435,24 @@ export default function StudentTimetable() {
                     onChange={e => setSlotForm({...slotForm, subject: e.target.value})}
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-blue-500"
                   />
+                  {commitments.selectedSubjects.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {commitments.selectedSubjects.slice(0, 6).map(sub => (
+                        <button
+                          key={sub}
+                          type="button"
+                          onClick={() => setSlotForm(prev => ({ ...prev, subject: sub }))}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
+                            slotForm.subject === sub
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'
+                          }`}
+                        >
+                          {sub}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { AppShell, SurfaceCard, MetricCard } from '../components/AppShell';
 import { authHeaders, logout, getUserId } from '../utils/auth';
@@ -352,7 +352,7 @@ export default function StudentTimetable() {
       subject: 'Rest',
       startTime: sleepStartTime,
       endTime: sleepEndTime,
-      durationMinutes: 420,
+      durationMinutes: calcDurationMinutes(sleepStartTime, sleepEndTime),
       targetDescription: 'Recharge body and mind for high-focus learning',
       daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     });
@@ -765,7 +765,7 @@ export default function StudentTimetable() {
       case 'Work / College':
         return 'bg-slate-100 text-slate-700 border-slate-200';
       case 'Sleep':
-        return 'bg-slate-800 text-slate-200 border-slate-700';
+        return 'bg-indigo-950 text-indigo-200 border-indigo-800';
       case 'Break / Meals':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       default:
@@ -773,10 +773,34 @@ export default function StudentTimetable() {
     }
   };
 
-  const dateSlots = (timetable?.dateSlots && timetable.dateSlots.length > 0)
-    ? timetable.dateSlots
-    : (timetable?.slots || []);
-  const activeSlots = dateSlots.filter(s => s.category !== 'Sleep');
+  const dateSlots = useMemo(() => {
+    let slots = (timetable?.dateSlots && timetable.dateSlots.length > 0)
+      ? [...timetable.dateSlots]
+      : (timetable?.slots && timetable.slots.length > 0 ? [...timetable.slots] : []);
+
+    // If slots exist but don't have a Sleep block, dynamically inject one from sleepStartTime / sleepEndTime
+    const hasSleep = slots.some(s => s.category === 'Sleep' || s.title?.toLowerCase().includes('sleep'));
+    if (!hasSleep && timetable) {
+      const sStart = timetable.sleepStartTime || commitments?.sleepStartTime || '23:00';
+      const sEnd = timetable.sleepEndTime || commitments?.sleepEndTime || '06:00';
+      const dur = calcDurationMinutes(sStart, sEnd);
+
+      slots.push({
+        id: 'slot_sleep_routine',
+        title: 'Rest & Deep Sleep',
+        category: 'Sleep',
+        subject: 'Rest & Recovery',
+        startTime: sStart,
+        endTime: sEnd,
+        durationMinutes: dur,
+        targetDescription: `7h deep sleep routine (${sStart} – ${sEnd}) for cognitive focus & energy`,
+        daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      });
+    }
+    return slots;
+  }, [timetable, commitments]);
+
+  const activeSlots = dateSlots;
   const filteredChecklistSlots = activeSlots.filter(s => {
     const isCompleted = todayChecklist.completedSlotIds?.includes(s.id);
     if (slotFilter === 'Pending') return !isCompleted;

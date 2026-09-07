@@ -4,6 +4,19 @@ import Student from '../models/Student.js';
 // Helper to generate unique slot IDs
 const generateSlotId = () => 'slot_' + Math.random().toString(36).substr(2, 9);
 
+// Helper to calculate duration in minutes between 24h start and end times
+export const calcDurationMinutes = (startTime, endTime) => {
+  if (!startTime || !endTime) return 60;
+  const [sh, sm] = (startTime || '00:00').split(':').map(Number);
+  const [eh, em] = (endTime || '00:00').split(':').map(Number);
+  let startMins = (isNaN(sh) ? 0 : sh) * 60 + (isNaN(sm) ? 0 : sm);
+  let endMins = (isNaN(eh) ? 0 : eh) * 60 + (isNaN(em) ? 0 : em);
+  if (endMins <= startMins) {
+    endMins += 24 * 60; // overnight wrap-around (e.g. 23:00 to 06:00)
+  }
+  return Math.max(15, endMins - startMins);
+};
+
 // Helper function to build smart schedule slots
 export const generateSmartSlots = ({
   sleepStartTime = '23:00',
@@ -31,7 +44,7 @@ export const generateSmartSlots = ({
     subject: 'Rest',
     startTime: sleepStartTime,
     endTime: sleepEndTime,
-    durationMinutes: 420,
+    durationMinutes: calcDurationMinutes(sleepStartTime, sleepEndTime),
     targetDescription: 'Recharge body and mind for high-focus learning',
     daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
   });
@@ -280,18 +293,6 @@ export const calculateTimetableRewards = (timetable) => {
   return { streak, totalXp, badges };
 };
 
-// Helper to calculate duration in minutes between 24h start and end times
-export const calcDurationMinutes = (startTime, endTime) => {
-  if (!startTime || !endTime) return 60;
-  const [sh, sm] = (startTime || '00:00').split(':').map(Number);
-  const [eh, em] = (endTime || '00:00').split(':').map(Number);
-  let startMins = (isNaN(sh) ? 0 : sh) * 60 + (isNaN(sm) ? 0 : sm);
-  let endMins = (isNaN(eh) ? 0 : eh) * 60 + (isNaN(em) ? 0 : em);
-  if (endMins <= startMins) {
-    endMins += 24 * 60; // overnight wrap-around (e.g. 23:00 to 06:00)
-  }
-  return Math.max(15, endMins - startMins);
-};
 
 // Get current student's timetable + date-specific checklist
 export const getMyTimetable = async (req, res) => {
@@ -309,6 +310,25 @@ export const getMyTimetable = async (req, res) => {
     calculateTimetableRewards(timetable);
     await timetable.save();
 
+    // Ensure timetable.slots has a Sleep block
+    const hasSleepSlot = timetable.slots.some(s => s.category === 'Sleep' || s.title?.toLowerCase().includes('sleep') || s.title?.toLowerCase().includes('rest'));
+    if (!hasSleepSlot) {
+      const sStart = timetable.sleepStartTime || '23:00';
+      const sEnd = timetable.sleepEndTime || '06:00';
+      timetable.slots.unshift({
+        id: generateSlotId(),
+        title: 'Rest & Deep Sleep',
+        category: 'Sleep',
+        subject: 'Rest',
+        startTime: sStart,
+        endTime: sEnd,
+        durationMinutes: calcDurationMinutes(sStart, sEnd),
+        targetDescription: 'Recharge body and mind for high-focus learning',
+        daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      });
+      await timetable.save();
+    }
+
     let dateChecklist = timetable.dailyChecklists.find(c => c.date === targetDate);
 
     // Determine slots for this date:
@@ -322,11 +342,11 @@ export const getMyTimetable = async (req, res) => {
       // Also update dateChecklist snapshot for today/future so it stays in sync
       if (dateChecklist) {
         dateChecklist.slotsSnapshot = timetable.slots;
-        dateChecklist.totalCount = timetable.slots.filter(s => s.category !== 'Sleep').length;
+        dateChecklist.totalCount = timetable.slots.length;
       }
     }
 
-    const activeSlotsCount = dateSlots.filter(s => s.category !== 'Sleep').length;
+    const activeSlotsCount = dateSlots.length;
 
     if (!dateChecklist) {
       dateChecklist = {
@@ -396,6 +416,22 @@ export const saveMyTimetable = async (req, res) => {
       selectedSubjects
     });
 
+    // Ensure rawSlots has a Sleep block
+    const hasSleepInRaw = rawSlots.some(s => s.category === 'Sleep' || s.title?.toLowerCase().includes('sleep') || s.title?.toLowerCase().includes('rest'));
+    if (!hasSleepInRaw) {
+      rawSlots.unshift({
+        id: generateSlotId(),
+        title: 'Rest & Deep Sleep',
+        category: 'Sleep',
+        subject: 'Rest',
+        startTime: sleepStartTime,
+        endTime: sleepEndTime,
+        durationMinutes: calcDurationMinutes(sleepStartTime, sleepEndTime),
+        targetDescription: 'Recharge body and mind for high-focus learning',
+        daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      });
+    }
+
     const preparedSlots = rawSlots.map(s => ({
       ...s,
       id: s.id || generateSlotId(),
@@ -431,7 +467,7 @@ export const saveMyTimetable = async (req, res) => {
           date: todayStr,
           completedSlotIds: [],
           slotsSnapshot: preparedSlots,
-          totalCount: preparedSlots.filter(s => s.category !== 'Sleep').length,
+          totalCount: preparedSlots.length,
           completedCount: 0,
           completionRate: 0,
           notes: ''
@@ -458,17 +494,17 @@ export const saveMyTimetable = async (req, res) => {
       // Synchronize today and all future checklists to use the updated active slots
       let todayFound = false;
       const validSlotIds = new Set(preparedSlots.map(s => s.id));
-      const nonSleepCount = preparedSlots.filter(s => s.category !== 'Sleep').length;
+      const totalSlotCount = preparedSlots.length;
 
       timetable.dailyChecklists.forEach(c => {
         if (c.date >= todayStr) {
           c.slotsSnapshot = preparedSlots;
-          c.totalCount = nonSleepCount;
+          c.totalCount = totalSlotCount;
           if (c.date === todayStr) todayFound = true;
           // Keep only valid completed IDs that still exist in the updated schedule
           c.completedSlotIds = (c.completedSlotIds || []).filter(id => validSlotIds.has(id));
           c.completedCount = c.completedSlotIds.length;
-          c.completionRate = Math.round((c.completedCount / Math.max(1, nonSleepCount)) * 100);
+          c.completionRate = Math.round((c.completedCount / Math.max(1, totalSlotCount)) * 100);
         }
       });
 
@@ -477,7 +513,7 @@ export const saveMyTimetable = async (req, res) => {
           date: todayStr,
           completedSlotIds: [],
           slotsSnapshot: preparedSlots,
-          totalCount: nonSleepCount,
+          totalCount: totalSlotCount,
           completedCount: 0,
           completionRate: 0,
           notes: ''
@@ -535,8 +571,7 @@ export const toggleSlotCheck = async (req, res) => {
       ? checklist.slotsSnapshot
       : timetable.slots;
 
-    const nonSleepSlots = activeSlots.filter(s => s.category !== 'Sleep');
-    const totalCount = Math.max(1, nonSleepSlots.length);
+    const totalCount = Math.max(1, activeSlots.length);
 
     if (!checklist) {
       checklist = {
@@ -618,9 +653,8 @@ export const markAllSlots = async (req, res) => {
       ? checklist.slotsSnapshot
       : timetable.slots;
 
-    const nonSleepSlots = activeSlots.filter(s => s.category !== 'Sleep');
-    const allSlotIds = nonSleepSlots.map(s => s.id);
-    const totalCount = Math.max(1, nonSleepSlots.length);
+    const allSlotIds = activeSlots.map(s => s.id);
+    const totalCount = Math.max(1, activeSlots.length);
 
     if (!checklist) {
       checklist = {

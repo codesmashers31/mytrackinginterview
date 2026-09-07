@@ -273,8 +273,57 @@ export default function StudentTimetable() {
     }
   };
 
+  // Helper to calculate duration in minutes between 24h start and end times
+  const calcDurationMinutes = (startTime, endTime) => {
+    if (!startTime || !endTime) return 60;
+    const [sh, sm] = (startTime || '00:00').split(':').map(Number);
+    const [eh, em] = (endTime || '00:00').split(':').map(Number);
+    let startMins = (isNaN(sh) ? 0 : sh) * 60 + (isNaN(sm) ? 0 : sm);
+    let endMins = (isNaN(eh) ? 0 : eh) * 60 + (isNaN(em) ? 0 : em);
+    if (endMins <= startMins) {
+      endMins += 24 * 60; // overnight wrap-around (e.g. 23:00 to 06:00)
+    }
+    return Math.max(15, endMins - startMins);
+  };
+
+  const formatDurationText = (minutes) => {
+    if (!minutes || minutes <= 0) return '0 min';
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hrs > 0 && mins > 0) return `${hrs} hr ${mins} mins`;
+    if (hrs > 0) return `${hrs} hr${hrs > 1 ? 's' : ''}`;
+    return `${mins} mins`;
+  };
+
   // Helper to generate unique slot IDs
   const generateSlotId = () => 'slot_' + Math.random().toString(36).substr(2, 9);
+
+  // Sleep time sync handlers
+  const handleSleepTimeChange = (field, value) => {
+    const newStartTime = field === 'sleepStartTime' ? value : (commitments.sleepStartTime || '23:00');
+    const newEndTime = field === 'sleepEndTime' ? value : (commitments.sleepEndTime || '06:00');
+    const mins = calcDurationMinutes(newStartTime, newEndTime);
+    const hours = parseFloat((mins / 60).toFixed(1));
+    setCommitments(prev => ({
+      ...prev,
+      [field]: value,
+      sleepHours: hours
+    }));
+  };
+
+  const handleSleepHoursChange = (hours) => {
+    const h = Number(hours) || 0;
+    const [sh, sm] = (commitments.sleepStartTime || '23:00').split(':').map(Number);
+    let endMins = Math.round((sh * 60 + sm + h * 60)) % (24 * 60);
+    if (endMins < 0) endMins += 24 * 60;
+    const eh = String(Math.floor(endMins / 60)).padStart(2, '0');
+    const em = String(endMins % 60).padStart(2, '0');
+    setCommitments(prev => ({
+      ...prev,
+      sleepHours: hours,
+      sleepEndTime: `${eh}:${em}`
+    }));
+  };
 
   // Instant Client-Side Smart Schedule Builder
   const generateSmartSlots = ({
@@ -550,65 +599,153 @@ export default function StudentTimetable() {
   };
 
   // Slot Management Modal Handlers
-  const handleOpenSlotModal = (index = -1) => {
+  const handleOpenSlotModal = (indexOrSlot = -1) => {
+    let index = -1;
+    let s = null;
+
+    if (typeof indexOrSlot === 'number') {
+      index = indexOrSlot;
+      if (index >= 0) s = commitments.slots[index];
+    } else if (indexOrSlot && typeof indexOrSlot === 'object') {
+      index = commitments.slots.findIndex(item => item.id === indexOrSlot.id);
+      s = indexOrSlot;
+    }
+
     setEditingSlotIndex(index);
-    if (index >= 0) {
-      const s = commitments.slots[index];
+    if (s) {
       setSlotForm({
+        id: s.id || generateSlotId(),
         title: s.title || '',
         category: s.category || 'Technical Practice',
         subject: s.subject || '',
         startTime: s.startTime || '14:00',
         endTime: s.endTime || '16:00',
+        durationMinutes: s.durationMinutes || calcDurationMinutes(s.startTime || '14:00', s.endTime || '16:00'),
         targetDescription: s.targetDescription || ''
       });
     } else {
       setSlotForm({
+        id: generateSlotId(),
         title: '',
         category: 'Technical Practice',
         subject: commitments.selectedSubjects[0] || 'React',
         startTime: '14:00',
         endTime: '16:00',
+        durationMinutes: 120,
         targetDescription: ''
       });
     }
     setIsSlotModalOpen(true);
   };
 
-  const handleSaveSlotModal = (e) => {
+  const handleSaveSlotModal = async (e) => {
     e.preventDefault();
     if (!slotForm.title.trim()) {
       toast.error('Slot title is required');
       return;
     }
 
-    const updatedSlots = [...commitments.slots];
+    const duration = calcDurationMinutes(slotForm.startTime, slotForm.endTime);
+    const updatedSlotData = {
+      ...slotForm,
+      durationMinutes: duration
+    };
+
+    let updatedSlots = [...commitments.slots];
     if (editingSlotIndex >= 0) {
       updatedSlots[editingSlotIndex] = {
         ...updatedSlots[editingSlotIndex],
-        ...slotForm
+        ...updatedSlotData
       };
     } else {
       updatedSlots.push({
-        id: 'slot_' + Math.random().toString(36).substr(2, 9),
-        ...slotForm,
+        id: updatedSlotData.id || generateSlotId(),
+        ...updatedSlotData,
         daysActive: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
       });
     }
 
     // Sort slots chronologically by startTime
-    updatedSlots.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    updatedSlots.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
 
-    setCommitments(prev => ({ ...prev, slots: updatedSlots }));
+    const updatedCommitments = { ...commitments, slots: updatedSlots };
+    setCommitments(updatedCommitments);
     setIsSlotModalOpen(false);
+
+    // If timetable exists, persist changes directly to backend
+    if (timetable?._id) {
+      try {
+        const res = await fetch(buildApiUrl('/timetables/my'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({
+            sleepHours: Number(updatedCommitments.sleepHours),
+            sleepStartTime: updatedCommitments.sleepStartTime,
+            sleepEndTime: updatedCommitments.sleepEndTime,
+            workOrJobHours: Number(updatedCommitments.workOrJobHours),
+            workDetails: (updatedCommitments.workDetails || '').trim(),
+            personalRoutineHours: Number(updatedCommitments.personalRoutineHours),
+            technicalClassHours: Number(updatedCommitments.technicalClassHours),
+            communicationClassHours: Number(updatedCommitments.communicationClassHours),
+            aptitudeClassHours: Number(updatedCommitments.aptitudeClassHours),
+            selectedSubjects: updatedCommitments.selectedSubjects,
+            slots: updatedSlots
+          })
+        });
+
+        if (res.ok) {
+          const savedData = await res.json();
+          setTimetable(savedData);
+          if (savedData.todayChecklist) {
+            setTodayChecklist(savedData.todayChecklist);
+          }
+          fetchTimetable();
+          toast.success(editingSlotIndex >= 0 ? 'Slot time & schedule updated!' : 'New slot added & routine updated!');
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to auto-save updated slot:', err);
+      }
+    }
+
     toast.success(editingSlotIndex >= 0 ? 'Slot updated' : 'New slot added');
   };
 
-  const handleDeleteSlot = (index) => {
-    setCommitments(prev => ({
-      ...prev,
-      slots: prev.slots.filter((_, i) => i !== index)
-    }));
+  const handleDeleteSlot = async (index) => {
+    const updatedSlots = commitments.slots.filter((_, i) => i !== index);
+    const updatedCommitments = { ...commitments, slots: updatedSlots };
+    setCommitments(updatedCommitments);
+
+    if (timetable?._id) {
+      try {
+        const res = await fetch(buildApiUrl('/timetables/my'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({
+            sleepHours: Number(updatedCommitments.sleepHours),
+            sleepStartTime: updatedCommitments.sleepStartTime,
+            sleepEndTime: updatedCommitments.sleepEndTime,
+            workOrJobHours: Number(updatedCommitments.workOrJobHours),
+            workDetails: (updatedCommitments.workDetails || '').trim(),
+            personalRoutineHours: Number(updatedCommitments.personalRoutineHours),
+            technicalClassHours: Number(updatedCommitments.technicalClassHours),
+            communicationClassHours: Number(updatedCommitments.communicationClassHours),
+            aptitudeClassHours: Number(updatedCommitments.aptitudeClassHours),
+            selectedSubjects: updatedCommitments.selectedSubjects,
+            slots: updatedSlots
+          })
+        });
+
+        if (res.ok) {
+          const savedData = await res.json();
+          setTimetable(savedData);
+          fetchTimetable();
+        }
+      } catch (err) {
+        console.error('Failed to save slot removal:', err);
+      }
+    }
+
     toast('Slot removed', { icon: '🗑️' });
   };
 
@@ -1004,7 +1141,17 @@ export default function StudentTimetable() {
                       </div>
                     </div>
 
-                    <div className="sm:text-right shrink-0">
+                    <div className="flex items-center gap-2 sm:self-center shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenSlotModal(slot)}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition border border-transparent hover:border-blue-100 flex items-center gap-1 text-[11px] font-bold"
+                        title="Edit slot time & goals"
+                      >
+                        <Edit3 size={13} />
+                        <span className="hidden sm:inline">Edit Time</span>
+                      </button>
+
                       {isCompleted ? (
                         <span className="inline-flex items-center gap-1 text-xs font-extrabold text-emerald-700 bg-emerald-100/80 px-3 py-1 rounded-xl">
                           <CheckCircle2 size={14} />
@@ -1040,37 +1187,69 @@ export default function StudentTimetable() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Sleep Duration */}
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
-                <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <Moon size={14} className="text-indigo-600" />
-                  <span>Sleep & Rest (Hours)</span>
-                </label>
-                <input
-                  type="number"
-                  min="4"
-                  max="12"
-                  value={commitments.sleepHours}
-                  onChange={e => setCommitments({...commitments, sleepHours: e.target.value})}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:border-blue-500"
-                />
-                <div className="flex gap-2 text-[10px] text-slate-500">
-                  <span>Bedtime: <strong>{commitments.sleepStartTime}</strong></span>
-                  <span>•</span>
-                  <span>Wake: <strong>{commitments.sleepEndTime}</strong></span>
+              {/* Sleep & Rest Duration with Bedtime and Wake Time */}
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Moon size={14} className="text-indigo-600" />
+                    <span>Sleep & Rest</span>
+                  </label>
+                  <span className="text-xs font-extrabold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
+                    {commitments.sleepHours} hrs
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-500 block mb-0.5">Bedtime</span>
+                    <input
+                      type="time"
+                      value={commitments.sleepStartTime}
+                      onChange={e => handleSleepTimeChange('sleepStartTime', e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-500 block mb-0.5">Wake Time</span>
+                    <input
+                      type="time"
+                      value={commitments.sleepEndTime}
+                      onChange={e => handleSleepTimeChange('sleepEndTime', e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 pt-1 border-t border-slate-200/60">
+                  <span>Sleep Hours:</span>
+                  <input
+                    type="number"
+                    min="4"
+                    max="12"
+                    step="0.5"
+                    value={commitments.sleepHours}
+                    onChange={e => handleSleepHoursChange(e.target.value)}
+                    className="w-16 px-2 py-0.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-right outline-none focus:border-indigo-500"
+                  />
                 </div>
               </div>
 
               {/* Work / Part-time Job */}
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
-                <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <Briefcase size={14} className="text-amber-600" />
-                  <span>Job / College Hours</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Briefcase size={14} className="text-amber-600" />
+                    <span>Job / College</span>
+                  </label>
+                  <span className="text-xs font-extrabold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-100">
+                    {commitments.workOrJobHours} hrs
+                  </span>
+                </div>
                 <input
                   type="number"
                   min="0"
                   max="14"
+                  step="0.5"
                   value={commitments.workOrJobHours}
                   onChange={e => setCommitments({...commitments, workOrJobHours: e.target.value})}
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:border-blue-500"
@@ -1086,17 +1265,23 @@ export default function StudentTimetable() {
 
               {/* Class Hours */}
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
-                <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <BookOpen size={14} className="text-blue-600" />
-                  <span>Mandatory Classes (Hours)</span>
-                </label>
-                <div className="space-y-1 text-xs">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <BookOpen size={14} className="text-blue-600" />
+                    <span>Live Classes</span>
+                  </label>
+                  <span className="text-xs font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+                    {(Number(commitments.technicalClassHours || 0) + Number(commitments.aptitudeClassHours || 0) + Number(commitments.communicationClassHours || 0))} hrs
+                  </span>
+                </div>
+                <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between items-center">
                     <span className="text-[11px] text-slate-600">Technical Class:</span>
                     <input
                       type="number"
                       min="0"
                       max="6"
+                      step="0.5"
                       value={commitments.technicalClassHours}
                       onChange={e => setCommitments({...commitments, technicalClassHours: e.target.value})}
                       className="w-14 px-2 py-0.5 bg-white border border-slate-200 rounded text-xs font-bold text-right"
@@ -1108,6 +1293,7 @@ export default function StudentTimetable() {
                       type="number"
                       min="0"
                       max="4"
+                      step="0.5"
                       value={commitments.aptitudeClassHours}
                       onChange={e => setCommitments({...commitments, aptitudeClassHours: e.target.value})}
                       className="w-14 px-2 py-0.5 bg-white border border-slate-200 rounded text-xs font-bold text-right"
@@ -1119,6 +1305,7 @@ export default function StudentTimetable() {
                       type="number"
                       min="0"
                       max="4"
+                      step="0.5"
                       value={commitments.communicationClassHours}
                       onChange={e => setCommitments({...commitments, communicationClassHours: e.target.value})}
                       className="w-14 px-2 py-0.5 bg-white border border-slate-200 rounded text-xs font-bold text-right"
@@ -1128,16 +1315,22 @@ export default function StudentTimetable() {
               </div>
 
               {/* Routine & Calculation Gauge */}
-              <div className="p-4 bg-blue-50/60 rounded-2xl border border-blue-100 flex flex-col justify-between">
+              <div className="p-4 bg-blue-50/60 rounded-2xl border border-blue-100 flex flex-col justify-between space-y-2">
                 <div>
-                  <label className="block text-xs font-bold text-blue-900 flex items-center gap-1.5 mb-1">
-                    <Coffee size={14} className="text-emerald-600" />
-                    <span>Personal Routine / Meals</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                      <Coffee size={14} className="text-emerald-600" />
+                      <span>Routine & Meals</span>
+                    </label>
+                    <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">
+                      {commitments.personalRoutineHours} hrs
+                    </span>
+                  </div>
                   <input
                     type="number"
                     min="1"
                     max="6"
+                    step="0.5"
                     value={commitments.personalRoutineHours}
                     onChange={e => setCommitments({...commitments, personalRoutineHours: e.target.value})}
                     className="w-full px-3 py-1.5 bg-white border border-blue-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
@@ -1148,6 +1341,61 @@ export default function StudentTimetable() {
                   <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 block">Available Study Time</span>
                   <span className="text-2xl font-black text-blue-900">{calculatedStudyHours} Hours</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Visual 24-Hour Day Allocation Breakdown Bar */}
+            <div className="mt-5 pt-4 border-t border-slate-100">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">24-Hour Daily Allocation Gauge</span>
+                <span className="text-xs font-bold text-slate-700">
+                  {Math.min(24, Number(commitments.sleepHours || 0) + Number(commitments.workOrJobHours || 0) + Number(commitments.technicalClassHours || 0) + Number(commitments.aptitudeClassHours || 0) + Number(commitments.communicationClassHours || 0) + Number(commitments.personalRoutineHours || 0) + calculatedStudyHours)} / 24 Hours Accounted
+                </span>
+              </div>
+
+              <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
+                {/* Sleep */}
+                <div 
+                  style={{ width: `${((Number(commitments.sleepHours || 0)) / 24) * 100}%` }}
+                  className="bg-indigo-500 h-full transition-all"
+                  title={`Sleep & Rest: ${commitments.sleepHours} hrs`}
+                />
+                {/* Classes */}
+                <div 
+                  style={{ width: `${(((Number(commitments.technicalClassHours || 0) + Number(commitments.aptitudeClassHours || 0) + Number(commitments.communicationClassHours || 0))) / 24) * 100}%` }}
+                  className="bg-blue-500 h-full transition-all"
+                  title={`Classes: ${(Number(commitments.technicalClassHours || 0) + Number(commitments.aptitudeClassHours || 0) + Number(commitments.communicationClassHours || 0))} hrs`}
+                />
+                {/* Work */}
+                {Number(commitments.workOrJobHours || 0) > 0 && (
+                  <div 
+                    style={{ width: `${((Number(commitments.workOrJobHours || 0)) / 24) * 100}%` }}
+                    className="bg-amber-500 h-full transition-all"
+                    title={`Job/College: ${commitments.workOrJobHours} hrs`}
+                  />
+                )}
+                {/* Routine */}
+                <div 
+                  style={{ width: `${((Number(commitments.personalRoutineHours || 0)) / 24) * 100}%` }}
+                  className="bg-emerald-500 h-full transition-all"
+                  title={`Routine & Meals: ${commitments.personalRoutineHours} hrs`}
+                />
+                {/* Available Study */}
+                <div 
+                  style={{ width: `${(calculatedStudyHours / 24) * 100}%` }}
+                  className="bg-teal-500 h-full transition-all"
+                  title={`Self Study Budget: ${calculatedStudyHours} hrs`}
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4 mt-2 text-[11px] font-bold text-slate-600">
+                <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-indigo-500 inline-block" /> Sleep ({commitments.sleepHours}h)</div>
+                <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-blue-500 inline-block" /> Classes ({(Number(commitments.technicalClassHours || 0) + Number(commitments.aptitudeClassHours || 0) + Number(commitments.communicationClassHours || 0))}h)</div>
+                {Number(commitments.workOrJobHours || 0) > 0 && (
+                  <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-500 inline-block" /> Work ({commitments.workOrJobHours}h)</div>
+                )}
+                <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500 inline-block" /> Routine ({commitments.personalRoutineHours}h)</div>
+                <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-teal-500 inline-block" /> Self-Study Focus ({calculatedStudyHours}h)</div>
               </div>
             </div>
           </SurfaceCard>
@@ -1456,27 +1704,39 @@ export default function StudentTimetable() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Start Time (24h)</label>
-                  <input
-                    type="time"
-                    required
-                    value={slotForm.startTime}
-                    onChange={e => setSlotForm({...slotForm, startTime: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-blue-500"
-                  />
+              <div className="space-y-1.5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Start Time (24h)</label>
+                    <input
+                      type="time"
+                      required
+                      value={slotForm.startTime}
+                      onChange={e => setSlotForm({...slotForm, startTime: e.target.value})}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">End Time (24h)</label>
+                    <input
+                      type="time"
+                      required
+                      value={slotForm.endTime}
+                      onChange={e => setSlotForm({...slotForm, endTime: e.target.value})}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-blue-500"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">End Time (24h)</label>
-                  <input
-                    type="time"
-                    required
-                    value={slotForm.endTime}
-                    onChange={e => setSlotForm({...slotForm, endTime: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-blue-500"
-                  />
+                <div className="flex items-center justify-between px-3 py-1.5 bg-blue-50/70 border border-blue-100 rounded-xl">
+                  <span className="text-[11px] font-bold text-blue-800 flex items-center gap-1.5">
+                    <Clock size={13} className="text-blue-600" />
+                    <span>Slot Duration:</span>
+                  </span>
+                  <span className="text-xs font-black text-blue-900">
+                    {formatDurationText(calcDurationMinutes(slotForm.startTime, slotForm.endTime))} ({calcDurationMinutes(slotForm.startTime, slotForm.endTime)} mins)
+                  </span>
                 </div>
               </div>
 

@@ -280,11 +280,25 @@ export const calculateTimetableRewards = (timetable) => {
   return { streak, totalXp, badges };
 };
 
+// Helper to calculate duration in minutes between 24h start and end times
+export const calcDurationMinutes = (startTime, endTime) => {
+  if (!startTime || !endTime) return 60;
+  const [sh, sm] = (startTime || '00:00').split(':').map(Number);
+  const [eh, em] = (endTime || '00:00').split(':').map(Number);
+  let startMins = (isNaN(sh) ? 0 : sh) * 60 + (isNaN(sm) ? 0 : sm);
+  let endMins = (isNaN(eh) ? 0 : eh) * 60 + (isNaN(em) ? 0 : em);
+  if (endMins <= startMins) {
+    endMins += 24 * 60; // overnight wrap-around (e.g. 23:00 to 06:00)
+  }
+  return Math.max(15, endMins - startMins);
+};
+
 // Get current student's timetable + date-specific checklist
 export const getMyTimetable = async (req, res) => {
   try {
     const studentId = req.user.id;
-    const targetDate = req.query.date || new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split('T')[0];
+    const targetDate = req.query.date || todayStr;
     let timetable = await Timetable.findOne({ studentId });
 
     if (!timetable) {
@@ -297,10 +311,20 @@ export const getMyTimetable = async (req, res) => {
 
     let dateChecklist = timetable.dailyChecklists.find(c => c.date === targetDate);
 
-    // Determine slots for this date: if past date has a snapshot, preserve and use it!
-    const dateSlots = (dateChecklist && dateChecklist.slotsSnapshot && dateChecklist.slotsSnapshot.length > 0)
-      ? dateChecklist.slotsSnapshot
-      : timetable.slots;
+    // Determine slots for this date:
+    // Past dates (< todayStr) preserve their historical snapshot.
+    // Today and future dates (>= todayStr) ALWAYS use the active updated timetable slots!
+    let dateSlots;
+    if (targetDate < todayStr && dateChecklist && dateChecklist.slotsSnapshot && dateChecklist.slotsSnapshot.length > 0) {
+      dateSlots = dateChecklist.slotsSnapshot;
+    } else {
+      dateSlots = timetable.slots;
+      // Also update dateChecklist snapshot for today/future so it stays in sync
+      if (dateChecklist) {
+        dateChecklist.slotsSnapshot = timetable.slots;
+        dateChecklist.totalCount = timetable.slots.filter(s => s.category !== 'Sleep').length;
+      }
+    }
 
     const activeSlotsCount = dateSlots.filter(s => s.category !== 'Sleep').length;
 
@@ -361,8 +385,8 @@ export const saveMyTimetable = async (req, res) => {
       24 - (sleepHours + workOrJobHours + personalRoutineHours + technicalClassHours + communicationClassHours + aptitudeClassHours)
     );
 
-    // Ensure all slots have IDs
-    const preparedSlots = (slots.length > 0 ? slots : generateSmartSlots({
+    // Ensure all slots have IDs and valid durationMinutes
+    const rawSlots = slots.length > 0 ? slots : generateSmartSlots({
       sleepStartTime,
       sleepEndTime,
       workOrJobHours,
@@ -370,10 +394,16 @@ export const saveMyTimetable = async (req, res) => {
       communicationClassHours,
       aptitudeClassHours,
       selectedSubjects
-    })).map(s => ({
+    });
+
+    const preparedSlots = rawSlots.map(s => ({
       ...s,
-      id: s.id || generateSlotId()
+      id: s.id || generateSlotId(),
+      durationMinutes: calcDurationMinutes(s.startTime, s.endTime)
     }));
+
+    // Sort slots chronologically
+    preparedSlots.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
 
     const todayStr = new Date().toISOString().split('T')[0];
 
@@ -425,11 +455,33 @@ export const saveMyTimetable = async (req, res) => {
       timetable.selectedSubjects = selectedSubjects;
       timetable.slots = preparedSlots;
 
-      const todayChecklist = timetable.dailyChecklists.find(c => c.date === todayStr);
-      if (todayChecklist) {
-        todayChecklist.slotsSnapshot = preparedSlots;
-        todayChecklist.totalCount = preparedSlots.filter(s => s.category !== 'Sleep').length;
-        todayChecklist.completionRate = Math.round(((todayChecklist.completedSlotIds?.length || 0) / Math.max(1, todayChecklist.totalCount)) * 100);
+      // Synchronize today and all future checklists to use the updated active slots
+      let todayFound = false;
+      const validSlotIds = new Set(preparedSlots.map(s => s.id));
+      const nonSleepCount = preparedSlots.filter(s => s.category !== 'Sleep').length;
+
+      timetable.dailyChecklists.forEach(c => {
+        if (c.date >= todayStr) {
+          c.slotsSnapshot = preparedSlots;
+          c.totalCount = nonSleepCount;
+          if (c.date === todayStr) todayFound = true;
+          // Keep only valid completed IDs that still exist in the updated schedule
+          c.completedSlotIds = (c.completedSlotIds || []).filter(id => validSlotIds.has(id));
+          c.completedCount = c.completedSlotIds.length;
+          c.completionRate = Math.round((c.completedCount / Math.max(1, nonSleepCount)) * 100);
+        }
+      });
+
+      if (!todayFound) {
+        timetable.dailyChecklists.push({
+          date: todayStr,
+          completedSlotIds: [],
+          slotsSnapshot: preparedSlots,
+          totalCount: nonSleepCount,
+          completedCount: 0,
+          completionRate: 0,
+          notes: ''
+        });
       }
     }
 

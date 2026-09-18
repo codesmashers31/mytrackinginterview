@@ -6,6 +6,7 @@ import SplRegistration from '../models/SplRegistration.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import requireRole from '../middleware/roleMiddleware.js';
 import multer from 'multer';
+import { normalizePhone, getPhoneVariants, buildPhoneOrEmailQuery } from '../utils/phoneUtils.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createRequire } from 'module';
 
@@ -47,15 +48,14 @@ const getPrimaryStudent = async (student) => {
 
 const ensureStudentAccount = async (emailOrMobile) => {
   if (!emailOrMobile) return;
-  const normalized = emailOrMobile.trim().toLowerCase();
+  const inputStr = String(emailOrMobile).trim();
+  const normalizedEmail = inputStr.toLowerCase();
+  const normPhone = normalizePhone(inputStr);
+
+  const orConditions = buildPhoneOrEmailQuery(normPhone || inputStr, normalizedEmail);
 
   // 1. Try finding in Student collection first
-  const student = await Student.findOne({
-    $or: [
-      ...(normalized ? [{ email: normalized }] : []),
-      { mobile: emailOrMobile.trim() }
-    ]
-  });
+  const student = orConditions.length > 0 ? await Student.findOne({ $or: orConditions }) : null;
 
   if (student) {
     const primaryStudent = await getPrimaryStudent(student);
@@ -374,30 +374,25 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Username and password are required' });
     }
 
-    const inputVal = email.trim().toLowerCase();
+    const inputVal = String(email).trim().toLowerCase();
+    const normPhone = normalizePhone(email);
+    const phoneVariants = getPhoneVariants(email);
     
     // First sync the student account if we can find them
     await ensureStudentAccount(email);
 
     // Try to find student in Student collection or SplRegistration collection
-    const student = await Student.findOne({
-      $or: [
-        { email: inputVal },
-        { mobile: email.trim() }
-      ]
-    });
+    const studentQueryConditions = buildPhoneOrEmailQuery(normPhone || email, inputVal);
+    const student = studentQueryConditions.length > 0 ? await Student.findOne({ $or: studentQueryConditions }) : null;
 
-    const splReg = await SplRegistration.findOne({
-      $or: [
-        { email: inputVal },
-        { mobile: email.trim() }
-      ]
-    });
+    const splReg = studentQueryConditions.length > 0 ? await SplRegistration.findOne({ $or: studentQueryConditions }) : null;
 
     let user = null;
     if (student) {
       const studentQuery = [];
-      if (student.mobile) studentQuery.push({ mobile: student.mobile.trim() });
+      if (student.mobile) {
+        studentQuery.push({ mobile: { $in: getPhoneVariants(student.mobile) } });
+      }
       if (student.email) studentQuery.push({ email: student.email.trim().toLowerCase() });
       const allStudentsForPerson = await Student.find({ $or: studentQuery });
       const studentIds = allStudentsForPerson.map(s => s._id);
@@ -406,6 +401,7 @@ router.post('/login', async (req, res) => {
         $or: [
           { studentId: { $in: studentIds } },
           { email: inputVal },
+          ...(normPhone ? [{ email: normPhone }] : []),
           ...(student.mobile ? [{ email: student.mobile.trim() }] : []),
           ...(student.email ? [{ email: student.email.trim().toLowerCase() }] : [])
         ]
@@ -415,12 +411,18 @@ router.post('/login', async (req, res) => {
         $or: [
           { studentId: splReg._id },
           { email: inputVal },
+          ...(normPhone ? [{ email: normPhone }] : []),
           ...(splReg.mobile ? [{ email: splReg.mobile.trim() }] : []),
           ...(splReg.email ? [{ email: splReg.email.trim().toLowerCase() }] : [])
         ]
       });
     } else {
-      user = await User.findOne({ email: inputVal });
+      user = await User.findOne({
+        $or: [
+          { email: inputVal },
+          ...(normPhone ? [{ email: normPhone }] : [])
+        ]
+      });
     }
 
     let passwordMatches = false;
@@ -429,15 +431,19 @@ router.post('/login', async (req, res) => {
     }
 
     if (!passwordMatches && user) {
+      const cleanPass = String(password).trim();
+      const normPass = normalizePhone(cleanPass);
       if (student) {
         const studentMobile = student.mobile ? student.mobile.trim() : '';
-        if (password.trim() === studentMobile) {
+        const normStudentMob = normalizePhone(studentMobile);
+        if (cleanPass === studentMobile || (normPass && normStudentMob && normPass === normStudentMob)) {
           passwordMatches = true;
         }
       }
       if (!passwordMatches && splReg) {
         const splMobile = splReg.mobile ? splReg.mobile.trim() : '';
-        if (password.trim() === splMobile) {
+        const normSplMob = normalizePhone(splMobile);
+        if (cleanPass === splMobile || (normPass && normSplMob && normPass === normSplMob)) {
           passwordMatches = true;
         }
       }

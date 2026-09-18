@@ -28,6 +28,7 @@ import aptitudeRoutes from './routes/aptitudeRoutes.js';
 import communicationRoutes from './routes/communicationRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 import { runStudentMigration, runTeamMigration } from './utils/migration.js';
+import { runDuplicateMergeMigration } from './utils/mergeDuplicateStudents.js';
 
 
 // ESM __dirname equivalent
@@ -77,6 +78,11 @@ mongoose.connect(process.env.MONGODB_URI)
       await runTeamMigration();
     } catch (teamMigErr) {
       console.error('Failed to run team migration:', teamMigErr);
+    }
+    try {
+      await runDuplicateMergeMigration();
+    } catch (mergeErr) {
+      console.error('Failed to run duplicate merge migration:', mergeErr);
     }
     try {
       await ensureAllStudentAccounts();

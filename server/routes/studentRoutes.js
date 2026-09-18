@@ -14,6 +14,8 @@ import xlsx from 'xlsx';
 import fs from 'fs';
 import authMiddleware from '../middleware/authMiddleware.js';
 import { ensureAllStudentAccounts } from './authRoutes.js';
+import { normalizePhone, getPhoneVariants, buildPhoneOrEmailQuery } from '../utils/phoneUtils.js';
+import { combineBatches } from '../utils/mergeDuplicateStudents.js';
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
@@ -54,19 +56,21 @@ router.get('/', authMiddleware, async (req, res) => {
             query.isFrontend = { $ne: true };
             query.enrollments = 'Regular';
         } else if (all !== 'true') {
-            query.isFrontend = { $ne: true };
             query.enrollments = 'Regular';
         }
         
         if (search) {
+            const cleanSearch = search.trim();
+            const normPhoneSearch = normalizePhone(cleanSearch);
             query.$or = [
-                { name: { $regex: search, $options: 'i' } },
-                { mobile: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } },
-                { batch: { $regex: search, $options: 'i' } },
-                { passedOutYear: { $regex: search, $options: 'i' } },
-                { skills: { $regex: search, $options: 'i' } },
-                { city: { $regex: search, $options: 'i' } }
+                { name: { $regex: cleanSearch, $options: 'i' } },
+                { mobile: { $regex: cleanSearch, $options: 'i' } },
+                ...(normPhoneSearch ? [{ mobile: { $regex: normPhoneSearch, $options: 'i' } }] : []),
+                { email: { $regex: cleanSearch, $options: 'i' } },
+                { batch: { $regex: cleanSearch, $options: 'i' } },
+                { passedOutYear: { $regex: cleanSearch, $options: 'i' } },
+                { skills: { $regex: cleanSearch, $options: 'i' } },
+                { city: { $regex: cleanSearch, $options: 'i' } }
             ];
         }
         
@@ -528,14 +532,17 @@ router.post('/', async (req, res) => {
         const email = (payload.email || '').trim().toLowerCase();
         const mobile = (payload.mobile || '').trim();
         if (email || mobile) {
-            const orConditions = [];
-            if (email) orConditions.push({ email });
-            if (mobile) orConditions.push({ mobile });
-            
-            const existing = await Student.findOne({ $or: orConditions });
-            if (existing) {
-                return res.status(409).json({ message: 'A student with the same email or mobile already exists.' });
+            const orConditions = buildPhoneOrEmailQuery(mobile, email);
+            if (orConditions.length > 0) {
+                const existing = await Student.findOne({ $or: orConditions });
+                if (existing) {
+                    return res.status(409).json({ message: 'A student with the same email or mobile already exists.' });
+                }
             }
+        }
+
+        if (mobile) {
+            payload.mobile = normalizePhone(mobile) || mobile;
         }
 
         const student = new Student(payload);
@@ -820,22 +827,58 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
         let insertCount = 0;
         let updateCount = 0;
         for (const studentData of students) {
-            if (!studentData.mobile) continue;
-            const cleanMobile = studentData.mobile.trim();
-            const existing = await Student.findOne({ mobile: cleanMobile });
+            if (!studentData.mobile && !studentData.email) continue;
+            const normPhone = normalizePhone(studentData.mobile);
+            const cleanMobile = normPhone || (studentData.mobile ? studentData.mobile.trim() : '');
+            const cleanEmail = (studentData.email || '').trim().toLowerCase();
+
+            // Find existing student by mobile variants or email
+            const queryConditions = buildPhoneOrEmailQuery(cleanMobile, cleanEmail);
+            let existing = queryConditions.length > 0 ? await Student.findOne({ $or: queryConditions }) : null;
+
             if (existing) {
                 const updates = {};
                 for (const key of Object.keys(studentData)) {
-                    if (studentData[key] !== undefined && studentData[key] !== '') {
+                    if (
+                        studentData[key] !== undefined && 
+                        studentData[key] !== '' && 
+                        studentData[key] !== 'Need to filled' && 
+                        studentData[key] !== 'Not Provided'
+                    ) {
                         updates[key] = studentData[key];
                     }
                 }
-                if (existing.enrollments && existing.enrollments.length > 0) {
-                    delete updates.enrollments;
+
+                // Combine batches (e.g. Frontend Batch 1 + Batch 10)
+                if (studentData.batch) {
+                    updates.batch = combineBatches(existing.batch, studentData.batch);
                 }
+
+                // If either is Frontend, preserve Frontend flag and studentType
+                if (isFrontend || existing.isFrontend || /frontend/i.test(existing.batch || '') || /frontend/i.test(studentData.batch || '')) {
+                    updates.isFrontend = true;
+                    updates.studentType = 'Frontend';
+                }
+
+                // Standardize mobile number
+                if (normPhone) {
+                    updates.mobile = normPhone;
+                }
+
+                // Preserve existing enrollments and ensure Regular is present
+                const enrollments = Array.from(new Set([
+                    ...(existing.enrollments || []),
+                    ...(studentData.enrollments || []),
+                    'Regular'
+                ]));
+                updates.enrollments = enrollments;
+
                 await Student.updateOne({ _id: existing._id }, { $set: updates });
                 updateCount++;
             } else {
+                if (normPhone) {
+                    studentData.mobile = normPhone;
+                }
                 const student = new Student(studentData);
                 await student.save();
                 insertCount++;

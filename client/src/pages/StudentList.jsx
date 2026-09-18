@@ -294,7 +294,7 @@ export default function StudentList() {
 
   const availableBatches = [...new Set(
     students
-      .map(student => String(student.batch || '').trim())
+      .flatMap(student => String(student.batch || '').split(',').map(b => b.trim()))
       .filter(Boolean)
   )]
     .filter(batch => !/frontend/i.test(batch))
@@ -316,7 +316,8 @@ export default function StudentList() {
     return [...students]
       .filter(student => {
         if (batchFilter === 'All') return true;
-        return String(student.batch || '').trim() === batchFilter;
+        const studentBatches = String(student.batch || '').split(',').map(b => b.trim());
+        return studentBatches.includes(batchFilter) || String(student.batch || '').includes(batchFilter);
       })
       .filter(student => {
         if (yearFilter === 'All') return true;

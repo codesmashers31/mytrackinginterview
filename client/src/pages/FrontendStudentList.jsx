@@ -94,7 +94,7 @@ export default function FrontendStudentList() {
 
   const uniqueBatches = useMemo(() => {
     const batches = students
-      .map(s => String(s.batch || '').trim())
+      .flatMap(s => String(s.batch || '').split(',').map(b => b.trim()))
       .filter(Boolean);
     return ['All', ...new Set(batches)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }, [students]);
@@ -277,7 +277,8 @@ export default function FrontendStudentList() {
         }
 
         if (batchFilter !== 'All') {
-          if (String(student.batch || '').trim() !== batchFilter) return false;
+          const studentBatches = String(student.batch || '').split(',').map(b => b.trim());
+          if (!studentBatches.includes(batchFilter) && !String(student.batch || '').includes(batchFilter)) return false;
         }
 
         if (yearFilter !== 'All') {

@@ -2,48 +2,72 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Login from './pages/Login';
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const StudentList = lazy(() => import('./pages/StudentList'));
-const EligibilityPage = lazy(() => import('./pages/EligibilityPage'));
-const CoordinatorManagement = lazy(() => import('./pages/CoordinatorManagement'));
-const CoordinatorDashboard = lazy(() => import('./pages/CoordinatorDashboard'));
-const CoordinatorEligibility = lazy(() => import('./pages/CoordinatorEligibility'));
-const CoordinatorSplClasses = lazy(() => import('./pages/CoordinatorSplClasses'));
-const Settings = lazy(() => import('./pages/Settings'));
-const SplClassForm = lazy(() => import('./pages/SplClassForm'));
-const SplSuccess = lazy(() => import('./pages/SplSuccess'));
-const AttendancePage = lazy(() => import('./pages/AttendancePage'));
-const TaskManagement = lazy(() => import('./pages/TaskManagement'));
-const PlacementManagement = lazy(() => import('./pages/PlacementManagement'));
-const StudentTasks = lazy(() => import('./pages/StudentTasks'));
-const StudentAttendance = lazy(() => import('./pages/StudentAttendance'));
-const StudentDailyActivity = lazy(() => import('./pages/StudentDailyActivity'));
-const StudentDashboard = lazy(() => import('./pages/StudentDashboard'));
-const AdminDailyActivities = lazy(() => import('./pages/AdminDailyActivities'));
-const PlacementDashboard = lazy(() => import('./pages/PlacementDashboard'));
-const PlacementEligibility = lazy(() => import('./pages/PlacementEligibility'));
-const PlacementSplClasses = lazy(() => import('./pages/PlacementSplClasses'));
-const ResumeBuilder = lazy(() => import('./pages/ResumeBuilder'));
-const TeamManagement = lazy(() => import('./pages/TeamManagement'));
-const StudentTeams = lazy(() => import('./pages/StudentTeams'));
-const FrontendStudentList = lazy(() => import('./pages/FrontendStudentList'));
-const SplRegistrations = lazy(() => import('./pages/SplRegistrations'));
-const StudentAiMentorship = lazy(() => import('./pages/StudentAiMentorship'));
-const AdminAiMentorship = lazy(() => import('./pages/AdminAiMentorship'));
-const StudentTimetable = lazy(() => import('./pages/StudentTimetable'));
-const AdminTimetables = lazy(() => import('./pages/AdminTimetables'));
-const StudentAiAptitude = lazy(() => import('./pages/StudentAiAptitude'));
-const StudentAiCommunication = lazy(() => import('./pages/StudentAiCommunication'));
-const AdminAiLearning = lazy(() => import('./pages/AdminAiLearning'));
+
+const PageFallback = () => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: '#475569' }}>
+      <div style={{ width: '24px', height: '24px', border: '3px solid #2563eb', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      Loading...
+    </div>
+  </div>
+);
+
+// Resilient lazy import that auto-refreshes on deployment chunk updates
+const lazyWithRetry = (importFn) =>
+  lazy(async () => {
+    try {
+      return await importFn();
+    } catch (error) {
+      console.warn('Chunk outdated or failed to load. Reloading for latest app bundle...', error);
+      const key = 'chunk_retry_' + window.location.pathname;
+      const isRefreshed = sessionStorage.getItem(key);
+      if (!isRefreshed) {
+        sessionStorage.setItem(key, 'true');
+        window.location.reload();
+        return new Promise(() => {});
+      }
+      sessionStorage.removeItem(key);
+      throw error;
+    }
+  });
+
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const StudentList = lazyWithRetry(() => import('./pages/StudentList'));
+const EligibilityPage = lazyWithRetry(() => import('./pages/EligibilityPage'));
+const CoordinatorManagement = lazyWithRetry(() => import('./pages/CoordinatorManagement'));
+const CoordinatorDashboard = lazyWithRetry(() => import('./pages/CoordinatorDashboard'));
+const CoordinatorEligibility = lazyWithRetry(() => import('./pages/CoordinatorEligibility'));
+const CoordinatorSplClasses = lazyWithRetry(() => import('./pages/CoordinatorSplClasses'));
+const Settings = lazyWithRetry(() => import('./pages/Settings'));
+const SplClassForm = lazyWithRetry(() => import('./pages/SplClassForm'));
+const SplSuccess = lazyWithRetry(() => import('./pages/SplSuccess'));
+const AttendancePage = lazyWithRetry(() => import('./pages/AttendancePage'));
+const TaskManagement = lazyWithRetry(() => import('./pages/TaskManagement'));
+const PlacementManagement = lazyWithRetry(() => import('./pages/PlacementManagement'));
+const StudentTasks = lazyWithRetry(() => import('./pages/StudentTasks'));
+const StudentAttendance = lazyWithRetry(() => import('./pages/StudentAttendance'));
+const StudentDailyActivity = lazyWithRetry(() => import('./pages/StudentDailyActivity'));
+const StudentDashboard = lazyWithRetry(() => import('./pages/StudentDashboard'));
+const AdminDailyActivities = lazyWithRetry(() => import('./pages/AdminDailyActivities'));
+const PlacementDashboard = lazyWithRetry(() => import('./pages/PlacementDashboard'));
+const PlacementEligibility = lazyWithRetry(() => import('./pages/PlacementEligibility'));
+const PlacementSplClasses = lazyWithRetry(() => import('./pages/PlacementSplClasses'));
+const ResumeBuilder = lazyWithRetry(() => import('./pages/ResumeBuilder'));
+const TeamManagement = lazyWithRetry(() => import('./pages/TeamManagement'));
+const StudentTeams = lazyWithRetry(() => import('./pages/StudentTeams'));
+const FrontendStudentList = lazyWithRetry(() => import('./pages/FrontendStudentList'));
+const SplRegistrations = lazyWithRetry(() => import('./pages/SplRegistrations'));
+const StudentAiMentorship = lazyWithRetry(() => import('./pages/StudentAiMentorship'));
+const AdminAiMentorship = lazyWithRetry(() => import('./pages/AdminAiMentorship'));
+const StudentTimetable = lazyWithRetry(() => import('./pages/StudentTimetable'));
+const AdminTimetables = lazyWithRetry(() => import('./pages/AdminTimetables'));
+const StudentAiAptitude = lazyWithRetry(() => import('./pages/StudentAiAptitude'));
+const StudentAiCommunication = lazyWithRetry(() => import('./pages/StudentAiCommunication'));
+const AdminAiLearning = lazyWithRetry(() => import('./pages/AdminAiLearning'));
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
 import { isAuthenticated } from './utils/auth';
 
-const PageFallback = () => (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-    Loading...
-  </div>
-);
 
 function App() {
   return (

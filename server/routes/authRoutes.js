@@ -112,12 +112,7 @@ const ensureStudentAccount = async (emailOrMobile) => {
   }
 
   // 2. If not in Student collection, try finding in SplRegistration collection
-  const splReg = await SplRegistration.findOne({
-    $or: [
-      ...(normalized ? [{ email: normalized }] : []),
-      { mobile: emailOrMobile.trim() }
-    ]
-  });
+  const splReg = orConditions.length > 0 ? await SplRegistration.findOne({ $or: orConditions }) : null;
 
   if (splReg) {
     const expectedUserEmail = splReg.email ? splReg.email.trim().toLowerCase() : splReg.mobile.trim();

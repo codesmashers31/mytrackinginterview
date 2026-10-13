@@ -558,6 +558,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
         const { id } = req.params;
         const payload = { ...req.body };
 
+        const newPasswordFromEdit = payload.password;
+        delete payload.password;
+
         // 1. Check if ID belongs to SplRegistration
         const splRegExists = await SplRegistration.exists({ _id: id });
         if (splRegExists) {
@@ -571,6 +574,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
                         user.email = targetEmail;
                         await user.save();
                     }
+                }
+                if (newPasswordFromEdit && typeof newPasswordFromEdit === 'string' && newPasswordFromEdit.trim().length >= 4) {
+                    await updateStudentPassword(id, newPasswordFromEdit.trim());
                 }
                 const mappedReg = {
                     ...reg.toObject(),
@@ -654,10 +660,133 @@ router.put('/:id', authMiddleware, async (req, res) => {
                 }
                 await user.save();
             }
+            if (newPasswordFromEdit && typeof newPasswordFromEdit === 'string' && newPasswordFromEdit.trim().length >= 4) {
+                await updateStudentPassword(id, newPasswordFromEdit.trim());
+            }
         }
         res.json(student);
     } catch (error) {
         res.status(400).json({ message: 'Update failed', error: error.message });
+    }
+});
+
+// Helper for resetting / updating a student's password and linked user account
+const updateStudentPassword = async (id, newPassword) => {
+    let student = await Student.findById(id);
+    let splReg = null;
+    let isSpl = false;
+
+    if (!student) {
+        splReg = await SplRegistration.findById(id);
+        if (splReg) {
+            isSpl = true;
+        } else {
+            return { success: false, status: 404, message: 'Student record not found' };
+        }
+    }
+
+    if (!isSpl) {
+        const searchTerms = [];
+        if (student.mobile) searchTerms.push({ mobile: student.mobile.trim() });
+        if (student.email) searchTerms.push({ email: student.email.trim().toLowerCase() });
+        const samePersonStudents = searchTerms.length > 0 ? await Student.find({ $or: searchTerms }) : [];
+        const studentIds = samePersonStudents.map(s => s._id);
+        if (!studentIds.some(sid => sid.toString() === student._id.toString())) {
+            studentIds.push(student._id);
+        }
+
+        const phoneVariants = student.mobile ? getPhoneVariants(student.mobile) : [];
+        const normPhone = student.mobile ? normalizePhone(student.mobile) : '';
+        const studentEmail = student.email ? student.email.trim().toLowerCase() : '';
+
+        const userQuery = [
+            { studentId: { $in: studentIds } }
+        ];
+        if (studentEmail) userQuery.push({ email: studentEmail });
+        if (normPhone) userQuery.push({ email: normPhone });
+        if (student.mobile) userQuery.push({ email: student.mobile.trim() });
+        phoneVariants.forEach(pv => userQuery.push({ email: pv }));
+
+        let users = await User.find({ $or: userQuery });
+        if (!users || users.length === 0) {
+            const expectedEmail = studentEmail || normPhone || (student.mobile ? student.mobile.trim() : '');
+            if (!expectedEmail) {
+                return { success: false, status: 400, message: 'Student lacks an email or mobile number to associate a login account' };
+            }
+            const newUser = new User({
+                name: student.name || 'Student',
+                email: expectedEmail,
+                password: newPassword,
+                role: 'student',
+                studentId: student._id
+            });
+            await newUser.save();
+            return { success: true, message: 'Login account created and password set successfully', username: newUser.email };
+        }
+
+        for (const u of users) {
+            u.password = newPassword;
+            if (!u.studentId) u.studentId = student._id;
+            await u.save();
+        }
+        return { success: true, message: 'Password updated successfully', username: users[0].email };
+    } else {
+        const splEmail = splReg.email ? splReg.email.trim().toLowerCase() : '';
+        const splMobile = splReg.mobile ? splReg.mobile.trim() : '';
+        const splNormPhone = splMobile ? normalizePhone(splMobile) : '';
+        const splPhoneVariants = splMobile ? getPhoneVariants(splMobile) : [];
+
+        const userQuery = [
+            { studentId: splReg._id }
+        ];
+        if (splEmail) userQuery.push({ email: splEmail });
+        if (splNormPhone) userQuery.push({ email: splNormPhone });
+        if (splMobile) userQuery.push({ email: splMobile });
+        splPhoneVariants.forEach(pv => userQuery.push({ email: pv }));
+
+        let users = await User.find({ $or: userQuery });
+        if (!users || users.length === 0) {
+            const expectedEmail = splEmail || splNormPhone || splMobile;
+            if (!expectedEmail) {
+                return { success: false, status: 400, message: 'Student lacks an email or mobile number to associate a login account' };
+            }
+            const newUser = new User({
+                name: splReg.name || 'SPL Student',
+                email: expectedEmail,
+                password: newPassword,
+                role: 'student',
+                studentId: splReg._id
+            });
+            await newUser.save();
+            return { success: true, message: 'Login account created and password set successfully', username: newUser.email };
+        }
+
+        for (const u of users) {
+            u.password = newPassword;
+            if (!u.studentId) u.studentId = splReg._id;
+            await u.save();
+        }
+        return { success: true, message: 'Password updated successfully', username: users[0].email };
+    }
+};
+
+// PUT /api/students/:id/password (protected, admin/coordinator)
+router.put('/:id/password', authMiddleware, async (req, res) => {
+    try {
+        if (!req.user || !['admin', 'coordinator'].includes(req.user.role)) {
+            return res.status(403).json({ message: 'Access denied: Only admins and coordinators can reset student passwords' });
+        }
+        const { password } = req.body;
+        if (!password || typeof password !== 'string' || password.trim().length < 4) {
+            return res.status(400).json({ message: 'Password must be at least 4 characters long' });
+        }
+        const result = await updateStudentPassword(req.params.id, password.trim());
+        if (!result.success) {
+            return res.status(result.status || 400).json({ message: result.message });
+        }
+        return res.json(result);
+    } catch (error) {
+        return res.status(500).json({ message: 'Failed to update student password', error: error.message });
     }
 });
 

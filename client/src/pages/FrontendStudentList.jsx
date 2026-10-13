@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Search, Download, Upload, Plus, Edit, Eye, Trash2, X, ChevronLeft, ChevronRight,
   User, Mail, Phone, GraduationCap, Calendar, Users, MapPin, SlidersHorizontal, ChevronDown,
-  Briefcase, Award, TrendingUp, AlertCircle
+  Briefcase, Award, TrendingUp, AlertCircle, KeyRound, EyeOff, Copy, Check, Lock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { AppShell, SectionTabs, StatusBadge, SurfaceCard, MetricCard } from '../components/AppShell';
+import UpdateStudentPasswordModal from '../components/UpdateStudentPasswordModal';
 import { authHeaders, logout } from '../utils/auth';
 import { buildApiUrl } from '../utils/api';
 
@@ -27,6 +28,7 @@ export default function FrontendStudentList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
@@ -708,6 +710,13 @@ export default function FrontendStudentList() {
                     <td className="px-3 py-2 text-right">
                       <div className="inline-flex gap-1.5">
                         <button 
+                          onClick={() => { setSelectedStudent(student); setIsPasswordModalOpen(true); }}
+                          className="p-1.5 text-amber-600 hover:text-white bg-amber-50 hover:bg-amber-600 rounded-lg transition-all duration-200 border border-amber-200/60 hover:border-amber-600 hover:scale-105 active:scale-95 shadow-2xs hover:shadow-[0_4px_12px_rgba(217,119,6,0.2)] cursor-pointer"
+                          title="Reset / Update Password"
+                        >
+                          <KeyRound size={13} />
+                        </button>
+                        <button 
                           onClick={() => { setSelectedStudent(student); setIsViewOpen(true); }}
                           className="p-1.5 text-emerald-600 hover:text-white bg-emerald-50 hover:bg-emerald-500 rounded-lg transition-all duration-200 border border-emerald-100 hover:border-emerald-500 hover:scale-105 active:scale-95 shadow-2xs hover:shadow-[0_4px_12px_rgba(16,185,129,0.2)] cursor-pointer"
                           title="View Details"
@@ -762,6 +771,13 @@ export default function FrontendStudentList() {
       </SurfaceCard>
 
       {/* Modals */}
+      {isPasswordModalOpen && selectedStudent && (
+        <UpdateStudentPasswordModal
+          onClose={() => setIsPasswordModalOpen(false)}
+          student={selectedStudent}
+        />
+      )}
+
       {isModalOpen && (
         <FrontendStudentFormModal 
           onClose={() => setIsModalOpen(false)} 
@@ -823,7 +839,8 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
     githubLink: student?.githubLink || '',
     linkedinLink: student?.linkedinLink || '',
     studentType: 'Frontend',
-    isFrontend: true
+    isFrontend: true,
+    password: ''
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -850,6 +867,11 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
         degree: formData.degree === 'Other' ? formData.customDegree.trim() || '' : formData.degree
       };
       delete payload.customDegree;
+      if (!payload.password || payload.password.trim() === '') {
+        delete payload.password;
+      } else {
+        payload.password = payload.password.trim();
+      }
 
       const res = await fetch(url, {
         method: editMode ? 'PUT' : 'POST',
@@ -862,7 +884,8 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
         onRefresh();
         onClose();
       } else {
-        toast.error('Transaction rejected');
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.message || 'Transaction rejected');
       }
     } catch (err) {
       toast.error('Network disconnect');
@@ -878,7 +901,7 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
           <h3 className="text-[#1e293b] font-extrabold text-lg md:text-xl">
             {editMode ? 'Modify Frontend Student' : 'Add Frontend Student'}
           </h3>
-          <button onClick={onClose} className="p-1.5 bg-slate-100 rounded-full text-slate-500 hover:text-slate-800 transition-all">
+          <button onClick={onClose} className="p-1.5 bg-slate-100 rounded-full text-slate-500 hover:text-slate-800 transition-all cursor-pointer">
             <X size={16} />
           </button>
         </div>
@@ -898,6 +921,20 @@ function FrontendStudentFormModal({ onClose, onRefresh, student, editMode }) {
               <label className="crm-label">Email Address</label>
               <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="crm-input" placeholder="e.g. john@domain.com" />
             </div>
+          </div>
+
+          <div>
+            <label className="crm-label flex items-center justify-between">
+              <span>{editMode ? 'Reset Password (optional)' : 'Custom Initial Password (optional)'}</span>
+              <span className="text-[10px] text-slate-400 font-normal">Defaults to mobile or email if blank</span>
+            </label>
+            <input 
+              type="text" 
+              value={formData.password} 
+              onChange={e => setFormData({...formData, password: e.target.value})} 
+              className="crm-input font-mono text-xs" 
+              placeholder={editMode ? "Leave empty to keep existing password" : "e.g. Student@123"} 
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -1273,3 +1310,4 @@ function ConfirmDeleteSelectedModal({ onClose, onConfirm, count, isDeleting }) {
     </div>
   );
 }
+

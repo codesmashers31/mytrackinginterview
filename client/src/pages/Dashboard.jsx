@@ -25,7 +25,8 @@ import {
   ChevronRight,
   Eye,
   Filter,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { AppShell, MetricCard, SectionTabs, StatusBadge, SurfaceCard } from '../components/AppShell';
 import { authHeaders, logout } from '../utils/auth';
@@ -42,10 +43,78 @@ function getNormalizedYear(student) {
   return yr || 'Not Specified';
 }
 
+function DashboardSkeleton() {
+  return (
+    <AppShell
+      title="Executive Command Dashboard"
+      subtitle="Comprehensive real-time overview of candidate recruitment, outreach pipeline, interview intelligence, and operations."
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-48 bg-slate-200/80 rounded-md animate-pulse" />
+        </div>
+        <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
+          <div className="h-3 w-3 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+          <span>Synchronizing telemetry...</span>
+        </div>
+      </div>
+
+      {/* 6 Metric Card Skeletons */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-xs space-y-3 animate-pulse">
+            <div className="flex justify-between items-center">
+              <div className="h-3 w-20 bg-slate-200 rounded-md" />
+              <div className="h-6 w-6 bg-slate-100 rounded-lg" />
+            </div>
+            <div className="h-7 w-16 bg-slate-200 rounded-lg" />
+            <div className="h-2.5 w-24 bg-slate-100 rounded-md" />
+          </div>
+        ))}
+      </div>
+
+      {/* Filter Skeleton */}
+      <div className="p-4 mb-6 bg-white rounded-2xl border border-slate-100 shadow-xs space-y-3 animate-pulse">
+        <div className="h-4 w-32 bg-slate-200 rounded-md" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-8 bg-slate-100 rounded-xl" />
+          ))}
+        </div>
+      </div>
+
+      {/* Feed Skeletons */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-xs h-72 animate-pulse space-y-4">
+          <div className="h-5 w-40 bg-slate-200 rounded-md" />
+          <div className="h-14 bg-slate-50 rounded-xl" />
+          <div className="h-14 bg-slate-50 rounded-xl" />
+          <div className="h-14 bg-slate-50 rounded-xl" />
+        </div>
+        <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-xs h-72 animate-pulse space-y-4">
+          <div className="h-5 w-40 bg-slate-200 rounded-md" />
+          <div className="h-14 bg-slate-50 rounded-xl" />
+          <div className="h-14 bg-slate-50 rounded-xl" />
+          <div className="h-14 bg-slate-50 rounded-xl" />
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Fast Stale-While-Revalidate initialization from localStorage
+  const [stats, setStats] = useState(() => {
+    try {
+      const saved = localStorage.getItem('placex_dashboard_stats');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState(() => !stats);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [activeDashboardSegment, setActiveDashboardSegment] = useState('overview'); // 'overview' | 'outreach' | 'telemetry' | 'analytics'
 
   // Interactive filters
@@ -55,9 +124,16 @@ export default function Dashboard() {
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterBatch, setFilterBatch] = useState('All');
 
-  // All student records for dynamic filtering
-  const [allStudents, setAllStudents] = useState([]);
-  const [studentsLoading, setStudentsLoading] = useState(true);
+  // Lightweight student summary records for dynamic filtering
+  const [allStudents, setAllStudents] = useState(() => {
+    try {
+      const saved = localStorage.getItem('placex_dashboard_students_summary');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [studentsLoading, setStudentsLoading] = useState(() => allStudents.length === 0);
 
   // Leave Requests state
   const [leaveRequests, setLeaveRequests] = useState([]);
@@ -105,18 +181,33 @@ export default function Dashboard() {
     }
   };
 
-  const loadDashboardStats = () => {
-    cachedGet('/students/stats')
-      .then(data => {
-        if (data) setStats(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+  const loadDashboardStats = (isManualRefresh = false) => {
+    if (isManualRefresh) setIsSyncing(true);
 
-    cachedGet('/students?all=true')
+    cachedGet('/students/stats', { force: isManualRefresh })
+      .then(data => {
+        if (data) {
+          setStats(data);
+          try {
+            localStorage.setItem('placex_dashboard_stats', JSON.stringify(data));
+          } catch {}
+        }
+        setLoading(false);
+        setIsSyncing(false);
+      })
+      .catch(() => {
+        setLoading(false);
+        setIsSyncing(false);
+      });
+
+    // Request lightweight summary for fast filtering without downloading massive resumes/objects
+    cachedGet('/students?all=true&summary=true', { force: isManualRefresh })
       .then(data => {
         if (data && Array.isArray(data)) {
           setAllStudents(data);
+          try {
+            localStorage.setItem('placex_dashboard_students_summary', JSON.stringify(data));
+          } catch {}
         }
         setStudentsLoading(false);
       })
@@ -273,15 +364,8 @@ export default function Dashboard() {
     });
   }, [filteredStudents]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--app-bg)]">
-        <div className="crm-surface flex items-center gap-3 px-6 py-4 rounded-2xl">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-          <p className="text-sm font-bold text-slate-700">Loading live executive telemetry...</p>
-        </div>
-      </div>
-    );
+  if (loading && !stats) {
+    return <DashboardSkeleton />;
   }
 
   return (
@@ -290,16 +374,24 @@ export default function Dashboard() {
       subtitle="Comprehensive real-time overview of candidate recruitment, outreach pipeline, interview intelligence, and operations."
       searchPlaceholder="Search candidates, companies, or metrics..."
     >
-      <SectionTabs
-        items={[
-          { label: 'Overview', active: true },
-          { label: 'Regular Students', onClick: () => navigate('/students') },
-          { label: 'Frontend Students', onClick: () => navigate('/admin/frontend-students') },
-          { label: 'SPL Class Students', onClick: () => navigate('/spl-registrations') },
-          { label: 'Daily Activity Hub', onClick: () => navigate('/admin/daily-activities') },
-          { label: 'Placement Eligibility', onClick: () => navigate('/placement/eligibility') },
-        ]}
-      />
+      <div className="flex items-center justify-between mb-2">
+        <SectionTabs
+          items={[
+            { label: 'Overview', active: true },
+            { label: 'Regular Students', onClick: () => navigate('/students') },
+            { label: 'Frontend Students', onClick: () => navigate('/admin/frontend-students') },
+            { label: 'SPL Class Students', onClick: () => navigate('/spl-registrations') },
+            { label: 'Daily Activity Hub', onClick: () => navigate('/admin/daily-activities') },
+            { label: 'Placement Eligibility', onClick: () => navigate('/placement/eligibility') },
+          ]}
+        />
+        {isSyncing && (
+          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100 animate-pulse shrink-0">
+            <RefreshCw size={12} className="animate-spin" />
+            <span>Syncing telemetry...</span>
+          </div>
+        )}
+      </div>
 
       {/* Top Level Metric KPIs */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6">
@@ -359,6 +451,15 @@ export default function Dashboard() {
           </div>
           
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => loadDashboardStats(true)}
+              disabled={isSyncing}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 hover:text-slate-900 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl shadow-xs transition disabled:opacity-60 cursor-pointer"
+              title="Refresh live data from server"
+            >
+              <RefreshCw size={13} className={isSyncing ? "animate-spin text-blue-600" : "text-slate-500"} />
+              <span>{isSyncing ? 'Syncing...' : 'Live Sync'}</span>
+            </button>
             <button
               onClick={() => {
                 setFilterYear('All');

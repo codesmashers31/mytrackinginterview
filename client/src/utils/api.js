@@ -70,10 +70,20 @@ export const cachedGet = async (path, { ttl = DEFAULT_CACHE_TTL, force = false }
 export const invalidateCache = (path) => {
   if (!path) {
     getCache.clear();
+    try {
+      localStorage.removeItem('placex_dashboard_stats');
+      localStorage.removeItem('placex_dashboard_students_summary');
+    } catch {}
     return;
   }
   const url = buildApiUrl(path);
   getCache.delete(url);
+  if (path.includes('students') || path.includes('dashboard')) {
+    try {
+      localStorage.removeItem('placex_dashboard_stats');
+      localStorage.removeItem('placex_dashboard_students_summary');
+    } catch {}
+  }
 };
 
 // Coordinator API helpers

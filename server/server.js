@@ -29,7 +29,7 @@ import communicationRoutes from './routes/communicationRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 import { runStudentMigration, runTeamMigration } from './utils/migration.js';
 import { runDuplicateMergeMigration } from './utils/mergeDuplicateStudents.js';
-
+import { invalidateDashboardCache } from './utils/redis.js';
 
 // ESM __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -46,6 +46,30 @@ app.use(cors());
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Auto-invalidate dashboard & student caches on any successful state-changing mutation
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    const url = req.originalUrl || req.url;
+    if (
+      url.startsWith('/api/students') || 
+      url.startsWith('/api/spl-registration') ||
+      url.startsWith('/api/attendance') ||
+      url.startsWith('/api/tasks') ||
+      url.startsWith('/api/job-applications') ||
+      url.startsWith('/api/interview-experiences') ||
+      url.startsWith('/api/daily-activities') ||
+      url.startsWith('/api/leaves')
+    ) {
+      res.on('finish', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          invalidateDashboardCache().catch(() => {});
+        }
+      });
+    }
+  }
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -71,24 +95,26 @@ app.use(errorHandler);
 mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     console.log('PlaceX Database Linked: MongoDB Connected');
-    // runStudentMigration() has already executed and completed the historical database cleanup.
-    // We can comment it out now to speed up server startups.
-    // await runStudentMigration();
-    try {
-      await runTeamMigration();
-    } catch (teamMigErr) {
-      console.error('Failed to run team migration:', teamMigErr);
-    }
-    try {
-      await runDuplicateMergeMigration();
-    } catch (mergeErr) {
-      console.error('Failed to run duplicate merge migration:', mergeErr);
-    }
-    try {
-      await ensureAllStudentAccounts();
-    } catch (syncErr) {
-      console.error('Failed to sync student accounts:', syncErr);
-    }
+    
+    // Asynchronously run background migrations and student sync without blocking request handling
+    setTimeout(async () => {
+      try {
+        await runTeamMigration();
+      } catch (teamMigErr) {
+        console.error('Failed to run team migration:', teamMigErr);
+      }
+      try {
+        await runDuplicateMergeMigration();
+      } catch (mergeErr) {
+        console.error('Failed to run duplicate merge migration:', mergeErr);
+      }
+      try {
+        await ensureAllStudentAccounts();
+      } catch (syncErr) {
+        console.error('Failed to sync student accounts:', syncErr);
+      }
+    }, 1500);
+
     try {
       const adminCount = await User.countDocuments({ role: 'admin' });
       if (adminCount === 0) {

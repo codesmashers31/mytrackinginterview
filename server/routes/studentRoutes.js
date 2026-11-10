@@ -16,19 +16,40 @@ import authMiddleware from '../middleware/authMiddleware.js';
 import { ensureAllStudentAccounts } from './authRoutes.js';
 import { normalizePhone, getPhoneVariants, buildPhoneOrEmailQuery } from '../utils/phoneUtils.js';
 import { combineBatches } from '../utils/mergeDuplicateStudents.js';
+import { getCache, setCache, delCache, invalidateDashboardCache } from '../utils/redis.js';
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
+
+let cachedSplIdentifiers = null;
+let cachedSplTime = 0;
 const getSplIdentifiers = async () => {
+    if (cachedSplIdentifiers && (Date.now() - cachedSplTime < 60000)) {
+        return cachedSplIdentifiers;
+    }
     const spls = await SplRegistration.find({}, 'email mobile').lean();
     const splEmails = spls.map(s => s.email ? s.email.trim().toLowerCase() : '').filter(Boolean);
     const splMobiles = spls.map(s => s.mobile ? s.mobile.trim() : '').filter(Boolean);
-    return { splEmails, splMobiles };
+    cachedSplIdentifiers = { splEmails, splMobiles };
+    cachedSplTime = Date.now();
+    return cachedSplIdentifiers;
 };
 
 router.get('/', authMiddleware, async (req, res) => {
     try {
-        const { search, status, degree, year, isFrontend, all, studentType, enrollment } = req.query;
+        const { search, status, degree, year, isFrontend, all, studentType, enrollment, summary } = req.query;
+        
+        // Redis / In-memory caching for full list or summary list when no filter
+        const isDefaultAll = all === 'true' && !search && (!status || status === 'All') && (!degree || degree === 'All') && !year;
+        const cacheKey = isDefaultAll ? `students:all:${summary === 'true' ? 'summary' : 'full'}:${enrollment || ''}:${studentType || ''}:${isFrontend || ''}` : null;
+        
+        if (cacheKey) {
+            const cached = await getCache(cacheKey);
+            if (cached) {
+                res.setHeader('X-Cache', 'HIT');
+                return res.json(cached);
+            }
+        }
         
         // 1. Build Student Query
         let query = {};
@@ -78,7 +99,11 @@ router.get('/', authMiddleware, async (req, res) => {
         if (degree && degree !== 'All') query.degree = { $regex: new RegExp(`^${degree}$`, 'i') };
         if (year) query.passedOutYear = year;
 
-        let students = await Student.find(query).select('-resumeData').lean();
+        const selectFields = summary === 'true'
+            ? '_id name mobile email degree studentType enrollments isFrontend city passedOutYear batch grade currentStatus status statusReason companyName packageLpa skills createdAt'
+            : '-resumeData';
+
+        let students = await Student.find(query).select(selectFields).lean();
 
         // 2. Fetch and Map SplRegistration records if we are looking for SPL students
         const includeSplRegs = !enrollment || enrollment === 'All' || enrollment === 'SPL';
@@ -105,7 +130,11 @@ router.get('/', authMiddleware, async (req, res) => {
                 splQuery.batch = year;
             }
 
-            const rawSplRegs = await SplRegistration.find(splQuery).select('-resumeData').lean();
+            const splSelectFields = summary === 'true'
+                ? '_id name mobile email degree status batch grade companyName createdAt'
+                : '-resumeData';
+
+            const rawSplRegs = await SplRegistration.find(splQuery).select(splSelectFields).lean();
             splRegs = rawSplRegs.map(r => ({
                 ...r,
                 studentType: 'SPL',
@@ -117,6 +146,12 @@ router.get('/', authMiddleware, async (req, res) => {
 
         // 3. Combine and Sort
         let combined = [...students, ...splRegs].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        
+        if (cacheKey) {
+            await setCache(cacheKey, combined, 120); // 2 min cache
+            res.setHeader('X-Cache', 'MISS');
+        }
+
         res.json(combined);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching students', error: error.message });
@@ -284,6 +319,12 @@ router.get('/export-regular-excel', async (req, res) => {
 // GET dashboard stats (protected)
 router.get('/stats', authMiddleware, async (req, res) => {
     try {
+        const cachedStats = await getCache('dashboard:stats');
+        if (cachedStats) {
+            res.setHeader('X-Cache', 'HIT');
+            return res.json(cachedStats);
+        }
+
         const { splEmails, splMobiles } = await getSplIdentifiers();
         const regularQuery = { isFrontend: { $ne: true }, studentType: { $ne: 'SPL' } };
         
@@ -300,12 +341,10 @@ router.get('/stats', authMiddleware, async (req, res) => {
         const d = new Date();
         const today = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
 
-        // Run queries in parallel
+        // Run queries in parallel with optimized projections
         const [
-            total,
             regularGroups,
             recent,
-            frontendTotal,
             frontendGroups,
             recentFrontend,
             
@@ -348,18 +387,16 @@ router.get('/stats', authMiddleware, async (req, res) => {
             pendingLeavesCount,
             recentDailyTasks
         ] = await Promise.all([
-            Student.countDocuments(regularQuery),
             Student.aggregate([
                 { $match: regularQuery },
                 { $group: { _id: { $toLower: "$currentStatus" }, count: { $sum: 1 } } }
             ]),
-            Student.find(regularQuery).sort({ updatedAt: -1 }).limit(5).lean(),
-            Student.countDocuments(frontendQuery),
+            Student.find(regularQuery).sort({ updatedAt: -1 }).limit(5).select('name currentStatus batch passedOutYear updatedAt').lean(),
             Student.aggregate([
                 { $match: frontendQuery },
                 { $group: { _id: { $toLower: "$currentStatus" }, count: { $sum: 1 } } }
             ]),
-            Student.find(frontendQuery).sort({ updatedAt: -1 }).limit(5).lean(),
+            Student.find(frontendQuery).sort({ updatedAt: -1 }).limit(5).select('name currentStatus batch passedOutYear updatedAt').lean(),
 
             // Attendance stats
             Attendance.countDocuments({ date: today }),
@@ -377,7 +414,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
             SplRegistration.countDocuments({ willingCompanyProcess: true }),
             SplRegistration.countDocuments({ status: 'New' }),
             SplRegistration.countDocuments({ status: 'In Progress' }),
-            SplRegistration.find().sort({ updatedAt: -1 }).limit(5).lean(),
+            SplRegistration.find().sort({ updatedAt: -1 }).limit(5).select('name status batch grade updatedAt').lean(),
 
             // Cohort distribution counts
             Student.countDocuments({ enrollments: 'Regular', isFrontend: { $ne: true } }),
@@ -397,19 +434,21 @@ router.get('/stats', authMiddleware, async (req, res) => {
             JobApplication.countDocuments(),
             JobApplication.countDocuments({ applyDate: { $gte: today } }),
             JobApplication.countDocuments({ status: { $in: ['Shortlisted', 'Interview Scheduled', 'Offer Received'] } }),
-            JobApplication.find().sort({ applyDate: -1, createdAt: -1 }).limit(5).lean(),
+            JobApplication.find().sort({ applyDate: -1, createdAt: -1 }).limit(5).select('companyName jobRole studentName hrDetails status applyDate').lean(),
             InterviewExperience.countDocuments(),
             InterviewExperience.countDocuments({ overallStatus: { $in: ['Cleared / Next Round', 'Selected / Offer'] } }),
-            InterviewExperience.find().sort({ interviewDate: -1, createdAt: -1 }).limit(5).lean(),
+            InterviewExperience.find().sort({ interviewDate: -1, createdAt: -1 }).limit(5).select('companyName role studentName overallStatus interviewDate').lean(),
             LeaveRequest.countDocuments({ status: 'Pending' }),
-            DailyActivity.find().sort({ date: -1, createdAt: -1 }).limit(5).lean()
+            DailyActivity.find().sort({ date: -1, createdAt: -1 }).limit(5).select('studentName companyApply taskWorkProcess date').lean()
         ]);
 
         // Map status counts from regular aggregation
+        let total = 0;
         const regularCounts = {};
         regularGroups.forEach(g => {
             if (g._id) {
                 regularCounts[g._id.trim()] = g.count;
+                total += g.count;
             }
         });
 
@@ -420,10 +459,12 @@ router.get('/stats', authMiddleware, async (req, res) => {
         const interviewProcess = regularCounts['interview process'] || 0;
 
         // Map status counts from frontend aggregation
+        let frontendTotal = 0;
         const frontendCounts = {};
         frontendGroups.forEach(g => {
             if (g._id) {
                 frontendCounts[g._id.trim()] = g.count;
+                frontendTotal += g.count;
             }
         });
 
@@ -446,7 +487,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
 
         const passedOutYears = Object.values(yearsMap).sort((a, b) => a.year.localeCompare(b.year));
 
-        res.json({ 
+        const responseData = { 
             total, 
             jobSeekers, 
             placed, 
@@ -507,7 +548,13 @@ router.get('/stats', authMiddleware, async (req, res) => {
                 pureSpl: splTotal
             },
             passedOutYears
-        });
+        };
+
+        // Cache in Redis / in-memory for 120 seconds
+        await setCache('dashboard:stats', responseData, 120);
+        res.setHeader('X-Cache', 'MISS');
+
+        res.json(responseData);
     } catch (error) {
         console.error('Dashboard stats failure:', error);
         res.status(500).json({ message: 'Dashboard stats failure' });
